@@ -1,0 +1,70 @@
+import Base
+
+type Tab<-A: Data> is Data:
+  TNone{}
+  TLeaf{value: A}
+  TNode{lo: Tab<A>, hi: Tab<A>}
+
+type Vec<-A: Data> is Data:
+  Vec{size: U32, tab: Tab<A>}
+
+def evens(-A: Data, xs: List<&2, A>) -> List<&2, A>:
+  match xs:
+    case a <> b <> t:
+      a <> evens(A, t)
+    case a <> []:
+      [a]
+    case []:
+      []
+
+def odds(-A: Data, xs: List<&2, A>) -> List<&2, A>:
+  match xs:
+    case a <> b <> t:
+      b <> odds(A, t)
+    case _:
+      []
+
+def leaf(-A: Data, xs: List<&2, A>) -> Tab<A>:
+  match xs:
+    case a <> t:
+      TLeaf{a}
+    case []:
+      TNone{}
+
+def build(-A: Data, +d: Nat, +xs: List<&2, A>) -> Tab<A>:
+  match d:
+    case 0n:
+      leaf(A, xs)
+    case 1n+p:
+      TNode{build(A, p, evens(A, xs)), build(A, p, odds(A, xs))}
+
+def odd(+i: U32) -> Bool:
+  U32.is_eq((i .&. 1 : U32), 1)
+
+def get.go(-A: Data, +t: Tab<A>, b: Bool, +i: U32, +z: A) -> A:
+  match t b:
+    case TLeaf{v} _:
+      v
+    case TNone{} _:
+      z
+    case TNode{l, h} False{}:
+      get.go(A, l, odd((i >> 1n : U32)), (i >> 1n : U32), z)
+    case TNode{l, h} True{}:
+      get.go(A, h, odd((i >> 1n : U32)), (i >> 1n : U32), z)
+
+def get(-A: Data, +v: Vec<A>, +i: U32, +z: A) -> A:
+  match v:
+    case Vec{n, t}:
+      get.go(A, t, odd(i), i, z)
+
+def size(-A: Data, +v: Vec<A>) -> U32:
+  match v:
+    case Vec{n, t}:
+      n
+
+def depth(+n: U32) -> Nat:
+  Bool.pick(Nat, U32.is_le(n, 1), 0n, 1n+U32.log2((n - 1 : U32)))
+
+def from_list(-A: Data, +xs: List<&2, A>) -> Vec<A>:
+  +n = U32.from_nat(List.length(&2, A, xs))
+  Vec{n, build(A, depth(n), xs)}

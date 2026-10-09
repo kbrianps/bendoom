@@ -1,0 +1,4 @@
+tests/.cache/
+*.bmp
+/wadinfo
+/automap

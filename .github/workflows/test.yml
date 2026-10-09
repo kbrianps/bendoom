@@ -1,0 +1,25 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Bend 2.0.36
+        run: |
+          git clone -q --depth 1 --branch v2.0.36 https://github.com/bendlang/bend "$RUNNER_TEMP/bend"
+          (cd "$RUNNER_TEMP/bend/bend2/pack" && bun install --frozen-lockfile)
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/bin/sh\nexec bun %s/bend/bend2/main.ts "$@"\n' "$RUNNER_TEMP" > "$RUNNER_TEMP/bin/bend"
+          chmod +x "$RUNNER_TEMP/bin/bend"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - uses: actions/cache@v4
+        with:
+          path: tests/.cache
+          key: freedoom-0.13.0
+      - run: ./test.sh
