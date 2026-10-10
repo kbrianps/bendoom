@@ -47,6 +47,26 @@ def pick(-A: Data, c: Bool, t: Unit -> A, e: Unit -> A) -> A:
     case False{}:
       e(Unit{})
 
+def withp(+i: U32, +g: S.Sim, f: S.Sim -> S.Sim) -> S.Sim:
+  +c = S.sim.cp(g)
+  S.sim.cp.set(f(S.sim.cp.set(g, i)), c)
+
+def pof(+g: S.Sim, +m: U32) -> U32:
+  +p = S.m.player(g, m)
+  Bool.pick(U32, U32.is_eq(p, 0), S.sim.cp(g), (p - 1 : U32))
+
+def asmo(+g: S.Sim, +m: U32, f: S.Sim -> S.Sim) -> S.Sim:
+  withp(pof(g, m), g, f)
+
+def me(+g: S.Sim) -> U32:
+  T.get(U32, S.sim.ui(g), 169, 0)
+
+def ingame(+g: S.Sim, +i: U32) -> Bool:
+  has(S.sim.ingame(g), (1 << U32.to_nat(i) : U32))
+
+def net(+g: S.Sim) -> Bool:
+  U32.is_ne(S.sim.net(g), 0)
+
 def rnd(+g: S.Sim) -> U32:
   T.get(U32, S.mp.rndt(g), ((S.sim.rnd(g) + 1) .&. 255 : U32), 0)
 
@@ -153,7 +173,10 @@ def seclines(+g: S.Sim, +s: U32) -> List<&2, U32>:
   T.get(List<&2, U32>, S.mp.seclines(g), s, [])
 
 def secbox(+g: S.Sim, +s: U32, +k: U32) -> U32:
-  T.get(U32, S.mp.secbox(g), (s * 4 + k : U32), 0)
+  T.get(U32, S.mp.secbox(g), (s * 6 + k : U32), 0)
+
+def sorg(+g: S.Sim, +s: U32, +k: U32) -> U32:
+  T.get(U32, S.mp.secbox(g), (s * 6 + 4 + k : U32), 0)
 
 def theight(+g: S.Sim, +t: U32) -> U32:
   T.get(U32, S.mp.theights(g), t, 0)

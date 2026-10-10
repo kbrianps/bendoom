@@ -10,6 +10,15 @@ import ./state.bend as S
 import ./tab.bend as T
 import ./world.bend as R
 
+def sound(+g: S.Sim, +o: U32, +sfx: U32) -> S.Sim:
+  S.sim.snd.set(g, (o * 128 + sfx : U32) <> S.sim.snd(g))
+
+def ssound(+g: S.Sim, +sec: U32, +sfx: U32) -> S.Sim:
+  S.sim.snd.set(g, ((16777216 + sec) * 128 + sfx : U32) <> S.sim.snd(g))
+
+def tic8(+g: S.Sim) -> Bool:
+  U32.is_eq((S.sim.time(g) .&. 7 : U32), 0)
+
 def onfloor() -> U32:
   2147483648
 
@@ -50,7 +59,7 @@ def spawn(+g: S.Sim, +x: U32, +y: U32, +z: U32, +k: U32) -> S.Sim:
   placed(g5, m, z, k)
 
 def remove(+g: S.Sim, +m: U32) -> S.Sim:
-  C.remove(G.unset(g, m), m)
+  C.remove(G.unset(sound(g, m, 0), m), m)
 
 def setstate.one(+g: S.Sim, +m: U32, +s: U32) -> S.Sim:
   +g1 = S.m.tics.set(S.m.state.set(g, m, s), m, C.state(g, s, 2))
@@ -81,24 +90,92 @@ def alive(+g: S.Sim, +m: U32) -> Bool:
 def angle45(+a: U32) -> U32:
   (536870912 * (a / 45) : U32)
 
+def pzero(n: Nat, +g: S.Sim, +f: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      pzero(p, S.pput(g, f, 0), (f + 1 : U32))
+
 def reborn(+g: S.Sim) -> S.Sim:
   +k = S.p.kills(g)
   +i = S.p.items(g)
   +s = S.p.secrets(g)
-  +g0 = S.sim.pl.set(g, T.new(U32, 64, 0))
+  +g0 = pzero(64n, g, 0)
   +g1 = S.p.secrets.set(S.p.items.set(S.p.kills.set(g0, k), i), s)
   +g2 = S.p.state.set(S.p.attackdown.set(S.p.usedown.set(g1, 1), 1), 0)
   +g3 = S.p.pending.set(S.p.ready.set(S.p.health.set(g2, 100), 1), 1)
   +g4 = S.p.ammo0.set(S.p.own1.set(S.p.own0.set(g3, 1), 1), 50)
   S.p.max3.set(S.p.max2.set(S.p.max1.set(S.p.max0.set(g4, 200), 50), 300), 50)
 
-def spawnplayer?(+g: S.Sim, +x: U32, +y: U32, +a: U32) -> S.Sim:
+def spawnplayer.go?(+g: S.Sim, +i: U32, +x: U32, +y: U32, +a: U32) -> S.Sim:
   +g0 = C.when(U32.is_eq(S.p.state(g), 2), g, +h => reborn(h))
   +m = C.newid(g0)
   +g1 = spawn(g0, (x << 16n : U32), (y << 16n : U32), onfloor(), 0)
-  +g2 = S.m.health.set(S.m.player.set(S.m.angle.set(g1, m, angle45(a)), m, 1), m, S.p.health(g1))
+  +g1a = S.m.flags.set(g1, m, (S.m.flags(g1, m) .|. (i << 26n) : U32))
+  +g2 = S.m.health.set(S.m.player.set(S.m.angle.set(g1a, m, angle45(a)), m, (i + 1 : U32)), m, S.p.health(g1a))
   +g3 = S.p.damagecount.set(S.p.message.set(S.p.refire.set(S.p.state.set(S.p.mo.set(g2, m), 0), 0), 0), 0)
-  st.start(setuppsprites(S.p.viewheight.set(S.p.fixedcm.set(S.p.extralight.set(S.p.bonuscount.set(g3, 0), 0), 0), viewheight())))
+  +g4 = setuppsprites(S.p.viewheight.set(S.p.fixedcm.set(S.p.extralight.set(S.p.bonuscount.set(g3, 0), 0), 0), viewheight()))
+  C.when(U32.is_eq(i, C.me(g4)), g4, +h => st.start(h))
+
+def spawnplayer?(+g: S.Sim, +i: U32, +x: U32, +y: U32, +a: U32) -> S.Sim:
+  C.withp(i, g, +h => spawnplayer.go(h, i, x, y, a))
+
+def fog.xa(+tb: V.Tabs, +an: U32) -> U32:
+  Bool.pick(U32, U32.is_eq(an, 4096), V.tangent(tb, 2048), Bool.pick(U32, U32.is_eq(an, 5120), V.tangent(tb, 3072),
+    Bool.pick(U32, U32.is_eq(an, 6144), V.sine(tb, 0), Bool.pick(U32, U32.is_eq(an, 7168), V.sine(tb, 1024), V.sine(tb, (an + 2048 : U32))))))
+
+def fog.ya(+tb: V.Tabs, +an: U32) -> U32:
+  Bool.pick(U32, U32.is_eq(an, 4096), V.tangent(tb, 0), Bool.pick(U32, U32.is_eq(an, 5120), V.tangent(tb, 1024),
+    Bool.pick(U32, U32.is_eq(an, 6144), V.tangent(tb, 2048), Bool.pick(U32, U32.is_eq(an, 7168), V.tangent(tb, 3072), V.sine(tb, an)))))
+
+def start.x(+g: S.Sim, +j: U32) -> U32:
+  T.get(U32, S.sim.starts(g), (j * 3 : U32), 0)
+
+def start.y(+g: S.Sim, +j: U32) -> U32:
+  T.get(U32, S.sim.starts(g), (j * 3 + 1 : U32), 0)
+
+def start.a(+g: S.Sim, +j: U32) -> U32:
+  T.get(U32, S.sim.starts(g), (j * 3 + 2 : U32), 0)
+
+def spot.fog?(+g: S.Sim, +x: U32, +y: U32, +a: U32) -> S.Sim:
+  +n = S.sim.bodyn(g)
+  +g1 = C.when(U32.is_ge(n, 32), g, +h => remove(h, T.get(U32, S.sim.bodyq(h), (n % 32 : U32), 0)))
+  +g2 = S.sim.bodyn.set(S.sim.bodyq.set(g1, T.set(U32, S.sim.bodyq(g1), (n % 32 : U32), S.p.mo(g1))), (n + 1 : U32))
+  +an = (1024 * (a / 45) : U32)
+  +tb = S.mp.tb(g2)
+  +f = C.newid(g2)
+  +g3 = spawn(g2, (x + 20 * fog.xa(tb, an) : U32), (y + 20 * fog.ya(tb, an) : U32), S.s.floor(g2, G.secat(g2, x, y)), 39)
+  S.sim.ret.set(C.when(U32.is_ne(S.pi.viewz(g3, C.me(g3)), 1), g3, +h => sound(h, f, 35)), 1)
+
+def checkspot?(+g: S.Sim, +j: U32) -> S.Sim:
+  +x = (start.x(g, j) << 16n : U32)
+  +y = (start.y(g, j) << 16n : U32)
+  +g1 = checkpos(g, S.p.mo(g), x, y)
+  C.br(U32.is_eq(S.tm.ok(g1), 0), g1, +h => S.sim.ret.set(h, 0), +h => spot.fog(h, x, y, start.a(h, j)))
+
+def reborn.at?(+g: S.Sim, +i: U32, +j: U32) -> S.Sim:
+  spawnplayer.go(g, i, start.x(g, j), start.y(g, j), start.a(g, j))
+
+def reborn.try?(n: Nat, +g: S.Sim, +i: U32, +j: U32) -> S.Sim:
+  match n:
+    case 0n:
+      reborn.at(g, i, i)
+    case 1n+p:
+      +g1 = checkspot(g, j)
+      C.br(yes(g1), g1, +h => reborn.at(h, i, j), +h => reborn.try(p, h, i, (j + 1 : U32)))
+
+def doreborn.go?(+g: S.Sim, +i: U32) -> S.Sim:
+  +g1 = S.m.player.set(g, S.p.mo(g), 0)
+  +g2 = checkspot(g1, i)
+  C.br(yes(g2), g2, +h => reborn.at(h, i, i), +h => reborn.try(4n, h, i, 0))
+
+def doreborn?(+g: S.Sim, +i: U32) -> S.Sim:
+  C.withp(i, g, +h => doreborn.go(h, i))
+
+def start.save(+g: S.Sim, +i: U32, +x: U32, +y: U32, +a: U32) -> S.Sim:
+  +v = T.set(U32, T.set(U32, T.set(U32, S.sim.starts(g), (i * 3 : U32), x), (i * 3 + 1 : U32), y), (i * 3 + 2 : U32), a)
+  S.sim.starts.set(g, v)
 
 def kind(n: Nat, +g: S.Sim, +ed: U32, +i: U32) -> U32:
   match n:
@@ -126,8 +203,10 @@ def mapthing.of(+g: S.Sim, +i: U32, +t: L.Thing) -> S.Sim:
   match t:
     case L.Thing{+x, +y, +a, +ty, +opt}:
       +k = kind(137n, g, ty, 0)
-      +skip = Bool.or(Bool.or(U32.is_eq(ty, 11), U32.is_le(ty, 4)), Bool.or(C.has(opt, 16), Bool.not(C.has(opt, skillbit(S.mp.skill(g))))))
-      +g1 = C.when(U32.is_eq(ty, 1), g, +h => spawnplayer(h, x, y, a))
+      +skip = Bool.or(Bool.or(U32.is_eq(ty, 11), U32.is_le(ty, 4)), Bool.or(Bool.and(C.has(opt, 16), Bool.not(C.net(g))), Bool.not(C.has(opt, skillbit(S.mp.skill(g))))))
+      +isp = Bool.and(U32.is_ge(ty, 1), U32.is_le(ty, 4))
+      +g0 = C.when(isp, g, +h => start.save(h, (ty - 1 : U32), x, y, a))
+      +g1 = C.when(Bool.and(isp, C.ingame(g0, (ty - 1 : U32))), g0, +h => spawnplayer(h, (ty - 1 : U32), x, y, a))
       C.when(Bool.not(Bool.or(skip, U32.is_eq(k, 65535))), g1, +h => placething(h, i, x, y, a, opt, k))
 
 def newmonster(+ty: U32) -> Bool:
@@ -181,14 +260,21 @@ def kill.tics(+g: S.Sim, +t: U32) -> S.Sim:
   +tc = (S.m.tics(g1, t) - (r .&. 3) : U32)
   S.m.tics.set(g1, t, Bool.pick(U32, F.lt(tc, 1), 1, tc))
 
+def kill.player?(+g: S.Sim, +t: U32) -> S.Sim:
+  +g1 = setpsp(S.p.state.set(S.m.flags.set(g, t, C.clr(S.m.flags(g, t), 2)), 1), 0, winfo(S.p.ready(g), 2))
+  C.when(Bool.and(U32.is_eq(S.sim.cp(g1), C.me(g1)), U32.is_ne(hu.ui(g1, 140), 0)), g1, +h => hu.set(hu.set(h, 140, 0), 97, 1))
+
 def kill?(+g: S.Sim, +src: U32, +t: U32) -> S.Sim:
   +k = S.m.type(g, t)
   +f0 = C.clr(S.m.flags(g, t), 16793604)
   +f1 = (Bool.pick(U32, U32.is_eq(k, 18), f0, C.clr(f0, 512)) .|. 1049600 : U32)
   +g1 = S.m.height.set(S.m.flags.set(g, t, f1), t, F.sar(S.m.height(g, t), 2n))
-  +g2 = C.when(C.has(f1, 4194304), g1, +h => S.p.kills.set(h, (S.p.kills(h) + 1 : U32)))
+  +ck = C.has(f1, 4194304)
+  +bypl = Bool.and(U32.is_ne(src, 0), U32.is_ne(S.m.player(g1, src), 0))
+  +ki = Bool.pick(U32, bypl, (S.m.player(g1, src) - 1 : U32), 0)
+  +g2 = C.when(Bool.and(ck, Bool.or(bypl, Bool.not(C.net(g1)))), g1, +h => S.pi.kills.set(h, ki, (S.pi.kills(h, ki) + 1 : U32)))
   +pl = U32.is_ne(S.m.player(g2, t), 0)
-  +g3 = C.when(pl, g2, +h => setpsp(S.p.state.set(S.m.flags.set(h, t, C.clr(S.m.flags(h, t), 2)), 1), 0, winfo(S.p.ready(h), 2)))
+  +g3 = C.when(pl, g2, +h => C.asmo(h, t, +q => kill.player(q, t)))
   +xd = C.info(g3, k, 13)
   +xs = Bool.and(F.lt(S.m.health(g3, t), F.neg(C.info(g3, k, 2))), U32.is_ne(xd, 0))
   +g4 = setstate(g3, t, Bool.pick(U32, xs, xd, C.info(g3, k, 12)))
@@ -254,13 +340,14 @@ def damage.go(+g: S.Sim, +t: U32, +inf: U32, +src: U32, +dmg0: U32) -> S.Sim:
   +dmg = Bool.pick(U32, Bool.and(pl, U32.is_eq(S.mp.skill(g), 0)), F.sar(dmg0, 1n), dmg0)
   +fl = S.m.flags(g, t)
   +g1 = C.when(C.has(fl, 16777216), g, +h => S.m.momz.set(S.m.momy.set(S.m.momx.set(h, t, 0), t, 0), t, 0))
-  +saw = Bool.and(Bool.and(U32.is_ne(src, 0), U32.is_ne(S.m.player(g1, src), 0)), U32.is_eq(S.p.ready(g1), 7))
+  +saw = Bool.and(Bool.and(U32.is_ne(src, 0), U32.is_ne(S.m.player(g1, src), 0)), U32.is_eq(S.pi.ready(g1, C.pof(g1, src)), 7))
   +g2 = C.when(Bool.and(Bool.and(U32.is_ne(inf, 0), Bool.not(C.has(fl, 4096))), Bool.not(saw)), g1, +h => push(h, t, inf, dmg))
   +hp = S.m.health(g2, t)
   +s11 = Bool.and(Bool.and(pl, U32.is_eq(S.s.special(g2, G.mobsec(g2, t)), 11)), F.ge(dmg, hp))
   +d = Bool.pick(U32, s11, (hp - 1 : U32), dmg)
-  +god = Bool.and(Bool.and(pl, F.lt(d, 1000)), Bool.or(C.has(S.p.cheats(g2), 2), U32.is_ne(S.p.pw0(g2), 0)))
-  C.when(Bool.not(god), g2, +h => hurt(h, t, src, d, pl))
+  +tp = C.pof(g2, t)
+  +god = Bool.and(Bool.and(pl, F.lt(d, 1000)), Bool.or(C.has(S.pi.cheats(g2, tp), 2), U32.is_ne(S.pi.pw0(g2, tp), 0)))
+  C.when(Bool.not(god), g2, +h => C.withp(tp, h, +k => hurt(k, t, src, d, pl)))
 
 def damage(+g: S.Sim, +t: U32, +inf: U32, +src: U32, +dmg: U32) -> S.Sim:
   C.when(Bool.and(C.has(S.m.flags(g, t), 4), F.gt(S.m.health(g, t), 0)), g, +h => damage.go(h, t, inf, src, dmg))
@@ -597,22 +684,23 @@ def door.wait0(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +top: U32, +speed: U3
   +c = (count - 1 : U32)
   +z = U32.is_eq(c, 0)
   +d = Bool.pick(U32, Bool.and(z, is.in2(kind, 5, 0)), neg1(), Bool.pick(U32, Bool.and(z, U32.is_eq(kind, 1)), 1, dir))
-  door.put(g, id, sec, kind, top, speed, d, wait, c)
+  +sfx = Bool.pick(U32, U32.is_eq(kind, 5), 89, Bool.pick(U32, U32.is_eq(kind, 0), 21, Bool.pick(U32, U32.is_eq(kind, 1), 20, 0)))
+  door.put(C.when(Bool.and(z, U32.is_ne(sfx, 0)), g, +h => ssound(h, sec, sfx)), id, sec, kind, top, speed, d, wait, c)
 
 def door.wait2(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +top: U32, +speed: U32, +dir: U32, +wait: U32, +count: U32) -> S.Sim:
   +c = (count - 1 : U32)
   +go = Bool.and(U32.is_eq(c, 0), U32.is_eq(kind, 4))
-  door.put(g, id, sec, Bool.pick(U32, go, 0, kind), top, speed, Bool.pick(U32, go, 1, dir), wait, c)
+  door.put(C.when(go, g, +h => ssound(h, sec, 20)), id, sec, Bool.pick(U32, go, 0, kind), top, speed, Bool.pick(U32, go, 1, dir), wait, c)
 
 def door.down.done(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +top: U32, +speed: U32, +dir: U32, +wait: U32, +count: U32) -> S.Sim:
   +r = ret(g)
-  C.br(Bool.and(U32.is_eq(r, 2), Bool.or(is.in2(kind, 5, 7), is.in2(kind, 0, 2))), g, +h => door.end(h, id, sec),
+  C.br(Bool.and(U32.is_eq(r, 2), Bool.or(is.in2(kind, 5, 7), is.in2(kind, 0, 2))), g, +h => C.when(is.in2(kind, 5, 7), door.end(h, id, sec), +k => ssound(k, sec, 89)),
     +h => C.when(Bool.and(U32.is_eq(r, 2), U32.is_eq(kind, 1)), h, +k => door.put(k, id, sec, kind, top, speed, 0, wait, 1050)))
 
 def door.down(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +top: U32, +speed: U32, +dir: U32, +wait: U32, +count: U32) -> S.Sim:
   +g1 = moveplane(g, sec, speed, S.s.floor(g, sec), 0, 1, neg1())
   +back = Bool.and(U32.is_eq(ret(g1), 1), Bool.not(is.in2(kind, 7, 2)))
-  C.br(back, g1, +h => door.put(h, id, sec, kind, top, speed, 1, wait, count), +h => door.down.done(h, id, sec, kind, top, speed, dir, wait, count))
+  C.br(back, g1, +h => door.put(ssound(h, sec, 20), id, sec, kind, top, speed, 1, wait, count), +h => door.down.done(h, id, sec, kind, top, speed, dir, wait, count))
 
 def door.up(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +top: U32, +speed: U32, +dir: U32, +wait: U32, +count: U32) -> S.Sim:
   +g1 = moveplane(g, sec, speed, top, 0, 1, 1)
@@ -644,21 +732,22 @@ def plat.put(+g: S.Sim, +id: U32, +sec: U32, +speed: U32, +low: U32, +high: U32,
   C.th.set(g, id, S.TPlat{sec, speed, low, high, wait, count, status, old, crush, tag, kind})
 
 def plat.up(+g: S.Sim, +id: U32, +sec: U32, +speed: U32, +low: U32, +high: U32, +wait: U32, +count: U32, +status: U32, +old: U32, +crush: U32, +tag: U32, +kind: U32) -> S.Sim:
-  +g1 = moveplane(g, sec, speed, high, crush, 0, 1)
-  +r = ret(g1)
-  C.br(Bool.and(U32.is_eq(r, 1), U32.is_eq(crush, 0)), g1, +h => plat.put(h, id, sec, speed, low, high, wait, wait, 1, old, crush, tag, kind),
+  +g0 = moveplane(g, sec, speed, high, crush, 0, 1)
+  +r = ret(g0)
+  +g1 = C.when(Bool.and(is.in2(kind, 2, 3), tic8(g0)), g0, +h => ssound(h, sec, 22))
+  C.br(Bool.and(U32.is_eq(r, 1), U32.is_eq(crush, 0)), g1, +h => plat.put(ssound(h, sec, 18), id, sec, speed, low, high, wait, wait, 1, old, crush, tag, kind),
     +h => C.when(U32.is_eq(r, 2), h,
-      +k => C.br(Bool.or(is.in2(kind, 4, 1), is.in2(kind, 2, 3)), k, +q => plat.remove(q, id, sec),
+      +k => C.br(Bool.or(is.in2(kind, 4, 1), is.in2(kind, 2, 3)), ssound(k, sec, 19), +q => plat.remove(q, id, sec),
         +q => plat.put(q, id, sec, speed, low, high, wait, wait, 2, old, crush, tag, kind))))
 
 def plat.down(+g: S.Sim, +id: U32, +sec: U32, +speed: U32, +low: U32, +high: U32, +wait: U32, +count: U32, +status: U32, +old: U32, +crush: U32, +tag: U32, +kind: U32) -> S.Sim:
   +g1 = moveplane(g, sec, speed, low, 0, 0, neg1())
-  C.when(U32.is_eq(ret(g1), 2), g1, +h => plat.put(h, id, sec, speed, low, high, wait, wait, 2, old, crush, tag, kind))
+  C.when(U32.is_eq(ret(g1), 2), g1, +h => plat.put(ssound(h, sec, 19), id, sec, speed, low, high, wait, wait, 2, old, crush, tag, kind))
 
 def plat.wait(+g: S.Sim, +id: U32, +sec: U32, +speed: U32, +low: U32, +high: U32, +wait: U32, +count: U32, +status: U32, +old: U32, +crush: U32, +tag: U32, +kind: U32) -> S.Sim:
   +c = (count - 1 : U32)
   +st = Bool.pick(U32, U32.is_eq(c, 0), Bool.pick(U32, U32.is_eq(S.s.floor(g, sec), low), 0, 1), status)
-  plat.put(g, id, sec, speed, low, high, wait, c, st, old, crush, tag, kind)
+  plat.put(C.when(U32.is_eq(c, 0), g, +h => ssound(h, sec, 18)), id, sec, speed, low, high, wait, c, st, old, crush, tag, kind)
 
 def t.plat(+g: S.Sim, +id: U32, +sec: U32, +speed: U32, +low: U32, +high: U32, +wait: U32, +count: U32, +status: U32, +old: U32, +crush: U32, +tag: U32, +kind: U32) -> S.Sim:
   C.br(U32.is_eq(status, 0), g, +h => plat.up(h, id, sec, speed, low, high, wait, count, status, old, crush, tag, kind),
@@ -676,16 +765,18 @@ def ceil.put(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +bottom: U32, +top: U32
   C.th.set(g, id, S.TCeil{sec, kind, bottom, top, speed, crush, dir, tag, old})
 
 def ceil.up(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +bottom: U32, +top: U32, +speed: U32, +crush: U32, +dir: U32, +tag: U32, +old: U32) -> S.Sim:
-  +g1 = moveplane(g, sec, speed, top, 0, 1, 1)
-  +past = U32.is_eq(ret(g1), 2)
+  +g0 = moveplane(g, sec, speed, top, 0, 1, 1)
+  +past = U32.is_eq(ret(g0), 2)
+  +g1 = C.when(Bool.and(U32.is_ne(kind, 5), tic8(g0)), g0, +h => ssound(h, sec, 22))
   C.br(Bool.and(past, U32.is_eq(kind, 1)), g1, +h => ceil.remove(h, id, sec),
-    +h => C.when(Bool.and(past, Bool.or(U32.is_eq(kind, 5), is.in2(kind, 4, 3))), h, +k => ceil.put(k, id, sec, kind, bottom, top, speed, crush, neg1(), tag, old)))
+    +h => C.when(Bool.and(past, Bool.or(U32.is_eq(kind, 5), is.in2(kind, 4, 3))), h, +k => ceil.put(C.when(U32.is_eq(kind, 5), k, +q => ssound(q, sec, 19)), id, sec, kind, bottom, top, speed, crush, neg1(), tag, old)))
 
 def ceil.down(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +bottom: U32, +top: U32, +speed: U32, +crush: U32, +dir: U32, +tag: U32, +old: U32) -> S.Sim:
-  +g1 = moveplane(g, sec, speed, bottom, crush, 1, neg1())
-  +r = ret(g1)
+  +g0 = moveplane(g, sec, speed, bottom, crush, 1, neg1())
+  +r = ret(g0)
+  +g1 = C.when(Bool.and(U32.is_ne(kind, 5), tic8(g0)), g0, +h => ssound(h, sec, 22))
   C.br(U32.is_eq(r, 2), g1,
-    +h => C.br(is.in2(kind, 5, 3), h, +k => ceil.put(k, id, sec, kind, bottom, top, fu(), crush, 1, tag, old),
+    +h => C.br(is.in2(kind, 5, 3), h, +k => ceil.put(C.when(U32.is_eq(kind, 5), k, +q => ssound(q, sec, 19)), id, sec, kind, bottom, top, fu(), crush, 1, tag, old),
       +k => C.br(U32.is_eq(kind, 4), k, +q => ceil.put(q, id, sec, kind, bottom, top, speed, crush, 1, tag, old),
         +q => C.when(is.in2(kind, 2, 0), q, +z => ceil.remove(z, id, sec)))),
     +h => C.when(Bool.and(U32.is_eq(r, 1), Bool.or(is.in2(kind, 5, 3), U32.is_eq(kind, 2))), h, +k => ceil.put(k, id, sec, kind, bottom, top, 8192, crush, dir, tag, old)))
@@ -701,8 +792,9 @@ def floor.done(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +dir: U32, +special: 
   C.remove(g2, id)
 
 def t.floor(+g: S.Sim, +id: U32, +sec: U32, +kind: U32, +crush: U32, +dir: U32, +special: U32, +texture: U32, +dest: U32, +speed: U32) -> S.Sim:
-  +g1 = moveplane(g, sec, speed, dest, crush, 0, dir)
-  C.when(U32.is_eq(ret(g1), 2), g1, +h => floor.done(h, id, sec, kind, dir, special, texture))
+  +g0 = moveplane(g, sec, speed, dest, crush, 0, dir)
+  +g1 = C.when(tic8(g0), g0, +h => ssound(h, sec, 22))
+  C.when(U32.is_eq(ret(g1), 2), g1, +h => ssound(floor.done(h, id, sec, kind, dir, special, texture), sec, 19))
 
 def flicker.go(+g: S.Sim, +id: U32, +sec: U32, +max: U32, +min: U32) -> S.Sim:
   +amount = ((C.rnd(g) .&. 3) * 16 : U32)
@@ -783,7 +875,9 @@ def door.one(+g: S.Sim, +s: U32, +ld: U32, +kind: U32, +u: U32) -> S.Sim:
   +top = Bool.pick(U32, U32.is_eq(kind, 1), S.s.ceil(g, s), top0)
   +dir = Bool.pick(U32, Bool.or(close, U32.is_eq(kind, 1)), neg1(), 1)
   +speed = Bool.pick(U32, blaze, 524288, vdoorspeed())
-  S.s.data.set(C.add(g, S.TDoor{s, kind, top, speed, dir, 150, 0}), s, id)
+  +moves = U32.is_ne(top, S.s.ceil(g, s))
+  +sfx = Bool.pick(U32, U32.is_eq(kind, 7), 89, Bool.pick(U32, Bool.or(close, U32.is_eq(kind, 1)), 21, Bool.pick(U32, moves, Bool.pick(U32, blaze, 88, 20), 0)))
+  S.s.data.set(C.add(C.when(U32.is_ne(sfx, 0), g, +h => ssound(h, s, sfx)), S.TDoor{s, kind, top, speed, dir, 150, 0}), s, id)
 
 def door(+g: S.Sim, +ld: U32, +kind: U32) -> S.Sim:
   ev(~(+a => +b => +c => +d => +e => door.one(a, b, c, d, e)), g, ld, kind, 0)
@@ -799,7 +893,7 @@ def lockeddoor(+g: S.Sim, +ld: U32, +kind: U32, +m: U32) -> S.Sim:
   +need = lock.need(C.lspec(g, ld))
   +ok = Bool.or(U32.is_eq(need, 0), C.has(S.p.cards(g), need))
   C.br(Bool.and(pl, ok), g, +h => door(h, ld, kind),
-    +h => S.sim.ret.set(C.when(pl, h, +k => S.p.message.set(k, lock.msg(need))), 0))
+    +h => S.sim.ret.set(C.when(pl, h, +k => sound(S.p.message.set(k, lock.msg(need)), 0, 34)), 0))
 
 def vdoor.need(+sp: U32) -> U32:
   Bool.pick(U32, is.in2(sp, 26, 32), 9, Bool.pick(U32, is.in2(sp, 27, 34), 18, Bool.pick(U32, is.in2(sp, 28, 33), 36, 0)))
@@ -821,7 +915,8 @@ def vdoor.new(+g: S.Sim, +ld: U32, +sec: U32, +sp: U32) -> S.Sim:
   +blaze = is.in2(sp, 117, 118)
   +kind = Bool.pick(U32, U32.is_eq(sp, 117), 5, Bool.pick(U32, U32.is_eq(sp, 118), 6, Bool.pick(U32, open, 3, 0)))
   +g1 = C.when(open, g, +h => C.lspec.set(h, ld, 0))
-  S.s.data.set(C.add(g1, S.TDoor{sec, kind, (lowestceil(g1, sec) - 262144 : U32), Bool.pick(U32, blaze, 524288, vdoorspeed()), 1, 150, 0}), sec, id)
+  +g2 = ssound(g1, sec, Bool.pick(U32, blaze, 88, 20))
+  S.s.data.set(C.add(g2, S.TDoor{sec, kind, (lowestceil(g2, sec) - 262144 : U32), Bool.pick(U32, blaze, 524288, vdoorspeed()), 1, 150, 0}), sec, id)
 
 def vdoor.go(+g: S.Sim, +ld: U32, +m: U32, +pl: Bool, +sp: U32) -> S.Sim:
   +sec = S.sd.sector(g, S.l.side1(g, ld))
@@ -834,7 +929,7 @@ def vdoor(+g: S.Sim, +ld: U32, +m: U32) -> S.Sim:
   +sp = C.lspec(g, ld)
   +need = vdoor.need(sp)
   +ok = Bool.or(U32.is_eq(need, 0), Bool.and(pl, C.has(S.p.cards(g), need)))
-  C.br(ok, g, +h => vdoor.go(h, ld, m, pl, sp), +h => C.when(pl, h, +k => S.p.message.set(k, vdoor.msg(need))))
+  C.br(ok, g, +h => vdoor.go(h, ld, m, pl, sp), +h => C.when(pl, h, +k => sound(S.p.message.set(k, vdoor.msg(need)), 0, 34)))
 
 def addplat(+g: S.Sim, +id: U32) -> S.Sim:
   +k = slot.find(30n, S.sim.plats(g), 0, 0)
@@ -887,7 +982,7 @@ def plat.one(+g: S.Sim, +s: U32, +ld: U32, +kind: U32, +amount: U32) -> S.Sim:
   +status = Bool.pick(U32, change, 0, Bool.pick(U32, U32.is_eq(kind, 0), (r .&. 1 : U32), 1))
   +g2 = C.when(change, g1, +h => S.s.fpic.set(h, s, S.s.fpic(h, S.sd.sector(h, S.l.side0(h, ld)))))
   +g3 = C.when(U32.is_eq(kind, 3), g2, +h => S.s.special.set(h, s, 0))
-  +g4 = C.add(g3, S.TPlat{s, speed, Bool.pick(U32, change, 0, low), high, wait, 0, status, 0, 0, S.l.tag(g3, ld), kind})
+  +g4 = C.add(ssound(g3, s, Bool.pick(U32, change, 22, 18)), S.TPlat{s, speed, Bool.pick(U32, change, 0, low), high, wait, 0, status, 0, 0, S.l.tag(g3, ld), kind})
   addplat(S.s.data.set(g4, s, id), id)
 
 def plat(+g: S.Sim, +ld: U32, +kind: U32, +amount: U32) -> S.Sim:
@@ -1150,12 +1245,14 @@ def tele.done(+g: S.Sim, +th: U32, +d: U32, +ox: U32, +oy: U32, +oz: U32) -> S.S
   +g1 = S.m.z.set(g, th, S.m.floorz(g, th))
   +pl = U32.is_ne(S.m.player(g1, th), 0)
   +g2 = C.when(pl, g1, +h => S.p.viewz.set(h, (S.m.z(h, th) + S.p.viewheight(h) : U32)))
-  +g3 = spawn(g2, ox, oy, oz, 39)
+  +f1 = C.newid(g2)
+  +g3 = sound(spawn(g2, ox, oy, oz, 39), f1, 35)
   +an = (S.m.angle(g3, d) >> 19n : U32)
   +tb = S.mp.tb(g3)
   +fx = (S.m.x(g3, d) + 20 * V.sine(tb, (an + 2048 : U32)) : U32)
   +fy = (S.m.y(g3, d) + 20 * V.sine(tb, an) : U32)
-  +g4 = spawn(g3, fx, fy, S.m.z(g3, th), 39)
+  +f2 = C.newid(g3)
+  +g4 = sound(spawn(g3, fx, fy, S.m.z(g3, th), 39), f2, 35)
   +g5 = C.when(pl, g4, +h => S.m.reaction.set(h, th, 18))
   +g6 = S.m.momz.set(S.m.momy.set(S.m.momx.set(S.m.angle.set(g5, th, S.m.angle(g5, d)), th, 0), th, 0), th, 0)
   S.sim.ret.set(g6, 1)
@@ -1220,7 +1317,9 @@ def sw.at(+g: S.Sim, +i: U32) -> U32:
 def sw.apply(+g: S.Sim, +ld: U32, +again: Bool, +wh: U32, +i: U32) -> S.Sim:
   +v = sw.at(g, i)
   +nv = sw.at(g, Bool.pick(U32, C.has(i, 1), (i - 1 : U32), (i + 1 : U32)))
-  +g1 = sidetex.set(g, S.l.side0(g, ld), wh, nv)
+  +b0 = btn(g, 0, 0)
+  +o = Bool.pick(U32, U32.is_ne(btn(g, 0, 3), 0), (16777216 + S.sd.sector(g, S.l.side0(g, b0)) : U32), 0)
+  +g1 = sidetex.set(sound(g, o, 23), S.l.side0(g, ld), wh, nv)
   C.when(again, g1, +h => button(h, ld, wh, v, 35))
 
 def sw.scan(n: Nat, more: Bool, +g: S.Sim, +ld: U32, +again: Bool, +top: U32, +mid: U32, +bot: U32, +i: U32) -> S.Sim:
@@ -1395,7 +1494,8 @@ def scrolls(xs: List<&2, U32>, +g: S.Sim) -> S.Sim:
       g
 
 def btn.fire(+g: S.Sim, +i: U32) -> S.Sim:
-  +g1 = sidetex.set(g, S.l.side0(g, btn(g, i, 0)), btn(g, i, 1), btn(g, i, 2))
+  +sd = S.l.side0(g, btn(g, i, 0))
+  +g1 = ssound(sidetex.set(g, sd, btn(g, i, 1), btn(g, i, 2)), S.sd.sector(g, sd), 23)
   btn.set(btn.set(btn.set(btn.set(g1, i, 0, 0), i, 1, 0), i, 2, 0), i, 3, 0)
 
 def btn.tick(+g: S.Sim, +i: U32) -> S.Sim:
@@ -1676,10 +1776,12 @@ def z.ceil(+g: S.Sim, +m: U32) -> S.Sim:
 
 def z.floor(+g: S.Sim, +m: U32, +pl: Bool) -> S.Sim:
   +fl = S.m.flags(g, m)
-  +g1 = C.when(C.has(fl, 16777216), g, +h => S.m.momz.set(h, m, F.neg(S.m.momz(h, m))))
+  +fix = U32.is_eq(T.get(U32, S.mp.hud(g), 1, 0), 2)
+  +g1 = C.when(Bool.and(fix, C.has(fl, 16777216)), g, +h => S.m.momz.set(h, m, F.neg(S.m.momz(h, m))))
   +mz = S.m.momz(g1, m)
-  +g2 = C.when(F.lt(mz, 0), g1, +h => S.m.momz.set(C.when(Bool.and(pl, F.lt(mz, 4294443008)), h, +k => S.p.dvh.set(k, F.sar(mz, 3n))), m, 0))
-  +g3 = S.m.z.set(g2, m, S.m.floorz(g2, m))
+  +g2 = C.when(F.lt(mz, 0), g1, +h => S.m.momz.set(C.when(Bool.and(pl, F.lt(mz, 4294443008)), h, +k => sound(S.p.dvh.set(k, F.sar(mz, 3n)), m, 34)), m, 0))
+  +g2b = S.m.z.set(g2, m, S.m.floorz(g2, m))
+  +g3 = C.when(Bool.and(Bool.not(fix), C.has(fl, 16777216)), g2b, +h => S.m.momz.set(h, m, F.neg(S.m.momz(h, m))))
   C.br(Bool.and(C.has(fl, 65536), Bool.not(C.has(fl, 4096))), g3, +h => explode(h, m), +h => z.ceil(h, m))
 
 def z.air(+g: S.Sim, +m: U32) -> S.Sim:
@@ -1703,8 +1805,10 @@ def zmovement(+g: S.Sim, +m: U32) -> S.Sim:
 def respawn.go(+g: S.Sim, +m: U32, +t: L.Thing, +x: U32, +y: U32) -> S.Sim:
   match t:
     case L.Thing{+tx, +ty, +a, +k, +opt}:
-      +g1 = spawn(g, S.m.x(g, m), S.m.y(g, m), S.s.floor(g, G.mobsec(g, m)), 39)
-      +g2 = spawn(g1, x, y, S.s.floor(g1, G.secat(g1, x, y)), 39)
+      +f1 = C.newid(g)
+      +g1 = sound(spawn(g, S.m.x(g, m), S.m.y(g, m), S.s.floor(g, G.mobsec(g, m)), 39), f1, 35)
+      +f2 = C.newid(g1)
+      +g2 = sound(spawn(g1, x, y, S.s.floor(g1, G.secat(g1, x, y)), 39), f2, 35)
       +n = C.newid(g2)
       +ty2 = S.m.type(g2, m)
       +g3 = spawn(g2, x, y, Bool.pick(U32, C.has(C.info(g2, ty2, 21), 256), onceiling(), onfloor()), ty2)
@@ -1746,7 +1850,7 @@ def use.ptr(+g: S.Sim, +i: S.Icpt) -> S.Sim:
     case S.Icpt{+frac, +isline, +ld}:
       +m = S.tm.mo(g)
       C.br(U32.is_eq(C.lspec(g, ld), 0), g,
-        +h => C.when(F.le(S.tm.orange(G.opening(h, ld)), 0), G.opening(h, ld), +k => C.stop(k)),
+        +h => C.when(F.le(S.tm.orange(G.opening(h, ld)), 0), G.opening(h, ld), +k => C.stop(sound(k, m, 81))),
         +h => C.stop(use(h, ld, Bool.pick(U32, U32.is_eq(G.pointside(S.m.x(h, m), S.m.y(h, m), S.line(h, ld)), 1), 1, 0), m)))
 
 def uselines(+g: S.Sim) -> S.Sim:
@@ -1875,7 +1979,7 @@ def run.of(+g: S.Sim, +id: U32, t: S.Th) -> S.Sim:
     case S.TDead{}:
       C.unlink(g, id)
     case S.TMo{}:
-      mobjthinker(g, id)
+      C.asmo(g, id, +h => mobjthinker(h, id))
     case S.TNone{}:
       g
     case _:
@@ -1894,16 +1998,19 @@ def runthinkers(+g: S.Sim) -> S.Sim:
   +first = C.tnext(g, 0)
   runthinkers.go(65536n, U32.is_ne(first, 0), g, first)
 
+def players.think(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      players.think(p, C.when(C.ingame(g, i), g, +h => C.withp(i, h, +k => playerthink(k))), (i + 1 : U32))
+
 def ticker?(+g: S.Sim) -> S.Sim:
-  +g1 = update(runthinkers(playerthink(S.sim.snd.set(g, []))))
-  hu.ticker(st.ticker(S.sim.tic.set(S.sim.time.set(g1, (S.sim.time(g1) + 1 : U32)), (S.sim.tic(g1) + 1 : U32))))
+  +g1 = update(runthinkers(players.think(4n, g, 0)))
+  C.withp(C.me(g1), S.sim.tic.set(S.sim.time.set(g1, (S.sim.time(g1) + 1 : U32)), (S.sim.tic(g1) + 1 : U32)), +h => hu.ticker(st.ticker(h)))
 
 def yes(+g: S.Sim) -> Bool:
   U32.is_eq(S.sim.ret(g), 1)
-
-
-def sound(+g: S.Sim, +o: U32, +sfx: U32) -> S.Sim:
-  S.sim.snd.set(g, (o * 128 + sfx : U32) <> S.sim.snd(g))
 
 
 def subr(+g: S.Sim) -> U32:
@@ -2220,7 +2327,7 @@ def rad.thing(+g: S.Sim, +th: U32) -> S.Sim:
 
 
 def radius(+g: S.Sim, +spot: U32, +src: U32, +dmg: U32) -> S.Sim:
-  +dist = ((dmg + 32) << 16n : U32)
+  +dist = (dmg << 16n : U32)
   +ox = S.mp.ox(g)
   +oy = S.mp.oy(g)
   +x = S.m.x(g, spot)
@@ -2393,18 +2500,18 @@ def look.seen(+g: S.Sim, +m: U32, +all: Bool, +pm: U32) -> S.Sim:
     +h => S.sim.ret.set(S.m.target.set(h, m, pm), 1))
 
 
-def look.check(+g: S.Sim, +m: U32, +all: Bool) -> S.Sim:
-  +pm = S.p.mo(g)
-  C.br(F.le(S.p.health(g), 0), g, +h => S.sim.ret.set(h, 2), +h => look.seen(checksight(h, m, pm), m, all, pm))
+def look.check(+g: S.Sim, +m: U32, +all: Bool, +ll: U32) -> S.Sim:
+  +pm = S.pi.mo(g, ll)
+  C.br(F.le(S.pi.health(g, ll), 0), g, +h => S.sim.ret.set(h, 2), +h => look.seen(checksight(h, m, pm), m, all, pm))
 
 
 def look.go(n: Nat, more: Bool, +g: S.Sim, +m: U32, +all: Bool, +c: U32, +stop: U32) -> S.Sim:
   match n more:
     case 1n+p True{}:
       +ll = S.m.lastlook(g, m)
-      +inplay = U32.is_eq(ll, 0)
+      +inplay = C.ingame(g, ll)
       +end = Bool.and(inplay, Bool.or(U32.is_eq(c, 2), U32.is_eq(ll, stop)))
-      +g1 = C.br(end, g, +h => S.sim.ret.set(h, 0), +h => C.br(inplay, h, +k => look.check(k, m, all), +k => S.sim.ret.set(k, 2)))
+      +g1 = C.br(end, g, +h => S.sim.ret.set(h, 0), +h => C.br(inplay, h, +k => look.check(k, m, all, ll), +k => S.sim.ret.set(k, 2)))
       +cont = U32.is_eq(S.sim.ret(g1), 2)
       +g2 = C.when(cont, g1, +h => S.m.lastlook.set(h, m, ((S.m.lastlook(h, m) + 1) .&. 3 : U32)))
       look.go(p, cont, g2, m, all, (c + C.b2u(inplay) : U32), stop)
@@ -2514,18 +2621,30 @@ def chase.move(+g: S.Sim, +m: U32) -> S.Sim:
   chase.active(g2, m)
 
 
+def chase.netlook?(+g: S.Sim, +m: U32) -> S.Sim:
+  C.br(yes(g), g, +h => h, +h => chase.move(h, m))
+
+
+def chase.net?(+g: S.Sim, +m: U32) -> S.Sim:
+  C.br(yes(g), g, +h => chase.move(h, m), +h => chase.netlook(lookfor(h, m, True{}), m))
+
+
+def chase.nomissile?(+g: S.Sim, +m: U32) -> S.Sim:
+  C.br(Bool.and(C.net(g), U32.is_eq(S.m.threshold(g, m), 0)), g, +h => chase.net(checksight(h, m, S.m.target(h, m)), m), +h => chase.move(h, m))
+
+
 def chase.flag(+g: S.Sim, +m: U32) -> S.Sim:
   S.m.flags.set(g, m, (S.m.flags(g, m) .|. 128 : U32))
 
 
 def chase.fire(+g: S.Sim, +m: U32, +ms: U32) -> S.Sim:
-  C.br(yes(g), g, +h => chase.flag(setstate(h, m, ms), m), +h => chase.move(h, m))
+  C.br(yes(g), g, +h => chase.flag(setstate(h, m, ms), m), +h => chase.nomissile(h, m))
 
 
 def chase.missile(+g: S.Sim, +m: U32) -> S.Sim:
   +ms = C.info(g, S.m.type(g, m), 11)
   +wait = Bool.and(U32.is_lt(S.mp.skill(g), 4), U32.is_ne(S.m.movecount(g, m), 0))
-  C.br(Bool.or(U32.is_eq(ms, 0), wait), g, +h => chase.move(h, m), +h => chase.fire(missilerange(h, m), m, ms))
+  C.br(Bool.or(U32.is_eq(ms, 0), wait), g, +h => chase.nomissile(h, m), +h => chase.fire(missilerange(h, m), m, ms))
 
 
 def chase.hit(+g: S.Sim, +m: U32, +ms: U32) -> S.Sim:
@@ -2920,9 +3039,16 @@ def boss.victory(+g: S.Sim, +k: U32) -> S.Sim:
         +r => C.br(Bool.and(U32.is_eq(ep, 4), U32.is_eq(mp, 8)), r, +s => floor.tag(s, 666, 1), +s => exit(s, 1)))))
 
 
+def anyalive(n: Nat, +g: S.Sim, +i: U32) -> Bool:
+  match n:
+    case 0n:
+      False{}
+    case 1n+p:
+      Bool.or(Bool.and(C.ingame(g, i), F.gt(S.pi.health(g, i), 0)), anyalive(p, g, (i + 1 : U32)))
+
 def a.bossdeath(+g: S.Sim, +m: U32) -> S.Sim:
   +k = S.m.type(g, m)
-  +ok = Bool.and(Bool.and(boss.qualifies(g, k), F.gt(S.p.health(g), 0)), Bool.not(anyother(g, m)))
+  +ok = Bool.and(Bool.and(boss.qualifies(g, k), anyalive(4n, g, 0)), Bool.not(anyother(g, m)))
   C.when(ok, g, +h => boss.victory(h, k))
 
 

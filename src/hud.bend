@@ -323,7 +323,7 @@ def ammos(n: Nat, fr: V.Frame, +g: S.Sim, +k: U32) -> V.Frame:
       ammos(p, num(f1, g, 314, ammoy(k), S.pget(g, (46 + k : U32)), 3n, 14), g, (k + 1 : U32))
 
 def statusbar(fr: V.Frame, +g: S.Sim) -> V.Frame:
-  f1 = patch(fr, g, 0, 168, 0)
+  f1 = fwhen(C.net(g), patch(fr, g, 0, 168, 0), f => patch(f, g, 143, 168, (306 + S.sim.cp(g) : U32)))
   f2 = num(f1, g, 44, 171, ready.ammo(g), 3n, 2)
   f3 = ammos(4n, f2, g, 0)
   f4 = num(patch(f3, g, 90, 171, 12), g, 90, 171, S.p.health(g), 3n, 2)

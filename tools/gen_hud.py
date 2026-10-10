@@ -77,7 +77,8 @@ msgs += [text(n) for n in ["MSGOFF", "MSGON", "AMSTR_FOLLOWON", "AMSTR_FOLLOWOFF
 msgs += ["%s %d" % (text("AMSTR_MARKEDSPOT"), i) for i in range(10)]
 msgs += [text(n) for n in ["AMSTR_MARKSCLEARED", "DETAILHI", "DETAILLO", "STSTR_DQDON", "STSTR_DQDOFF", "STSTR_FAADDED",
                            "STSTR_KFAADDED", "STSTR_NCON", "STSTR_NCOFF"]]
-assert len(msgs) == 69, len(msgs)
+msgs += [text("GGSAVED")]
+assert len(msgs) == 70, len(msgs)
 
 names = ["STBAR", "STARMS"]
 names += ["STTNUM%d" % i for i in range(10)] + ["STTPRCNT", "STTMINUS"]
@@ -121,7 +122,7 @@ menu = ["TITLEPIC", "CREDIT", "HELP1", "HELP2", "HELP",
         "M_JKILL", "M_ROUGH", "M_HURT", "M_ULTRA", "M_NMARE", "M_PAUSE",
         "M_OPTTTL", "M_ENDGAM", "M_MESSG", "M_MSGOFF", "M_MSGON", "M_DETAIL", "M_GDHIGH", "M_GDLOW", "M_SCRNSZ",
         "M_MSENS", "M_SVOL", "M_SFXVOL", "M_MUSVOL", "M_THERML", "M_THERMM", "M_THERMR", "M_THERMO",
-        "M_LGTTL", "M_SGTTL", "M_LSLEFT", "M_LSCNTR", "M_LSRGHT"] + ["AMMNUM%d" % i for i in range(10)]
+        "M_LGTTL", "M_SGTTL", "M_LSLEFT", "M_LSCNTR", "M_LSRGHT"] + ["AMMNUM%d" % i for i in range(10)] + ["STFB%d" % i for i in range(4)] + ["STPB%d" % i for i in range(4)] + ["WIOSTS"]
 
 texts = [text("E%dTEXT" % i) for i in range(1, 5)] + [text("C%dTEXT" % i) for i in range(1, 7)]
 texts += [text("HUSTR_E%dM%d" % (e, m)) for e in range(1, 5) for m in range(1, 10)]
@@ -131,6 +132,9 @@ texts += [text(n) for n in ["CC_ZOMBIE", "CC_SHOTGUN", "CC_HEAVY", "CC_IMP", "CC
 texts += [m + "\n\n" + text("DOSY") for m in endmsgs("doom1_endmsg") + endmsgs("doom2_endmsg")]
 texts += [text(n) for n in ["NIGHTMARE", "ENDGAME", "SWSTRING", "MSGOFF", "MSGON", "SAVEDEAD", "EMPTYSTRING", "QSAVESPOT"]]
 assert len(texts) == 119, len(texts)
+texts += [text(n) for n in ["LOADNET", "QLOADNET"]]
+texts += [part for n in ["QSPROMPT", "QLPROMPT"] for part in text(n).split("%s")]
+assert len(texts) == 125, len(texts)
 
 out = ["import Base", ""]
 out.append("def hudnames() -> List<&2, String>:")

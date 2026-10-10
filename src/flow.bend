@@ -13,6 +13,7 @@ import ./world.bend as R
 import ./hudtext.bend as H
 import ./menu.bend as Mn
 import ./am.bend as Am
+import ./setup.bend as Su
 
 type Cast is Data:
   Cast{num: U32, tics: U32, st: U32, death: U32, frames: U32, melee: U32, atk: U32}
@@ -117,6 +118,20 @@ def wi.stats(+g: S.Sim) -> S.Sim:
   +g1 = U.ui.set(U.ui.set(U.ui.set(U.ui.set(U.ui.set(g, 3, 0), 2, 0), 4, 1), 5, 4294967295), 6, 4294967295)
   anims.init(U.ui.set(U.ui.set(U.ui.set(U.ui.set(g1, 7, 4294967295), 8, 4294967295), 9, 4294967295), 10, 35))
 
+def wi.plrs(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      +g1 = U.ui.set(U.ui.set(U.ui.set(g, (77 + i : U32), S.pi.kills(g, i)), (81 + i : U32), S.pi.items(g, i)), (85 + i : U32), S.pi.secrets(g, i))
+      wi.plrs(p, U.ui.set(U.ui.set(U.ui.set(g1, (61 + i : U32), 0), (65 + i : U32), 0), (69 + i : U32), 0), (i + 1 : U32))
+
+def wi.netstats(+g: S.Sim) -> S.Sim:
+  anims.init(U.ui.set(U.ui.set(U.ui.set(U.ui.set(g, 3, 0), 2, 0), 4, 1), 10, 35))
+
+def wi.begin(+g: S.Sim) -> S.Sim:
+  C.br(C.net(g), g, +h => wi.netstats(h), +h => wi.stats(h))
+
 def wi.start(+g: S.Sim) -> S.Sim:
   +c = U.com(g)
   +map = U.ui(g, 25)
@@ -126,7 +141,7 @@ def wi.start(+g: S.Sim) -> S.Sim:
   +g1 = U.ui.set(U.ui.set(U.ui.set(U.ui.set(g, 12, epsd), 13, (map - 1 : U32)), 14, wi.next(c, U32.is_ne(U.ui(g, 24), 0), ep, map)), 15, S.p.didsecret(g))
   +g2 = U.ui.set(U.ui.set(U.ui.set(U.ui.set(g1, 16, max1(S.sim.kills(g1))), 17, max1(S.sim.items(g1))), 18, max1(S.sim.secrets(g1))), 19, (35 * pars(c, ep, map) : U32))
   +g3 = U.ui.set(U.ui.set(U.ui.set(U.ui.set(g2, 20, S.p.kills(g2)), 21, S.p.items(g2)), 22, S.p.secrets(g2)), 23, S.sim.time(g2))
-  wipe(wi.stats(U.ui.set(U.ui.set(S.sim.gs.set(g3, 1), 0, 0), 1, 0)))
+  wipe(wi.begin(wi.plrs(4n, U.ui.set(U.ui.set(S.sim.gs.set(g3, 1), 0, 0), 1, 0), 0)))
 
 def fin.text(+c: Bool, +ep: U32, +map: U32) -> U32:
   Bool.pick(U32, c,
@@ -145,14 +160,28 @@ def finishpl(+g: S.Sim) -> S.Sim:
   +g2 = S.m.flags.set(g1, m, C.clr(S.m.flags(g1, m), 262144))
   S.p.bonuscount.set(S.p.damagecount.set(S.p.fixedcm.set(S.p.extralight.set(S.p.cards.set(g2, 0), 0), 0), 0), 0)
 
+def finishall(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      finishall(p, C.when(C.ingame(g, i), g, +h => C.withp(i, h, +k => finishpl(k))), (i + 1 : U32))
+
+def secretall(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      secretall(p, S.pi.didsecret.set(g, i, 1), (i + 1 : U32))
+
 def completed(+g: S.Sim) -> S.Sim:
-  +g1 = U.ui.set(finishpl(g), 140, 0)
+  +g1 = U.ui.set(finishall(4n, g, 0), 140, 0)
   +c = U.com(g1)
   +map = S.mp.map(g1)
   +secret = Bool.and(U32.is_eq(S.sim.exit(g1), 2), Bool.or(Bool.not(c), U.has31(g1)))
   +g2 = U.ui.set(U.ui.set(U.ui.set(g1, 24, b2u(secret)), 25, map), 26, S.mp.episode(g1))
   C.br(Bool.and(Bool.not(c), U32.is_eq(map, 8)), g2, +h => finale.start(h),
-    +h => wi.start(C.when(Bool.and(Bool.not(c), U32.is_eq(map, 9)), h, +k => S.p.didsecret.set(k, 1))))
+    +h => wi.start(C.when(Bool.and(Bool.not(c), U32.is_eq(map, 9)), h, +k => secretall(4n, k, 0))))
 
 def worlddone(+g: S.Sim) -> S.Sim:
   +secret = U32.is_ne(U.ui(g, 24), 0)
@@ -162,24 +191,41 @@ def worlddone(+g: S.Sim) -> S.Sim:
     Bool.or(Bool.or(U32.is_eq(map, 6), U32.is_eq(map, 11)), Bool.or(U32.is_eq(map, 20), U32.is_eq(map, 30)))))
   C.when(fin, g1, +h => finale.start(h))
 
-def wi.accel(+g: S.Sim) -> S.Sim:
+def wi.accel.one(+g: S.Sim) -> S.Sim:
   +b = S.p.buttons(g)
   +atk = U32.is_ne((b .&. 1 : U32), 0)
   +use = U32.is_ne((b .&. 2 : U32), 0)
   +hit = Bool.or(Bool.and(atk, U32.is_eq(S.p.attackdown(g), 0)), Bool.and(use, U32.is_eq(S.p.usedown(g), 0)))
-  C.when(hit, S.p.usedown.set(S.p.attackdown.set(g, b2u(atk)), b2u(use)), +h => U.ui.set(h, 2, 1))
+  S.p.usedown.set(S.p.attackdown.set(C.when(hit, g, +h => U.ui.set(h, 2, 1)), b2u(atk)), b2u(use))
+
+def wi.accel.go(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      wi.accel.go(p, C.when(C.ingame(g, i), g, +h => C.withp(i, h, +k => wi.accel.one(k))), (i + 1 : U32))
+
+def wi.accel(+g: S.Sim) -> S.Sim:
+  wi.accel.go(4n, g, 0)
+
+def beep(+g: S.Sim, +sfx: U32) -> S.Sim:
+  S.sim.snd.set(g, sfx <> S.sim.snd(g))
+
+def tick4(+g: S.Sim) -> S.Sim:
+  C.when(U32.is_eq((U.ui(g, 0) .&. 3 : U32), 0), g, +h => beep(h, 1))
 
 def pct(+have: U32, +max: U32) -> U32:
   ((have * 100) / max : U32)
 
 def wi.all(+g: S.Sim) -> S.Sim:
   +g1 = U.ui.set(U.ui.set(U.ui.set(U.ui.set(g, 2, 0), 5, pct(U.ui(g, 20), U.ui(g, 16))), 6, pct(U.ui(g, 21), U.ui(g, 17))), 7, pct(U.ui(g, 22), U.ui(g, 18)))
-  U.ui.set(U.ui.set(U.ui.set(g1, 8, (U.ui(g1, 23) / 35 : U32)), 9, (U.ui(g1, 19) / 35 : U32)), 4, 10)
+  beep(U.ui.set(U.ui.set(U.ui.set(g1, 8, (U.ui(g1, 23) / 35 : U32)), 9, (U.ui(g1, 19) / 35 : U32)), 4, 10), 82)
 
 def wi.count(+g: S.Sim, +slot: U32, +have: U32, +max: U32) -> S.Sim:
   +v = (U.ui(g, slot) + 2 : U32)
   +top = pct(have, max)
-  Bool.pick(S.Sim, F.ge(v, top), U.ui.set(U.ui.set(g, slot, top), 4, (U.ui(g, 4) + 1 : U32)), U.ui.set(g, slot, v))
+  +g1 = tick4(g)
+  Bool.pick(S.Sim, F.ge(v, top), beep(U.ui.set(U.ui.set(g1, slot, top), 4, (U.ui(g1, 4) + 1 : U32)), 82), U.ui.set(g1, slot, v))
 
 def wi.times(+g: S.Sim) -> S.Sim:
   +tt = (U.ui(g, 23) / 35 : U32)
@@ -187,8 +233,9 @@ def wi.times(+g: S.Sim) -> S.Sim:
   +t1 = (U.ui(g, 8) + 3 : U32)
   +t2 = Bool.pick(U32, F.ge(t1, tt), tt, t1)
   +p1 = (U.ui(g, 9) + 3 : U32)
-  +g1 = U.ui.set(g, 8, t2)
-  Bool.pick(S.Sim, F.ge(p1, pt), U.ui.set(U.ui.set(g1, 9, pt), 4, Bool.pick(U32, F.ge(t2, tt), (U.ui(g1, 4) + 1 : U32), U.ui(g1, 4))), U.ui.set(g1, 9, p1))
+  +g1 = U.ui.set(tick4(g), 8, t2)
+  +done = F.ge(t2, tt)
+  Bool.pick(S.Sim, F.ge(p1, pt), C.when(done, U.ui.set(U.ui.set(g1, 9, pt), 4, Bool.pick(U32, done, (U.ui(g1, 4) + 1 : U32), U.ui(g1, 4))), +h => beep(h, 82)), U.ui.set(g1, 9, p1))
 
 def wi.nostate(+g: S.Sim) -> S.Sim:
   U.ui.set(U.ui.set(U.ui.set(g, 3, 2), 2, 0), 1, 10)
@@ -208,8 +255,50 @@ def wi.update(+g: S.Sim) -> S.Sim:
     +h => C.br(U32.is_eq(sp, 4), h, +k => wi.count(k, 6, U.ui(k, 21), U.ui(k, 17)),
       +k => C.br(U32.is_eq(sp, 6), k, +q => wi.count(q, 7, U.ui(q, 22), U.ui(q, 18)),
         +q => C.br(U32.is_eq(sp, 8), q, +z => wi.times(z),
-          +z => C.br(U32.is_eq(sp, 10), z, +y => C.when(U32.is_ne(U.ui(y, 2), 0), y, +x => C.br(U.com(x), x, +w => wi.nostate(w), +w => wi.shownext(w))),
+          +z => C.br(U32.is_eq(sp, 10), z, +y => C.when(U32.is_ne(U.ui(y, 2), 0), y, +x => C.br(U.com(x), beep(x, 3), +w => wi.nostate(w), +w => wi.shownext(w))),
             +y => C.when(U32.is_ne((sp .&. 1 : U32), 0), y, +x => wi.pause(x)))))))
+
+def wi.netall(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      +g1 = C.when(C.ingame(g, i), g, +h =>
+        U.ui.set(U.ui.set(U.ui.set(h, (61 + i : U32), pct(U.ui(h, (77 + i : U32)), U.ui(h, 16))), (65 + i : U32), pct(U.ui(h, (81 + i : U32)), U.ui(h, 17))), (69 + i : U32), pct(U.ui(h, (85 + i : U32)), U.ui(h, 18))))
+      wi.netall(p, g1, (i + 1 : U32))
+
+def wi.netcount.one(+g: S.Sim, +slot: U32, +top: U32) -> S.Sim:
+  +v = (U.ui(g, slot) + 2 : U32)
+  U.ui.set(g, slot, Bool.pick(U32, F.ge(v, top), top, v))
+
+def wi.netcount(n: Nat, +g: S.Sim, +i: U32, +slot: U32, +src: U32, +max: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      +g1 = C.when(C.ingame(g, i), g, +h => wi.netcount.one(h, (slot + i : U32), pct(U.ui(h, (src + i : U32)), U.ui(h, max))))
+      wi.netcount(p, g1, (i + 1 : U32), slot, src, max)
+
+def wi.netstill(n: Nat, +g: S.Sim, +i: U32, +slot: U32, +src: U32, +max: U32) -> Bool:
+  match n:
+    case 0n:
+      False{}
+    case 1n+p:
+      Bool.or(Bool.and(C.ingame(g, i), F.lt(U.ui(g, (slot + i : U32)), pct(U.ui(g, (src + i : U32)), U.ui(g, max)))), wi.netstill(p, g, (i + 1 : U32), slot, src, max))
+
+def wi.netstep(+g: S.Sim, +slot: U32, +src: U32, +max: U32, +next: U32) -> S.Sim:
+  +g1 = wi.netcount(4n, tick4(g), 0, slot, src, max)
+  C.when(Bool.not(wi.netstill(4n, g1, 0, slot, src, max)), g1, +h => beep(U.ui.set(h, 4, next), 82))
+
+def wi.netupdate(+g: S.Sim) -> S.Sim:
+  +g1 = anims.update(g)
+  +g2 = C.when(Bool.and(U32.is_ne(U.ui(g1, 2), 0), U32.is_ne(U.ui(g1, 4), 10)), g1, +h => beep(U.ui.set(U.ui.set(wi.netall(4n, h, 0), 2, 0), 4, 10), 82))
+  +sp = U.ui(g2, 4)
+  C.br(U32.is_eq(sp, 2), g2, +h => wi.netstep(h, 61, 77, 16, 3),
+    +h => C.br(U32.is_eq(sp, 4), h, +k => wi.netstep(k, 65, 81, 17, 5),
+      +k => C.br(U32.is_eq(sp, 6), k, +q => wi.netstep(q, 69, 85, 18, 9),
+        +q => C.br(U32.is_eq(sp, 10), q, +y => C.when(U32.is_ne(U.ui(y, 2), 0), y, +x => C.br(U.com(x), beep(x, 3), +w => wi.nostate(w), +w => wi.shownext(w))),
+          +y => C.when(U32.is_ne((sp .&. 1 : U32), 0), y, +x => wi.pause(x))))))
 
 def wi.nextloc(+g: S.Sim) -> S.Sim:
   +g1 = anims.update(g)
@@ -225,7 +314,7 @@ def wi.noupdate(+g: S.Sim) -> S.Sim:
 def wi.ticker(+g: S.Sim) -> S.Sim:
   +g1 = wi.accel(U.ui.set(g, 0, (U.ui(g, 0) + 1 : U32)))
   +st = U.ui(g1, 3)
-  C.br(U32.is_eq(st, 0), g1, +h => wi.update(h), +h => C.br(U32.is_eq(st, 1), h, +k => wi.nextloc(k), +k => wi.noupdate(k)))
+  C.br(U32.is_eq(st, 0), g1, +h => C.br(C.net(h), h, +k => wi.netupdate(k), +k => wi.update(k)), +h => C.br(U32.is_eq(st, 1), h, +k => wi.nextloc(k), +k => wi.noupdate(k)))
 
 def ctype(+num: U32) -> U32:
   T.get(U32, T.from_list(U32, [1, 2, 10, 11, 12, 18, 14, 17, 15, 20, 22, 5, 8, 3, 19, 21, 0]), num, 0)
@@ -288,6 +377,16 @@ def cast.tick(+g: S.Sim, +c: Cast) -> Cast:
       +t1 = (tics - 1 : U32)
       Bool.pick(Cast, F.gt(t1, 0), Cast{num, t1, st, death, frames, melee, atk}, cast.next(g, Cast{num, t1, st, death, frames, melee, atk}))
 
+def cast.sfx(+st: U32) -> U32:
+  Bool.pick(U32, U32.is_eq(st, 154), 4, Bool.pick(U32, U32.is_eq(st, 185), 1, Bool.pick(U32, U32.is_eq(st, 218), 2, Bool.pick(U32, U32.is_eq(st, 256), 54, Bool.pick(U32, U32.is_eq(st, 336), 56, Bool.pick(U32, U32.is_eq(st, 338), 53, Bool.pick(U32, U32.is_eq(st, 340), 107, Bool.pick(U32, U32.is_eq(st, 383), 16, Bool.pick(U32, U32.is_eq(st, 380), 16, Bool.pick(U32, U32.is_eq(st, 377), 16, Bool.pick(U32, U32.is_eq(st, 417), 2, Bool.pick(U32, U32.is_eq(st, 418), 2, Bool.pick(U32, U32.is_eq(st, 419), 2, Bool.pick(U32, U32.is_eq(st, 454), 55, Bool.pick(U32, U32.is_eq(st, 486), 52, Bool.pick(U32, U32.is_eq(st, 538), 16, Bool.pick(U32, U32.is_eq(st, 567), 16, Bool.pick(U32, U32.is_eq(st, 505), 16, Bool.pick(U32, U32.is_eq(st, 590), 51, Bool.pick(U32, U32.is_eq(st, 616), 2, Bool.pick(U32, U32.is_eq(st, 617), 2, Bool.pick(U32, U32.is_eq(st, 648), 8, Bool.pick(U32, U32.is_eq(st, 685), 14, Bool.pick(U32, U32.is_eq(st, 687), 14, Bool.pick(U32, U32.is_eq(st, 689), 14, Bool.pick(U32, U32.is_eq(st, 710), 51, 0))))))))))))))))))))))))))
+
+def cast.sound(+g: S.Sim, +c: Cast) -> U32:
+  match c:
+    case Cast{+num, +tics, +st, +death, +frames, +melee, +atk}:
+      +ended = Bool.or(U32.is_eq(C.state(g, st, 2), 4294967295), U32.is_eq(C.state(g, st, 4), 0))
+      +n1 = Bool.pick(U32, U32.is_eq((num + 1 : U32), 17), 0, (num + 1 : U32))
+      Bool.pick(U32, F.gt((tics - 1 : U32), 0), 0, Bool.pick(U32, ended, cinfo(g, n1, 4), Bool.pick(U32, U32.is_eq(st, 154), 0, cast.sfx(C.state(g, st, 4)))))
+
 def cast.start(+g: S.Sim) -> S.Sim:
   +s = cinfo(g, 0, 3)
   U.ui.set(cast.put(wipe(g), Cast{0, C.state(g, s, 2), s, 0, 0, 0, 0}), 50, 2)
@@ -295,15 +394,26 @@ def cast.start(+g: S.Sim) -> S.Sim:
 def cast.death(+g: S.Sim) -> S.Sim:
   +num = U.ui(g, 54)
   +s = cinfo(g, num, 12)
-  C.when(U32.is_eq(U.ui(g, 57), 0), g, +h => cast.put(h, Cast{num, C.state(h, s, 2), s, 1, 0, U.ui(h, 59), 0}))
+  +ds = cinfo(g, num, 14)
+  C.when(U32.is_eq(U.ui(g, 57), 0), g, +h => cast.put(C.when(U32.is_ne(ds, 0), h, +k => beep(k, ds)), Cast{num, C.state(h, s, 2), s, 1, 0, U.ui(h, 59), 0}))
+
+def anybtn(n: Nat, +g: S.Sim, +i: U32) -> Bool:
+  match n:
+    case 0n:
+      False{}
+    case 1n+p:
+      Bool.or(Bool.and(C.ingame(g, i), U32.is_ne(S.pi.buttons(g, i), 0)), anybtn(p, g, (i + 1 : U32)))
 
 def finale.ticker(+g: S.Sim) -> S.Sim:
   +c = U.com(g)
-  +g1 = C.when(Bool.and(c, Bool.and(U32.is_gt(U.ui(g, 51), 50), U32.is_ne(S.p.buttons(g), 0))), g,
+  +g1 = C.when(Bool.and(c, Bool.and(U32.is_gt(U.ui(g, 51), 50), anybtn(4n, g, 0))), g,
     +h => C.br(U32.is_eq(U.ui(h, 25), 30), h, +k => cast.start(k), +k => S.sim.act.set(k, 1)))
   +g2 = U.ui.set(g1, 51, (U.ui(g1, 51) + 1 : U32))
   +stage = U.ui(g2, 50)
-  C.br(U32.is_eq(stage, 2), g2, +h => cast.put(h, cast.tick(h, cast.get(h))),
+  +cnt = U.ui(g2, 51)
+  +bun = Bool.and(Bool.and(Bool.not(c), U32.is_eq(stage, 1)), Bool.and(U32.is_eq(U.ui(g2, 26), 3), Bool.and(Bool.and(U32.is_ge(cnt, 1185), U32.is_le(cnt, 1210)), U32.is_eq(((cnt - 1180) % 5 : U32), 0))))
+  +g3 = C.when(bun, g2, +h => beep(h, 1))
+  C.br(U32.is_eq(stage, 2), g3, +h => cast.put(C.when(U32.is_ne(cast.sound(h, cast.get(h)), 0), h, +k => beep(k, cast.sound(k, cast.get(k)))), cast.tick(h, cast.get(h))),
     +h => C.when(Bool.and(Bool.not(c), Bool.and(U32.is_eq(stage, 0), U32.is_gt(U.ui(h, 51), (U.ui(h, 53) * 3 + 250 : U32)))), h,
       +k => wipe(U.ui.set(U.ui.set(k, 51, 0), 50, 1))))
 
@@ -318,7 +428,7 @@ def advance?(n: Nat, +g: S.Sim) -> S.Sim:
       +ds = ((U.ui(g, 124) + 1) % Bool.pick(U32, U32.is_eq(U.mode(g), 2), 7, 6) : U32)
       +g1 = S.sim.act.set(U.ui.set(U.ui.set(U.ui.set(g, 125, 0), 118, 0), 124, ds), 0)
       +c = U.com(g1)
-      C.br(Bool.or(U32.is_eq((ds .&. 1 : U32), 1), U32.is_eq(ds, 6)), g1, +h => advance(p, h),
+      C.br(Bool.or(U32.is_eq((ds .&. 1 : U32), 1), U32.is_eq(ds, 6)), g1, +h => S.sim.act.set(U.ui.set(U.ui.set(h, 122, 100000), 131, Bool.pick(U32, U32.is_eq(ds, 6), 4, ((ds + 1) / 2 : U32))), 4),
         +h => C.br(U32.is_eq(ds, 0), h, +k => page(k, Bool.pick(U32, c, 385, 170), 247),
           +k => C.br(U32.is_eq(ds, 2), k, +q => page(q, 200, 248),
             +q => page(q, Bool.pick(U32, c, 385, 200), Bool.pick(U32, c, 247, Bool.pick(U32, U32.is_eq(U.mode(q), 2), 248, 250))))))
@@ -328,27 +438,74 @@ def page.ticker(+g: S.Sim) -> S.Sim:
   U.ui.set(C.when(F.lt(t, 0), g, +h => U.ui.set(h, 125, 1)), 122, t)
 
 def level.ticker(+g: S.Sim) -> S.Sim:
-  +paused = Bool.and(Bool.and(U32.is_ne(U.ui(g, 100), 0), U32.is_eq(U.ui(g, 127), 0)), U32.is_ne(S.sim.time(g), 0))
+  +paused = Bool.and(Bool.and(Bool.and(U32.is_ne(U.ui(g, 100), 0), U32.is_eq(U.ui(g, 127), 0)), U32.is_ne(S.sim.time(g), 0)), Bool.not(C.net(g)))
   Am.ticker(C.br(paused, g, +h => K.hu.ticker(K.st.ticker(S.sim.tic.set(h, (S.sim.tic(h) + 1 : U32)))), +h => K.ticker(h)))
 
 def other.ticker(+g: S.Sim, +gs: U32) -> S.Sim:
   +g1 = C.br(U32.is_eq(gs, 1), g, +k => wi.ticker(k), +k => C.br(U32.is_eq(gs, 2), k, +q => finale.ticker(q), +q => page.ticker(q)))
   S.sim.tic.set(g1, (S.sim.tic(g1) + 1 : U32))
 
+def sx(+b: U32) -> U32:
+  Bool.pick(U32, U32.is_ge(b, 128), (b - 256 : U32), b)
+
+def demo.byte(+g: S.Sim, +i: U32) -> U32:
+  T.get(U32, S.sim.demo(g), i, 128)
+
+def demo.end(+g: S.Sim) -> S.Sim:
+  +g1 = S.sim.ingame.set(S.sim.net.set(U.ui.set(U.ui.set(g, 127, 0), 169, 0), 0), 1)
+  C.br(U32.is_ne(U.ui(g1, 129), 0), g1, +h => U.ui.set(h, 119, 1), +h => U.ui.set(h, 125, 1))
+
+def demo.set(+g: S.Sim, +i: U32, +pos: U32) -> S.Sim:
+  +g1 = S.pi.side.set(S.pi.fwd.set(g, i, sx(demo.byte(g, pos))), i, sx(demo.byte(g, (pos + 1 : U32))))
+  +g2 = S.pi.buttons.set(S.pi.turn.set(g1, i, (demo.byte(g1, (pos + 2 : U32)) << 8n : U32)), i, demo.byte(g1, (pos + 3 : U32)))
+  S.sim.dpos.set(g2, (pos + 4 : U32))
+
+def demo.read(+g: S.Sim, +i: U32) -> S.Sim:
+  +pos = S.sim.dpos(g)
+  C.br(U32.is_eq(demo.byte(g, pos), 128), g, +h => demo.end(h), +h => demo.set(h, i, pos))
+
+def demo.cmds(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      +on = Bool.and(U32.is_ne(U.ui(g, 127), 0), C.ingame(g, i))
+      demo.cmds(p, C.when(on, g, +h => demo.read(h, i)), (i + 1 : U32))
+
+def demo.start(+g: S.Sim, +bs: T.Vec<U32>) -> S.Sim:
+  +b = S.sim.dpos.set(S.sim.demo.set(g, bs), 13)
+  +mask = (C.b2u(U32.is_ne(T.get(U32, bs, 9, 0), 0)) .|. (C.b2u(U32.is_ne(T.get(U32, bs, 10, 0), 0)) << 1n) .|. (C.b2u(U32.is_ne(T.get(U32, bs, 11, 0), 0)) << 2n) .|. (C.b2u(U32.is_ne(T.get(U32, bs, 12, 0), 0)) << 3n) : U32)
+  +g1 = U.ui.set(U.ui.set(U.ui.set(U.ui.set(U.ui.set(U.ui.set(U.ui.set(b, 120, T.get(U32, bs, 2, 1)), 121, T.get(U32, bs, 1, 2)), 128, T.get(U32, bs, 3, 1)), 148, mask), 149, C.b2u(U32.is_ne((mask .&. 14 : U32), 0))), 127, 1), 169, (T.get(U32, bs, 8, 0) .&. 3 : U32))
+  S.sim.act.set(g1, 2)
+
+def demo.loaded(+g: S.Sim, +bs: List<&2, U32>) -> S.Sim:
+  +g1 = S.sim.act.set(g, 0)
+  C.br(U32.is_lt(U32.from_nat(List.length(&2, U32, bs)), 14), g1, +h => U.ui.set(h, 125, 1), +h => demo.start(U.ui.set(h, 129, 0), T.from_list(U32, bs)))
+
+def reborns(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      +due = Bool.and(Bool.and(C.net(g), U32.is_eq(S.sim.gs(g), 0)), Bool.and(C.ingame(g, i), U32.is_eq(S.pi.state(g, i), 2)))
+      reborns(p, C.when(due, g, +h => K.doreborn(h, i)), (i + 1 : U32))
+
 def tick?(+g: S.Sim) -> S.Sim:
-  +g0 = Mn.ticker(C.when(U32.is_ne(U.ui(g, 125), 0), g, +h => advance(8n, h)))
-  +g1 = C.when(Bool.and(U32.is_eq(S.sim.gs(g0), 0), U32.is_ne(S.sim.exit(g0), 0)), g0, +h => completed(h))
+  +g0 = reborns(4n, Mn.ticker(C.when(U32.is_ne(U.ui(g, 125), 0), g, +h => advance(8n, h))), 0)
+  +g1a = C.when(Bool.and(U32.is_eq(S.sim.gs(g0), 0), U32.is_ne(S.sim.exit(g0), 0)), g0, +h => completed(h))
+  +g1 = demo.cmds(4n, g1a, 0)
   +gs = S.sim.gs(g1)
-  C.br(U32.is_eq(gs, 0), g1, +h => level.ticker(h), +h => other.ticker(h, gs))
+  C.when(Bool.not(quit(g1)), g1, +q => C.br(U32.is_eq(gs, 0), q, +h => level.ticker(h), +h => other.ticker(h, gs)))
 
 def eaten(+g: S.Sim) -> Bool:
   U32.is_ne(U.ui(g, 199), 0)
 
 def game.respond(+g: S.Sim, +key: U32, +ch: U32, +down: Bool) -> S.Sim:
   +gs = S.sim.gs(g)
-  C.br(U32.is_eq(gs, 0), g, +h => Am.respond(h, key, ch, down),
-    +h => C.br(Bool.and(down, Bool.and(U32.is_eq(gs, 2), U32.is_eq(U.ui(h, 50), 2))), h, +k => U.ui.set(cast.death(k), 199, 1),
-      +k => C.when(Bool.and(down, U32.is_eq(gs, 3)), k, +q => U.ui.set(Mn.startcp(q), 199, 1))))
+  +attract = Bool.and(Bool.and(down, U32.is_eq(S.sim.act(g), 0)), Bool.or(U32.is_eq(gs, 3), Bool.and(U32.is_ne(U.ui(g, 127), 0), U32.is_eq(U.ui(g, 129), 0))))
+  C.br(attract, g, +q => U.ui.set(Mn.startcp(q), 199, 1),
+    +q => C.br(U32.is_eq(gs, 0), q, +h => Am.respond(h, key, ch, down),
+      +h => C.when(Bool.and(down, Bool.and(U32.is_eq(gs, 2), U32.is_eq(U.ui(h, 50), 2))), h, +k => U.ui.set(cast.death(k), 199, 1))))
 
 def respond(+g: S.Sim, +key: U32, +down: Bool) -> S.Sim:
   +ch = Bool.pick(U32, U32.is_lt(key, 128), key, 0)
@@ -364,6 +521,9 @@ def quit(+g: S.Sim) -> Bool:
 def digit(+d: U32) -> String:
   T.get(String, T.from_list(String, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]), d, "0")
 
+def demo.lump(+g: S.Sim) -> String:
+  String.append("DEMO", digit(U.ui(g, 131)))
+
 def mapname(+c: Bool, +ep: U32, +map: U32) -> String:
   Bool.pick(String, c, String.append("MAP", String.append(digit((map / 10 : U32)), digit((map % 10 : U32)))),
     String.append("E", String.append(digit(ep), String.append("M", digit(map)))))
@@ -376,19 +536,20 @@ def here(+g: S.Sim) -> String:
 
 def pending(+g: S.Sim) -> U32:
   +a = S.sim.act(g)
-  Bool.pick(U32, U32.is_eq(a, 1), 1, Bool.pick(U32, U32.is_eq(a, 2), 3, Bool.pick(U32, Bool.and(U32.is_eq(S.sim.gs(g), 0), U32.is_eq(S.p.state(g), 2)), 2, 0)))
+  Bool.pick(U32, U32.is_eq(a, 1), 1, Bool.pick(U32, U32.is_eq(a, 2), 3, Bool.pick(U32, U32.is_ge(a, 4), a,
+    Bool.pick(U32, Bool.and(Bool.and(U32.is_eq(S.sim.gs(g), 0), U32.is_eq(S.p.state(g), 2)), Bool.not(C.net(g))), 2, 0))))
 
 def target(+g: S.Sim) -> String:
   +p = pending(g)
-  Bool.pick(String, U32.is_eq(p, 1), nextname(g), Bool.pick(String, U32.is_eq(p, 3), mapname(U.com(g), U.ui(g, 120), 1), here(g)))
+  Bool.pick(String, U32.is_eq(p, 1), nextname(g), Bool.pick(String, U32.is_eq(p, 3), mapname(U.com(g), U.ui(g, 120), U.ui(g, 128)), here(g)))
 
 def player(+g: S.Sim) -> T.Vec<U32>:
-  Bool.pick(T.Vec<U32>, U32.is_eq(pending(g), 3), T.set(U32, T.new(U32, 64, 0), 1, 2), S.sim.pl(g))
+  Bool.pick(T.Vec<U32>, U32.is_eq(pending(g), 3), Su.newplayer(), S.sim.pl(g))
 
 def carry(+g: S.Sim) -> T.Vec<U32>:
   +ng = U32.is_eq(pending(g), 3)
   T.from_list(U32, [Bool.pick(U32, ng, 0, S.sim.rnd(g)), Bool.pick(U32, ng, U.ui(g, 121), S.mp.skill(g)), Bool.pick(U32, ng, 0, S.sim.mrnd(g)), 1,
-    Bool.pick(U32, ng, 0, U.ui(g, 99)), S.sim.stcount(g), S.sim.stprio(g), S.sim.stlad(g), S.sim.stpainh(g), S.sim.stpainc(g), S.sim.tic(g)])
+    Bool.pick(U32, ng, 0, U.ui(g, 99)), S.sim.stcount(g), S.sim.stprio(g), S.sim.stlad(g), S.sim.stpainh(g), S.sim.stpainc(g), S.sim.tic(g), Bool.pick(U32, ng, U.ui(g, 148), S.sim.ingame(g)), Bool.pick(U32, ng, U.ui(g, 149), S.sim.net(g))])
 
 def adopt.go(n: Nat, +old: S.Sim, +g: S.Sim, +i: U32) -> S.Sim:
   match n:
@@ -400,7 +561,8 @@ def adopt.go(n: Nat, +old: S.Sim, +g: S.Sim, +i: U32) -> S.Sim:
 def adopt(+old: S.Sim, +g: S.Sim) -> S.Sim:
   +ng = U32.is_eq(pending(old), 3)
   +g1 = U.ui.set(U.ui.set(adopt.go(156n, old, g, 100), 116, 0), 117, 0)
-  C.when(ng, g1, +h => U.ui.set(U.ui.set(h, 118, 1), 140, 0))
+  +g2 = S.sim.cp.set(S.sim.saves.set(S.sim.dpos.set(S.sim.demo.set(g1, S.sim.demo(old)), S.sim.dpos(old)), S.sim.saves(old)), U.ui(old, 169))
+  C.when(ng, g2, +h => U.ui.set(U.ui.set(h, 118, Bool.pick(U32, U32.is_eq(U.ui(h, 127), 0), 1, 0)), 140, 0))
 
 def boot.title(+g: S.Sim) -> S.Sim:
   Mn.title(page(g, 0, 247))
@@ -511,6 +673,34 @@ def wi.drawstats.go(fr: V.Frame, +g: S.Sim, +lh: U32) -> V.Frame:
   f4 = wi.drawtime(U.patch(f3, g, 16, 168, 166), g, 144, 168, U.ui(g, 8))
   U.fwhen(U32.is_lt(U.ui(g, 12), 3), f4, f => wi.drawtime(U.patch(f, g, 176, 168, 168), g, 304, 168, U.ui(g, 9)))
 
+def wi.netrow(fr: V.Frame, +g: S.Sim, +i: U32, +x: U32, +y: U32, +pw: U32) -> V.Frame:
+  U.fr.let(U.pw(fr, g, (310 + i : U32)), f0 => +w =>
+    f1 = U.patch(f0, g, (x - w : U32), y, (310 + i : U32))
+    f2 = U.fwhen(U32.is_eq(i, 0), f1, f => U.patch(f, g, (x - w : U32), y, 44))
+    f3 = wi.pct(f2, g, (x + 64 - pw : U32), (y + 10 : U32), U.ui(g, (61 + i : U32)))
+    f4 = wi.pct(f3, g, (x + 128 - pw : U32), (y + 10 : U32), U.ui(g, (65 + i : U32)))
+    wi.pct(f4, g, (x + 192 - pw : U32), (y + 10 : U32), U.ui(g, (69 + i : U32))))
+
+def wi.netrows(n: Nat, fr: V.Frame, +g: S.Sim, +i: U32, +x: U32, +y: U32, +pw: U32) -> V.Frame:
+  match n:
+    case 0n:
+      fr
+    case 1n+p:
+      +ig = C.ingame(g, i)
+      wi.netrows(p, U.fwhen(ig, fr, f => wi.netrow(f, g, i, x, y, pw)), g, (i + 1 : U32), x, Bool.pick(U32, ig, (y + 33 : U32), y), pw)
+
+def wi.netright(fr: V.Frame, +g: S.Sim, +x: U32, +y: U32, +i: U32) -> V.Frame:
+  U.fr.let(U.pw(fr, g, i), f => +w => U.patch(f, g, (x - w : U32), y, i))
+
+def wi.drawnet?(fr: V.Frame, +g: S.Sim) -> V.Frame:
+  f0 = wi.lf(wi.bg(fr, g), g)
+  U.fr.let(U.pw(f0, g, 44), f1 => +sw =>
+    +x = (32 + sw / 2 + 32 : U32)
+    f2 = wi.netright(wi.netright(wi.netright(f1, g, (x + 64 : U32), 50, 162), g, (x + 128 : U32), 50, 163), g, (x + 192 : U32), 50, 314)
+    U.fr.let(ph(f2, g, 162), f3 => +kh =>
+      U.fr.let(U.pw(f3, g, 159), f4 => +pw =>
+        wi.netrows(4n, f4, g, 0, x, (50 + kh : U32), pw))))
+
 def fits?(fr: V.Frame, +g: S.Sim, +x: U32, +y: U32, +i: U32) -> V.Frame & Bool:
   U.fr.lt(V.Frame & Bool, U.pw(fr, g, i), f1 => +w =>
     U.fr.lt(V.Frame & Bool, ph(f1, g, i), f2 => +h =>
@@ -562,7 +752,7 @@ def wi.drawnext.go(fr: V.Frame, +g: S.Sim, +ptr: Bool, +c: Bool) -> V.Frame:
 
 def wi.draw(fr: V.Frame, +g: S.Sim) -> V.Frame:
   +st = U.ui(g, 3)
-  U.fsel(U32.is_eq(st, 0), fr, f => wi.drawstats(f, g),
+  U.fsel(U32.is_eq(st, 0), fr, f => U.fsel(C.net(g), f, q => wi.drawnet(q, g), q => wi.drawstats(q, g)),
     f => wi.drawnext(f, g, Bool.or(U32.is_eq(st, 2), U32.is_ne(U.ui(g, 11), 0))))
 
 def flat.row(n: Nat, fr: V.Frame, +a: U32, +x: U32, +y: U32) -> V.Frame:

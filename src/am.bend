@@ -215,7 +215,7 @@ def st.cheats(+g: S.Sim, +ch: U32) -> S.Sim:
         C.when(fired(q1), q1, +z => noclip(z)))))
 
 def respond(+g: S.Sim, +key: U32, +ch: U32, +down: Bool) -> S.Sim:
-  +g1 = C.when(Bool.and(down, U32.is_ne(S.mp.skill(g), 4)), g, +h => st.cheats(h, ch))
+  +g1 = C.when(Bool.and(Bool.and(down, Bool.not(C.net(g))), U32.is_ne(S.mp.skill(g), 4)), g, +h => st.cheats(h, ch))
   am.respond(set(g1, 199, 1), key, ch, down)
 
 def dots(n: Nat, fr: V.Frame, +x: U32, +y: U32, +sx: U32, +sy: U32, +ax: U32, +ay: U32, +d: U32, +xmaj: Bool, +c: U32) -> V.Frame:
@@ -445,11 +445,33 @@ def cross(fr: V.Frame) -> V.Frame:
     case V.Frame{fb, rom, ram, sd}:
       V.Frame{M.wr(fb, P.at(160, 84), 96), rom, ram, sd}
 
+def netcolor(+i: U32) -> U32:
+  Bool.pick(U32, U32.is_eq(i, 0), 112, Bool.pick(U32, U32.is_eq(i, 1), 96, Bool.pick(U32, U32.is_eq(i, 2), 64, 176)))
+
+def netplayers(n: Nat, fr: V.Frame, +g: S.Sim, +i: U32) -> V.Frame:
+  match n:
+    case 0n:
+      fr
+    case 1n+p:
+      +m = S.pi.mo(g, i)
+      +c = Bool.pick(U32, U32.is_ne(S.pi.pw2(g, i), 0), 246, netcolor(i))
+      netplayers(p, U.fwhen(C.ingame(g, i), fr, f => character(arrow(False{}), f, g, 0, S.m.angle(g, m), c, S.m.x(g, m), S.m.y(g, m))), g, (i + 1 : U32))
+
+def players.go(net: Bool, fr: V.Frame, +g: S.Sim, +cheat: Bool) -> V.Frame:
+  match net:
+    case True{}:
+      netplayers(4n, fr, g, 0)
+    case False{}:
+      +m = S.p.mo(g)
+      character(arrow(cheat), fr, g, 0, S.m.angle(g, m), 209, S.m.x(g, m), S.m.y(g, m))
+
+def players(fr: V.Frame, +g: S.Sim, +cheat: Bool) -> V.Frame:
+  players.go(C.net(g), fr, g, cheat)
+
 def draw(fr: V.Frame, +g: S.Sim) -> V.Frame:
   +cheat = U32.is_ne(ui(g, 143), 0)
   f1 = U.fwhen(U32.is_ne(ui(g, 142), 0), fr, f => grid(f, g))
   f2 = walls(U32.to_nat(S.mp.nlines(g)), f1, g, 0, cheat, U32.is_ne(S.p.pw4(g), 0))
-  +m = S.p.mo(g)
-  f3 = character(arrow(cheat), f2, g, 0, S.m.angle(g, m), 209, S.m.x(g, m), S.m.y(g, m))
+  f3 = players(f2, g, cheat)
   f4 = U.fwhen(U32.is_eq(ui(g, 143), 2), f3, f => things(U32.to_nat(S.mp.nsec(g)), f, g, 0))
   marks(10n, cross(f4), g, 0)

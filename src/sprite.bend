@@ -221,8 +221,29 @@ def weapons(ss: List<&2, U32>, +st: T.Vec<U32>, +acc: List<&2, U32>) -> List<&2,
     case []:
       acc
 
+def spawned(+k: U32) -> List<&2, U32>:
+  Bool.pick(List<&2, U32>, U32.is_eq(k, 3), [4],
+    Bool.pick(List<&2, U32>, U32.is_eq(k, 5), [6, 7],
+      Bool.pick(List<&2, U32>, U32.is_eq(k, 8), [9],
+        Bool.pick(List<&2, U32>, U32.is_eq(k, 11), [31],
+          Bool.pick(List<&2, U32>, U32.is_eq(k, 14), [32],
+            Bool.pick(List<&2, U32>, Bool.or(U32.is_eq(k, 15), U32.is_eq(k, 17)), [16],
+              Bool.pick(List<&2, U32>, U32.is_eq(k, 20), [36],
+                Bool.pick(List<&2, U32>, U32.is_eq(k, 22), [18],
+                  Bool.pick(List<&2, U32>, Bool.or(U32.is_eq(k, 25), Bool.or(U32.is_eq(k, 26), U32.is_eq(k, 27))), [28, 29, 11, 12, 13, 22, 14, 3, 5, 20, 8, 17, 15],
+                    [])))))))))
+
+def spawns.of(ks: List<&2, U32>) -> List<&2, U32>:
+  match ks:
+    case +k <> t:
+      List.append(&2, U32, spawned(k), spawns.of(t))
+    case []:
+      []
+
 def needed(+mi: T.Vec<U32>, +st: T.Vec<U32>, +ths: T.Vec<L.Thing>, +extra: List<&2, U32>) -> List<&2, U32>:
-  +ks = List.append(&2, U32, List.append(&2, U32, [0, 33, 34, 35, 37, 38, 39, 40, 42, 63, 73, 77], extra), thingkinds(U32.to_nat(T.size(L.Thing, ths)), mi, ths, 0))
+  +ks0 = List.append(&2, U32, List.append(&2, U32, [0, 33, 34, 35, 37, 38, 39, 40, 42, 63, 73, 77], extra), thingkinds(U32.to_nat(T.size(L.Thing, ths)), mi, ths, 0))
+  +ks1 = spawns.of(ks0)
+  +ks = List.append(&2, U32, ks0, List.append(&2, U32, ks1, spawns.of(ks1)))
   weapons([5, 4, 3, 2, 12, 11, 10, 13, 17, 20, 19, 18, 21, 30, 51, 50, 49, 52, 55, 59, 58, 57, 60, 63, 76, 75, 74, 77, 79, 83, 82, 81, 84, 88, 70, 69, 67, 71, 34, 33, 32, 35, 47], st, chain.from(st, 895, reach(ks, mi, st, [], [])))
 
 def sprites.of(+all: List<&2, W.Lump>, +cs: List<&2, U32>, +base: U32) -> Sprites:

@@ -86,7 +86,7 @@ sim = fields("w:R.World mp:Lvl lspec:T.Vec<U32> links:T.Vec<U32> valid:T.Vec<U32
              "tp:T.Vec<U32> free:List<&2,U32> next pl:T.Vec<U32> time rnd plats:T.Vec<U32> ceils:T.Vec<U32> "
              "buttons:T.Vec<U32> exit tm:Tm kills items secrets halt ret "
              "secv:T.Vec<U32> sndt:T.Vec<U32> sndn:T.Vec<U32> brains:T.Vec<U32> nbrain brainon easy snd:List<&2,U32> tic "
-             "mrnd wipe stface stcount stprio stlad stold stpainh stpainc stweap strnd hmsg hcount gs act ui:T.Vec<U32> seen:T.Vec<U32> nil:List<&2,Sim>")
+             "mrnd wipe stface stcount stprio stlad stold stpainh stpainc stweap strnd hmsg hcount gs act ui:T.Vec<U32> seen:T.Vec<U32> cp ingame net starts:T.Vec<U32> bodyq:T.Vec<U32> bodyn demo:T.Vec<U32> dpos saves:T.Vec<U32> nil:List<&2,Sim>")
 record("Sim", sim)
 
 for i in range(len(tm)):
@@ -112,10 +112,16 @@ def mput(+g: Sim, +m: U32, +f: U32, +v: U32) -> Sim:
   sim.w.set(g, R.set.mo(sim.w(g), m, f, v))
 
 def pget(+g: Sim, +f: U32) -> U32:
-  T.get(U32, sim.pl(g), f, 0)
+  T.get(U32, sim.pl(g), (sim.cp(g) * 64 + f : U32), 0)
 
 def pput(+g: Sim, +f: U32, +v: U32) -> Sim:
-  sim.pl.set(g, T.set(U32, sim.pl(g), f, v))
+  sim.pl.set(g, T.set(U32, sim.pl(g), (sim.cp(g) * 64 + f : U32), v))
+
+def piget(+g: Sim, +i: U32, +f: U32) -> U32:
+  T.get(U32, sim.pl(g), (i * 64 + f : U32), 0)
+
+def piput(+g: Sim, +i: U32, +f: U32, +v: U32) -> Sim:
+  sim.pl.set(g, T.set(U32, sim.pl(g), (i * 64 + f : U32), v))
 
 def line(+g: Sim, +l: U32) -> RLine:
   T.get(RLine, mp.lines(g), l, RLine{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65535, 65535, 0, 65535, 0})
@@ -141,6 +147,8 @@ assert len(pl) <= 64
 for i, n in enumerate(pl):
     out.append("def p.%s(+g: Sim) -> U32:\n  pget(g, %d)\n" % (n, i))
     out.append("def p.%s.set(+g: Sim, +v: U32) -> Sim:\n  pput(g, %d, v)\n" % (n, i))
+    out.append("def pi.%s(+g: Sim, +j: U32) -> U32:\n  piget(g, j, %d)\n" % (n, i))
+    out.append("def pi.%s.set(+g: Sim, +j: U32, +v: U32) -> Sim:\n  piput(g, j, %d, v)\n" % (n, i))
 
 rsec = "floor ceil fpic cpic light special tag data things".split()
 names = ["x%d" % j for j in range(len(rsec))]

@@ -120,7 +120,7 @@ def blk.lo(+v: U32, +o: U32) -> U32:
 def blocks(+b: BB, +ox: U32, +oy: U32, +bw: U32, +bh: U32) -> List<&2, U32>:
   match b:
     case BB{+t, +bo, +l, +r}:
-      [blk.hi(t, oy, bh), blk.lo(bo, oy), blk.lo(l, ox), blk.hi(r, ox, bw)]
+      [blk.hi(t, oy, bh), blk.lo(bo, oy), blk.lo(l, ox), blk.hi(r, ox, bw), F.sar((l + r : U32), 1n), F.sar((t + bo : U32), 1n)]
 
 def secboxes(n: Nat, +ls: T.Vec<S.RLine>, +sl: T.Vec<List<&2, U32>>, +ox: U32, +oy: U32, +bw: U32, +bh: U32, +i: U32) -> List<&2, U32>:
   match n:
@@ -272,14 +272,23 @@ def blank(+lv: L.Level, +w: R.World, +mp: S.Lvl, +pl: T.Vec<U32>, +rnd: U32, +mr
         T.new(S.Th, C.maxth(), S.TNone{}), T.new(U32, C.maxth(), 0), T.new(U32, C.maxth(), 0), [], 1, pl, 0, rnd,
         T.new(U32, 30, 0), T.new(U32, 30, 0), T.new(U32, 64, 0), 0, tm0(), 0, 0, 0, 0, 0,
         T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, 32, 0), 0, 0, 0, [], T.get(U32, cv, 10, 0),
-        mrnd, wipe, 0, T.get(U32, cv, 5, 0), T.get(U32, cv, 6, 0), T.get(U32, cv, 7, 4294967295), 4294967295, T.get(U32, cv, 8, 4294967295), T.get(U32, cv, 9, 0), 0, 0, 0, 0, 0, 0, ui0(sky, amb(U32.to_nat(T.size(L.Vertex, ve)), ve, 0, Bx{2147483647, 2147483647, 2147483649, 2147483649})), T.new(U32, nl, 0), []}
+        mrnd, wipe, 0, T.get(U32, cv, 5, 0), T.get(U32, cv, 6, 0), T.get(U32, cv, 7, 4294967295), 4294967295, T.get(U32, cv, 8, 4294967295), T.get(U32, cv, 9, 0), 0, 0, 0, 0, 0, 0, ui0(sky, amb(U32.to_nat(T.size(L.Vertex, ve)), ve, 0, Bx{2147483647, 2147483647, 2147483649, 2147483649})), T.new(U32, nl, 0),
+        0, T.get(U32, cv, 11, 1), T.get(U32, cv, 12, 0), T.new(U32, 12, 0), T.new(U32, 32, 0), 0, T.new(U32, 1, 128), 0, T.new(U32, 176, 0), []}
+
+def pstart(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      +g1 = S.pi.secrets.set(S.pi.items.set(S.pi.kills.set(g, i, 0), i, 0), i, 0)
+      +g2 = C.when(Bool.and(C.ingame(g1, i), U32.is_eq(S.pi.state(g1, i), 1)), g1, +h => S.pi.state.set(h, i, 2))
+      pstart(p, g2, (i + 1 : U32))
 
 def start(+g: S.Sim) -> S.Sim:
-  +g1 = S.p.secrets.set(S.p.items.set(S.p.kills.set(g, 0), 0), 0)
-  O.spawnspecials(O.spawnthings(g1))
+  O.spawnspecials(O.spawnthings(pstart(4n, g, 0)))
 
 def sim(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>, +pl: T.Vec<U32>, +cv: T.Vec<U32>) -> S.Sim:
   start(blank(lv, w, lvl(lv, t, w, tb, hud, T.get(U32, cv, 1, 2)), pl, T.get(U32, cv, 0, 0), T.get(U32, cv, 2, 0), T.get(U32, cv, 3, 2), skynum(lv, T.get(U32, cv, 4, 0)), cv))
 
 def newplayer() -> T.Vec<U32>:
-  T.set(U32, T.new(U32, 64, 0), 1, 2)
+  T.set(U32, T.set(U32, T.set(U32, T.set(U32, T.new(U32, 256, 0), 1, 2), 65, 2), 129, 2), 193, 2)

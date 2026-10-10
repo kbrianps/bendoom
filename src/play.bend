@@ -8,9 +8,14 @@ import ./game.bend as K
 import ./boot.bend as B
 import ./draw.bend as D
 import ./flow.bend as Q
+import ./disk.bend as Dk
+import ./sound.bend as N
+
+type Au is Type:
+  Au{dev: Maybe<Audio>, mix: N.Mix}
 
 type Game is Type:
-  Game{sim: S.Sim, rom: Array<U32>, path: String, keys: U32, t0: U32, tics: U32, held: U32}
+  Game{sim: S.Sim, rom: Array<U32>, path: String, keys: U32, t0: U32, tics: U32, held: U32, au: Au}
 
 type Run is Data:
   Run{sim: S.Sim, held: U32}
@@ -84,64 +89,156 @@ def steps(n: Nat, more: Bool, +g: S.Sim, +keys: U32, +h: U32) -> S.Sim:
 def stopped(+g: S.Sim) -> Bool:
   Bool.or(U32.is_ne(Q.pending(g), 0), Q.quit(g))
 
-def runs(n: Nat, more: Bool, +g: S.Sim, +keys: U32, +h: U32) -> Run:
+def quiet(+g: S.Sim) -> S.Sim:
+  S.sim.snd.set(g, [])
+
+def heard.out(+out: List<&2, U32>, r: N.Mix & List<&2, U32>) -> N.Mix & List<&2, U32>:
+  (m, +acc) = r
+  (m, List.append(&2, U32, out, acc))
+
+def heard(on: Bool, m: N.Mix, +g: S.Sim, +out: List<&2, U32>) -> N.Mix & List<&2, U32>:
+  match on:
+    case True{}:
+      heard.out(out, N.render(N.tic(m, g)))
+    case False{}:
+      (m, out)
+
+def runs.next?(n: Nat, +g: S.Sim, +keys: U32, +h: U32, +on: Bool, r: N.Mix & List<&2, U32>) -> Run & (N.Mix & List<&2, U32>):
+  (m, +out) = r
+  runs(n, Bool.not(stopped(g)), quiet(g), keys, h, on, m, out)
+
+def runs?(n: Nat, more: Bool, +g: S.Sim, +keys: U32, +h: U32, +on: Bool, m: N.Mix, +out: List<&2, U32>) -> Run & (N.Mix & List<&2, U32>):
   match n more:
     case 1n+p True{}:
       +h1 = Bool.pick(U32, held(keys, 12), (h + 1 : U32), 0)
       +g1 = Q.tick(cmd(g, keys, h1))
-      runs(p, Bool.not(stopped(g1)), g1, keys, h1)
+      runs.next(p, g1, keys, h1, on, heard(on, m, g1, out))
     case _ _:
-      Run{g, h}
+      (Run{g, h}, (m, out))
 
-def reload(+old: S.Sim, +path: String, +keys: U32, +t0: U32, +tics: U32, p: S.Sim & Array<U32>) -> IO(Maybe<Game>):
+def reload(+old: S.Sim, +path: String, +keys: U32, +t0: U32, +tics: U32, au: Au, p: S.Sim & Array<U32>) -> IO(Maybe<Game>):
   (+g, rom) = p
-  IO.pure(Maybe<Game>, Some{Game{Q.adopt(old, g), rom, path, keys, t0, tics, 0}})
+  IO.pure(Maybe<Game>, Some{Game{Q.adopt(old, g), rom, path, keys, t0, tics, 0, au}})
 
-def settle.go(quit: Bool, load: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32) -> IO(Maybe<Game>):
+def boot.now(+g: S.Sim, +path: String, +keys: U32, +t0: U32, +tics: U32, au: Au) -> IO(Maybe<Game>):
+  IO.bind(S.Sim & Array<U32>, Maybe<Game>, B.boot(path, Q.target(g), Q.player(g), Q.carry(g)), p => reload(g, path, keys, t0, tics, au, p))
+
+def demo.boot(+old: S.Sim, +path: String, +keys: U32, +t0: U32, +tics: U32, au: Au, +bs: List<&2, U32>) -> IO(Maybe<Game>):
+  boot.now(Q.demo.loaded(old, bs), path, keys, t0, tics, au)
+
+def kept(+g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32, au: Au) -> IO(Maybe<Game>):
+  IO.pure(Maybe<Game>, Some{Game{g, rom, path, keys, t0, tics, h, au}})
+
+def restored(+path: String, +keys: U32, +t0: U32, +tics: U32, au: Au, p: S.Sim & Array<U32>) -> IO(Maybe<Game>):
+  (+g, rom) = p
+  IO.pure(Maybe<Game>, Some{Game{g, rom, path, keys, t0, tics, 0, au}})
+
+def settle.load(c4: Bool, c5: Bool, c6: Bool, c7: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32, au: Au) -> IO(Maybe<Game>):
+  match c4 c5 c6 c7:
+    case True{} _ _ _:
+      IO.bind(List<&2, U32>, Maybe<Game>, B.demolump(path, Q.demo.lump(g)), +bs => demo.boot(g, path, keys, t0, tics, au, bs))
+    case False{} True{} _ _:
+      IO.bind(S.Sim, Maybe<Game>, Dk.strings(g), +g1 => kept(g1, rom, path, keys, t0, tics, h, au))
+    case False{} False{} True{} _:
+      IO.bind(S.Sim & Array<U32>, Maybe<Game>, Dk.load(g, path), p => restored(path, keys, t0, tics, au, p))
+    case False{} False{} False{} True{}:
+      IO.bind(S.Sim, Maybe<Game>, Dk.write(g), +g1 => kept(g1, rom, path, keys, t0, tics, h, au))
+    case _ _ _ _:
+      boot.now(g, path, keys, t0, tics, au)
+
+def closed(u: Unit) -> IO(Maybe<Game>):
+  IO.pure(Maybe<Game>, None{})
+
+def shut.dev(dev: Maybe<Audio>) -> IO(Maybe<Game>):
+  match dev:
+    case Some{a}:
+      IO.bind(Unit, Maybe<Game>, Audio.close(a), u => closed(u))
+    case None{}:
+      closed(Unit{})
+
+def shut(au: Au) -> IO(Maybe<Game>):
+  match au:
+    case Au{dev, m}:
+      shut.dev(dev)
+
+def settle.go(quit: Bool, load: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32, au: Au) -> IO(Maybe<Game>):
   match quit load:
     case True{} _:
-      IO.pure(Maybe<Game>, None{})
+      shut(au)
     case False{} True{}:
-      IO.bind(S.Sim & Array<U32>, Maybe<Game>, B.boot(path, Q.target(g), Q.player(g), Q.carry(g)), p => reload(g, path, keys, t0, tics, p))
+      +c = Q.pending(g)
+      settle.load(U32.is_eq(c, 4), U32.is_eq(c, 5), U32.is_eq(c, 6), U32.is_eq(c, 7), g, rom, path, keys, t0, tics, h, au)
     case False{} False{}:
-      IO.pure(Maybe<Game>, Some{Game{g, rom, path, keys, t0, tics, h}})
+      IO.pure(Maybe<Game>, Some{Game{g, rom, path, keys, t0, tics, h, au}})
 
-def settle(+g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32) -> IO(Maybe<Game>):
-  settle.go(Q.quit(g), U32.is_ne(Q.pending(g), 0), g, rom, path, keys, t0, tics, h)
+def settle(+g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32, au: Au) -> IO(Maybe<Game>):
+  settle.go(Q.quit(g), U32.is_ne(Q.pending(g), 0), g, rom, path, keys, t0, tics, h, au)
 
-def ran(r: Run, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32) -> IO(Maybe<Game>):
+def written(m: N.Mix, r: Audio & U32) -> IO(Au):
+  (a, q) = r
+  IO.pure(Au, Au{Some{a}, m})
+
+def play.out(dev: Maybe<Audio>, m: N.Mix, +out: List<&2, U32>) -> IO(Au):
+  match dev out:
+    case Some{a} +x <> +t:
+      IO.bind(Audio & U32, Au, Audio.write(a, N.pcm(x <> t)), r => written(m, r))
+    case d _:
+      IO.pure(Au, Au{d, m})
+
+def ran.out(+g: S.Sim, +h: U32, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, au: Au) -> IO(Maybe<Game>):
+  settle(g, rom, path, keys, t0, tics, h, au)
+
+def ran.go(r: Run, q: N.Mix & List<&2, U32>, dev: Maybe<Audio>, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32) -> IO(Maybe<Game>):
   match r:
     case Run{+g, +h}:
-      settle(g, rom, path, keys, t0, tics, h)
+      (m, +out) = q
+      IO.bind(Au, Maybe<Game>, play.out(dev, m, out), au => ran.out(g, h, rom, path, keys, t0, tics, au))
 
-def step(+g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32, +now: U32) -> IO(Maybe<Game>):
+def ran(p: Run & (N.Mix & List<&2, U32>), dev: Maybe<Audio>, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32) -> IO(Maybe<Game>):
+  (r, q) = p
+  ran.go(r, q, dev, rom, path, keys, t0, tics)
+
+def live(dev: Maybe<Audio>) -> Maybe<Audio> & Bool:
+  match dev:
+    case Some{a}:
+      (Some{a}, True{})
+    case None{}:
+      (None{}, False{})
+
+def step.go(+g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32, +now: U32, m: N.Mix, d: Maybe<Audio> & Bool) -> IO(Maybe<Game>):
+  (dev, +on) = d
   +due = (((now - t0) * 35) / 1000 : U32)
   +lag = Bool.pick(U32, U32.is_gt(due, tics), (due - tics : U32), 0)
   +n = U32.min(lag, 4)
-  ran(runs(U32.to_nat(n), Bool.not(stopped(g)), g, keys, h), rom, path, keys, t0, Bool.pick(U32, U32.is_gt(lag, 4), due, (tics + n : U32)))
+  ran(runs(U32.to_nat(n), Bool.not(stopped(g)), quiet(g), keys, h, on, N.heard(m, g), []), dev, rom, path, keys, t0, Bool.pick(U32, U32.is_gt(lag, 4), due, (tics + n : U32)))
+
+def step(+g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32, +now: U32, au: Au) -> IO(Maybe<Game>):
+  match au:
+    case Au{dev, m}:
+      step.go(g, rom, path, keys, t0, tics, h, now, m, live(dev))
 
 def advance(r: Run, g: Game) -> IO(Maybe<Game>):
   match r g:
-    case Run{+s, +k} Game{old, rom, +path, ok, +t0, +tics, +h}:
-      IO.bind(Nat, Maybe<Game>, IO.now(), now => step(s, rom, path, k, t0, tics, h, U32.from_nat(now)))
+    case Run{+s, +k} Game{old, rom, +path, ok, +t0, +tics, +h, au}:
+      IO.bind(Nat, Maybe<Game>, IO.now(), now => step(s, rom, path, k, t0, tics, h, U32.from_nat(now), au))
 
 def tick(es: List<Event>, g: Game) -> IO(Maybe<Game>):
   match g:
-    case Game{+s, rom, +path, +k, +t0, +tics, +h}:
-      advance(events(es, Run{s, k}), Game{s, rom, path, k, t0, tics, h})
+    case Game{+s, rom, +path, +k, +t0, +tics, +h, au}:
+      advance(events(es, Run{s, k}), Game{s, rom, path, k, t0, tics, h, au})
 
-def frame.fb(+s: S.Sim, +path: String, +k: U32, +t0: U32, +tics: U32, +h: U32, r: Array<U32> & Array<U32>) -> Game & Array<U32>:
+def frame.fb(+s: S.Sim, +path: String, +k: U32, +t0: U32, +tics: U32, +h: U32, au: Au, r: Array<U32> & Array<U32>) -> Game & Array<U32>:
   (fb, rom) = r
-  (Game{s, rom, path, k, t0, tics, h}, fb)
+  (Game{s, rom, path, k, t0, tics, h, au}, fb)
 
-def frame.out(+path: String, +k: U32, +t0: U32, +tics: U32, +h: U32, r: S.Sim & (Array<U32> & Array<U32>)) -> Game & Array<U32>:
+def frame.out(+path: String, +k: U32, +t0: U32, +tics: U32, +h: U32, au: Au, r: S.Sim & (Array<U32> & Array<U32>)) -> Game & Array<U32>:
   (+s, p) = r
-  frame.fb(s, path, k, t0, tics, h, p)
+  frame.fb(s, path, k, t0, tics, h, au, p)
 
 def frame(g: Game) -> Game & Array<U32>:
   match g:
-    case Game{+s, rom, +path, +k, +t0, +tics, +h}:
-      frame.out(path, k, t0, tics, h, Q.render(s, rom))
+    case Game{+s, rom, +path, +k, +t0, +tics, +h, au}:
+      frame.out(path, k, t0, tics, h, au, Q.render(s, rom))
 
-def start(+s: S.Sim, rom: Array<U32>, +path: String, +now: U32) -> Game:
-  Game{s, rom, path, 0, now, 0, 0}
+def start(+s: S.Sim, rom: Array<U32>, +path: String, +now: U32, au: Au) -> Game:
+  Game{s, rom, path, 0, now, 0, 0, au}

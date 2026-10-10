@@ -8,6 +8,9 @@ import ./geo.bend as G
 def ret(+g: S.Sim, +b: Bool) -> S.Sim:
   S.sim.ret.set(g, C.b2u(b))
 
+def me.sound(+g: S.Sim, +sfx: U32) -> S.Sim:
+  C.when(U32.is_eq(S.sim.cp(g), C.me(g)), g, +h => S.sim.snd.set(h, sfx <> S.sim.snd(h)))
+
 def got(+g: S.Sim) -> Bool:
   U32.is_ne(S.sim.ret(g), 0)
 
@@ -67,13 +70,22 @@ def giveammo.go(+g: S.Sim, +k: U32, +num: U32) -> S.Sim:
 def giveammo(+g: S.Sim, +k: U32, +num: U32) -> S.Sim:
   C.br(Bool.or(U32.is_eq(k, 5), U32.is_eq(ammo(g, k), maxammo(g, k))), g, +h => ret(h, False{}), +h => giveammo.go(h, k, num))
 
-def giveweapon(+g: S.Sim, +w: U32, +dropped: Bool) -> S.Sim:
+def giveweapon.net(+g: S.Sim, +w: U32) -> S.Sim:
+  +a = wammo(w)
+  +g1 = own.set(S.p.bonuscount.set(g, (S.p.bonuscount(g) + 6 : U32)), w, 1)
+  +g2 = C.when(U32.is_ne(a, 5), g1, +h => giveammo(h, a, 2))
+  ret(me.sound(S.p.pending.set(g2, w), 33), False{})
+
+def giveweapon.sp(+g: S.Sim, +w: U32, +dropped: Bool) -> S.Sim:
   +a = wammo(w)
   +g1 = C.br(U32.is_ne(a, 5), g, +h => giveammo(h, a, Bool.pick(U32, dropped, 1, 2)), +h => ret(h, False{}))
   +ga = got(g1)
   +has = U32.is_ne(own(g1, w), 0)
   +g2 = C.when(Bool.not(has), g1, +h => S.p.pending.set(own.set(h, w, 1), w))
   ret(g2, Bool.or(Bool.not(has), ga))
+
+def giveweapon(+g: S.Sim, +w: U32, +dropped: Bool) -> S.Sim:
+  C.br(Bool.and(C.net(g), Bool.not(dropped)), g, +h => C.br(U32.is_ne(own(h, w), 0), h, +k => ret(k, False{}), +k => giveweapon.net(k, w)), +h => giveweapon.sp(h, w, dropped))
 
 def health.set(+g: S.Sim, +v: U32) -> S.Sim:
   S.m.health.set(S.p.health.set(g, v), S.p.mo(g), v)
@@ -172,13 +184,19 @@ def msg.of(+spr: U32, +had: Bool, +hp: U32) -> U32:
 def message(+g: S.Sim, +m: U32) -> S.Sim:
   C.when(U32.is_ne(m, 0), g, +h => S.p.message.set(h, m))
 
+def pick.sound(+spr: U32) -> U32:
+  Bool.pick(U32, Bool.and(U32.is_ge(spr, 87), U32.is_le(spr, 93)), 33,
+    Bool.pick(U32, Bool.or(Bool.or(U32.is_eq(spr, 70), U32.is_eq(spr, 74)), Bool.and(U32.is_ge(spr, 71), U32.is_le(spr, 77))), 93, 32))
+
 def touch.go(+g: S.Sim, +sp: U32) -> S.Sim:
   +spr = S.m.sprite(g, sp)
   +had = C.has(S.p.cards(g), keybit(spr))
   +g1 = pickup(g, sp, spr)
-  C.when(got(g1), g1, +h => taken(message(h, msg.of(spr, had, S.p.health(h))), sp))
+  +card = Bool.and(U32.is_ge(spr, 62), U32.is_le(spr, 67))
+  C.br(Bool.and(card, C.net(g1)), g1, +h => ret(message(h, msg.of(spr, had, S.p.health(h))), False{}),
+    +h => C.when(got(h), h, +k => me.sound(taken(message(k, msg.of(spr, had, S.p.health(k))), sp), pick.sound(spr))))
 
 def touch(+g: S.Sim, +sp: U32, +t: U32) -> S.Sim:
   +delta = (S.m.z(g, sp) - S.m.z(g, t) : U32)
   +far = Bool.or(F.gt(delta, S.m.height(g, t)), F.lt(delta, 4294443008))
-  C.when(Bool.and(Bool.not(far), F.gt(S.m.health(g, t), 0)), g, +h => touch.go(h, sp))
+  C.when(Bool.and(Bool.not(far), F.gt(S.m.health(g, t), 0)), g, +h => C.asmo(h, t, +k => touch.go(k, sp)))

@@ -8,6 +8,8 @@ import ./src/boot.bend as B
 import ./src/game.bend as K
 import ./src/fixed.bend as F
 import ./src/flow.bend as Q
+import ./src/tab.bend as T
+import ./src/disk.bend as Dk
 
 type Opts is Data:
   Opts{all: Bool, at: U32, out: String, ex: U32, ks: List<&2, U32>}
@@ -67,16 +69,14 @@ def pl.hash(+g: S.Sim) -> U32:
     S.p.psp0st(g), S.p.psp0tics(g), S.p.psp0sx(g), S.p.psp0sy(g), S.p.psp1st(g), S.p.psp1tics(g), S.p.psp1sx(g), S.p.psp1sy(g),
     S.p.extralight(g), S.p.refire(g), S.p.attackdown(g), S.p.armor(g), S.p.kills(g)], 0)
 
-def trace(+g: S.Sim) -> String:
+def trace(+g0: S.Sim) -> String:
+  +g = S.sim.cp.set(g0, 0)
   +m = S.p.mo(g)
   +f = C.tnext(g, 0)
   String.append("T ", words([U32.show(S.sim.time(g)), U32.show(S.sim.rnd(g)),
     signed(F.sar(S.m.x(g, m), 16n)), signed(F.sar(S.m.y(g, m), 16n)), signed(F.sar(S.m.z(g, m), 16n)),
     U32.show(S.m.angle(g, m)), signed(S.p.health(g)),
     U32.show(count(65536n, U32.is_ne(f, 0), g, f, 0)), U32.show(hash(65536n, U32.is_ne(f, 0), g, f, 0)), U32.show(pl.hash(g))]))
-
-def tic(+g: S.Sim, +f: U32, +s: U32, +t: U32, +b: U32) -> S.Sim:
-  Q.tick(S.p.buttons.set(S.p.turn.set(S.p.side.set(S.p.fwd.set(g, sx(f)), sx(s)), (t << 8n : U32)), b))
 
 def exits(+g: S.Sim, +ex: U32) -> S.Sim:
   +n = (ex .&. 2147483647 : U32)
@@ -90,6 +90,9 @@ def shot.hit(+gt: U32, +at: U32) -> Bool:
 
 def shot.name(+gt: U32, +at: U32, +out: String) -> String:
   Bool.pick(String, U32.is_ne((at >> 31n : U32), 0), String.append(out, String.append("_", String.append(U32.show(gt), ".bmp"))), out)
+
+def stop(+g: S.Sim, +gt: U32, +at: U32) -> S.Sim:
+  C.when(Bool.and(U32.is_ne(U.ui(g, 168), 0), U32.is_ge(gt, (at .&. 2147483647 : U32))), g, +h => U.ui.set(h, 119, 1))
 
 def play.trace(level: Bool, +g: S.Sim) -> IO(Unit):
   match level:
@@ -112,35 +115,53 @@ def fire?(ks: List<&2, U32>, +g: S.Sim, +gt: U32) -> Fk:
     case _:
       Fk{g, []}
 
-def play?(xs: List<&2, U32>, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>) -> IO(Unit):
-  match xs:
-    case +f <> +s <> +t <> +b <> rest:
-      play.one(U32.is_eq(f, 128), U32.is_ne(Q.pending(g), 0), f, s, t, b, rest, g, rom, path, gt, at, out, ex, ks)
-    case _:
-      IO.pure(Unit, Unit{})
+def play?(+g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
+  play.go(Q.quit(g), U32.is_ne(Q.pending(g), 0), g, rom, path, gt, at, out, ex, ks, all)
 
-def play.reloaded?(xs: List<&2, U32>, +old: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, p: S.Sim & Array<U32>) -> IO(Unit):
+def play.reloaded?(+old: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
-  play(xs, Q.adopt(old, g), rom, path, gt, at, out, ex, ks)
+  play(Q.adopt(old, g), rom, path, gt, at, out, ex, ks, all)
 
-def play.one?(end: Bool, load: Bool, +f: U32, +s: U32, +t: U32, +b: U32, rest: List<&2, U32>, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>) -> IO(Unit):
-  match end load:
+def play.boot?(+g: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
+  IO.bind(S.Sim & Array<U32>, Unit, B.boot(path, Q.target(g), Q.player(g), Q.carry(g)),
+    p => play.reloaded(g, path, gt, at, out, ex, ks, all, p))
+
+def play.restored?(+path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool, p: S.Sim & Array<U32>) -> IO(Unit):
+  (+g, rom) = p
+  play(g, rom, path, gt, at, out, ex, ks, all)
+
+def play.load?(c4: Bool, c5: Bool, c6: Bool, c7: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
+  match c4 c5 c6 c7:
+    case True{} _ _ _:
+      IO.bind(List<&2, U32>, Unit, B.demolump(path, Q.demo.lump(g)), +bs => play.boot(Q.demo.loaded(g, bs), path, gt, at, out, ex, ks, all))
+    case False{} True{} _ _:
+      IO.bind(S.Sim, Unit, Dk.strings(g), +g1 => play(g1, rom, path, gt, at, out, ex, ks, all))
+    case False{} False{} True{} _:
+      IO.bind(S.Sim & Array<U32>, Unit, Dk.load(g, path), p => play.restored(path, gt, at, out, ex, ks, all, p))
+    case False{} False{} False{} True{}:
+      IO.bind(S.Sim, Unit, Dk.write(g), +g1 => play(g1, rom, path, gt, at, out, ex, ks, all))
+    case _ _ _ _:
+      play.boot(g, path, gt, at, out, ex, ks, all)
+
+def play.go?(quit: Bool, load: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
+  match quit load:
     case True{} _:
       IO.pure(Unit, Unit{})
     case False{} True{}:
-      IO.bind(S.Sim & Array<U32>, Unit, B.boot(path, Q.target(g), Q.player(g), Q.carry(g)),
-        p => play.reloaded(f <> s <> t <> b <> rest, g, path, gt, at, out, ex, ks, p))
+      +c = Q.pending(g)
+      play.load(U32.is_eq(c, 4), U32.is_eq(c, 5), U32.is_eq(c, 6), U32.is_eq(c, 7), g, rom, path, gt, at, out, ex, ks, all)
     case False{} False{}:
-      play.tic(fire(ks, g, gt), f, s, t, b, rest, rom, path, gt, at, out, ex)
+      play.tic(fire(ks, g, gt), rom, path, gt, at, out, ex, all)
 
-def play.tic?(fk: Fk, +f: U32, +s: U32, +t: U32, +b: U32, rest: List<&2, U32>, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32) -> IO(Unit):
+def play.tic?(fk: Fk, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, +all: Bool) -> IO(Unit):
   match fk:
     case Fk{+g, ks1}:
-      +g1 = exits(tic(g, f, s, t, b), ex)
+      +g0 = C.when(Bool.and(all, Bool.and(U32.is_eq(S.sim.gs(g), 0), U32.is_eq(S.sim.time(g), 0))), g, +h => give(h))
+      +g1 = stop(exits(Q.tick(g0), ex), gt, at)
       +gt1 = (gt + 1 : U32)
       do IO<Unit>:
-        play.trace(U32.is_eq(S.sim.gs(g1), 0), g1)
-        play.snap(shot.hit(gt1, at), Bool.or(shot.hit(gt1, at), Bool.and(U32.is_ne((at >> 31n : U32), 0), U32.is_ne(gt1, 1))), rest, g1, rom, path, gt1, at, out, ex, ks1)
+        play.trace(Bool.and(U32.is_eq(S.sim.gs(g1), 0), Bool.not(Q.quit(g1))), g1)
+        play.snap(shot.hit(gt1, at), Bool.or(shot.hit(gt1, at), Bool.and(U32.is_ne((at >> 31n : U32), 0), U32.is_ne(gt1, 1))), S.sim.snd.set(g1, []), rom, path, gt1, at, out, ex, ks1, all)
 
 def save.if(hit: Bool, +file: String, fb: Array<U32>) -> IO(Unit):
   match hit:
@@ -149,22 +170,22 @@ def save.if(hit: Bool, +file: String, fb: Array<U32>) -> IO(Unit):
     case False{}:
       IO.pure(Unit, Unit{})
 
-def play.saved?(hit: Bool, rest: List<&2, U32>, +g: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +file: String, r: Array<U32> & Array<U32>) -> IO(Unit):
+def play.saved?(hit: Bool, +g: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool, +file: String, r: Array<U32> & Array<U32>) -> IO(Unit):
   (fb, rom) = r
   do IO<Unit>:
     save.if(hit, file, fb)
-    play(rest, g, rom, path, gt, at, out, ex, ks)
+    play(g, rom, path, gt, at, out, ex, ks, all)
 
-def play.drawn?(hit: Bool, rest: List<&2, U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +file: String, r: S.Sim & (Array<U32> & Array<U32>)) -> IO(Unit):
+def play.drawn?(hit: Bool, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool, +file: String, r: S.Sim & (Array<U32> & Array<U32>)) -> IO(Unit):
   (+g, p) = r
-  play.saved(hit, rest, g, path, gt, at, out, ex, ks, file, p)
+  play.saved(hit, g, path, gt, at, out, ex, ks, all, file, p)
 
-def play.snap?(hit: Bool, draw: Bool, rest: List<&2, U32>, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>) -> IO(Unit):
+def play.snap?(hit: Bool, draw: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
   match draw:
     case True{}:
-      play.drawn(hit, rest, path, gt, at, out, ex, ks, shot.name(gt, at, out), Q.render(g, rom))
+      play.drawn(hit, path, gt, at, out, ex, ks, all, shot.name(gt, at, out), Q.render(g, rom))
     case False{}:
-      play(rest, g, rom, path, gt, at, out, ex, ks)
+      play(g, rom, path, gt, at, out, ex, ks, all)
 
 def give(+g: S.Sim) -> S.Sim:
   +g1 = S.p.own4.set(S.p.own3.set(S.p.own2.set(S.p.own1.set(S.p.own0.set(g, 1), 1), 1), 1), 1)
@@ -174,7 +195,7 @@ def give(+g: S.Sim) -> S.Sim:
 
 def start.go?(+all: Bool, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +path: String, bs: List<&2, U32>, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
-  play(List.drop(&2, U32, bs, 13n), C.when(all, U.ui.set(g, 127, 1), +h => give(h)), rom, path, 0, at, out, ex, ks)
+  play(Q.demo.start(U.ui.set(g, 129, 1), T.from_list(U32, bs)), rom, path, 0, at, out, ex, ks, all)
 
 def start(+o: Opts, +path: String, bs: List<&2, U32>, p: S.Sim & Array<U32>) -> IO(Unit):
   match o:
@@ -188,7 +209,29 @@ def loaded(+all: Opts, +path: String, name: String, r: File & Result<&1, &1, U32
     +bs : List<&2, U32> <- IO.pass(List<&2, U32>, res)
     IO.bind(S.Sim & Array<U32>, Unit, B.skilled(path, name, Maybe.default(&2, U32, List.get(&2, U32, bs, 1n), 2)), p => start(all, path, bs, p))
 
-def run(+all: Opts, +path: String, name: String, lmp: String) -> IO(Unit):
+def titled.go?(+all: Bool, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +path: String, p: S.Sim & Array<U32>) -> IO(Unit):
+  (+g, rom) = p
+  play(Q.boot.title(U.ui.set(g, 168, 1)), rom, path, 0, at, out, ex, ks, all)
+
+def titled?(+o: Opts, +path: String, p: S.Sim & Array<U32>) -> IO(Unit):
+  match o:
+    case Opts{+all, +at, +out, +ex, ks}:
+      titled.go(all, at, out, ex, ks, path, p)
+
+def run.title(+all: Opts, +path: String) -> IO(Unit):
+  IO.bind(S.Sim & Array<U32>, Unit, B.first(path), p => titled(all, path, p))
+
+def run.pick?(title: Bool, +all: Opts, +path: String, name: String, lmp: String) -> IO(Unit):
+  match title:
+    case True{}:
+      run.title(all, path)
+    case False{}:
+      run.lmp(all, path, name, lmp)
+
+def run(+all: Opts, +path: String, name: String, +lmp: String) -> IO(Unit):
+  run.pick(String.eq(lmp, "title"), all, path, name, lmp)
+
+def run.lmp(+all: Opts, +path: String, name: String, lmp: String) -> IO(Unit):
   do IO<Unit>:
     f : File <- IO.try(File, File.open(lmp, "r"))
     r : File & Result<&1, &1, U32 & String, List<&2, U32>> <- File.read_at(f, 0, 4194304)

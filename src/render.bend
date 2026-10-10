@@ -754,7 +754,9 @@ def project.at(ram: Array<U32>, +tb: Tabs, +vz: U32, +light: U32, +t: R.RThing, 
       +start = (Bool.pick(U32, flip, ((width << 16n) - 1 : U32), 0) + Bool.pick(U32, F.gt(vx1, x1), (step * (vx1 - x1) : U32), 0) : U32)
       +gzt = (z + (top << 16n) : U32)
       +cm = Bool.pick(U32, Bool.not(U32.is_eq((fl .&. 262144 : U32), 0)), M.none(), Bool.pick(U32, Bool.not(U32.is_eq((frm .&. 32768 : U32), 0)), 0, (lightmap(light, xscale) * 256 : U32)))
-      vis.put(Bool.and(ok, Bool.and(Bool.not(F.gt(x1, 320)), Bool.not(F.lt(x2, 0)))), ram, vx1, F.min(x2, 319), xscale, x, y, z, gzt, (gzt - vz : U32), start, step, patch, cm, fl)
+      +tr = ((fl >> 26n) .&. 3 : U32)
+      +cmt = Bool.pick(U32, U32.is_eq(cm, M.none()), cm, (cm .|. (tr << 28n) : U32))
+      vis.put(Bool.and(ok, Bool.and(Bool.not(F.gt(x1, 320)), Bool.not(F.lt(x2, 0)))), ram, vx1, F.min(x2, 319), xscale, x, y, z, gzt, (gzt - vz : U32), start, step, patch, cmt, fl)
 
 def project.hdr(fr: Frame, +tb: Tabs, +vz: U32, +light: U32, +t: R.RThing, +tx: U32, +xscale: U32, +ok: Bool, +patch: U32, +flip: Bool) -> Frame:
   match fr:

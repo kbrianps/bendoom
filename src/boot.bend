@@ -164,8 +164,25 @@ def boot(path: String, +name: String, +pl: T.Vec<U32>, +cv: T.Vec<U32>) -> IO(S.
     p : W.Wad & List<&2, List<&2, U32>> <- W.get(w, ["PLAYPAL", "COLORMAP"])
     got(name, pl, cv, p)
 
+def demolump.first(xs: List<&2, List<&2, U32>>) -> List<&2, U32>:
+  match xs:
+    case x <> t:
+      x
+    case []:
+      []
+
+def demolump.got(p: W.Wad & List<&2, List<&2, U32>>) -> List<&2, U32>:
+  (w, xs) = p
+  demolump.first(xs)
+
+def demolump(path: String, +name: String) -> IO(List<&2, U32>):
+  do IO<List<&2, U32>>:
+    w : W.Wad <- W.open(path)
+    p : W.Wad & List<&2, List<&2, U32>> <- W.get(w, [name])
+    return demolump.got(p)
+
 def carry(+rnd: U32, +sk: U32, +mrnd: U32, +wipe: U32, +sky: U32) -> T.Vec<U32>:
-  T.from_list(U32, [rnd, sk, mrnd, wipe, sky])
+  T.from_list(U32, [rnd, sk, mrnd, wipe, sky, 0, 0, 4294967295, 4294967295, 0, 0, 1, 0])
 
 def skilled(path: String, +name: String, +sk: U32) -> IO(S.Sim & Array<U32>):
   boot(path, name, U.newplayer(), carry(0, sk, 0, 2, 0))

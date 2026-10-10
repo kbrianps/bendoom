@@ -23,12 +23,28 @@ def fuzzpaint(n: Nat, fr: V.Frame, +x: U32, +y: U32) -> V.Frame:
     case _ f:
       f
 
+def tpaint(n: Nat, fr: V.Frame, +x: U32, +y: U32, +frac: U32, +step: U32, +col: U32, +cm: U32, +tb: U32) -> V.Frame:
+  match n fr:
+    case 1n+p V.Frame{fb, rom, ram, sd}:
+      M.let(V.Frame, M.rd(rom, (col + ((frac >> 16n) .&. 127) : U32)), rom1 => +t =>
+        M.let(V.Frame, M.rd(rom1, (cm + Bool.pick(U32, U32.is_eq((t .&. 240 : U32), 112), (tb + (t .&. 15) : U32), t) : U32)), rom2 => c =>
+          tpaint(p, V.Frame{S.put(fb, x, y, c), rom2, ram, sd}, x, (y + 1 : U32), (frac + step : U32), step, col, cm, tb)))
+    case _ f:
+      f
+
+def mcol.tr(plain: Bool, fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
+  match plain:
+    case True{}:
+      V.paint(V.count(yl, yh), fr, x, yl, (mid + (yl - M.cy()) * iscale : U32), iscale, src, cm)
+    case False{}:
+      tpaint(V.count(yl, yh), fr, x, yl, (mid + (yl - M.cy()) * iscale : U32), iscale, src, (cm .&. 268435455 : U32), (128 - 32 * ((cm >> 28n) .&. 3) : U32))
+
 def mcol.pick(fz: Bool, fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
   match fz:
     case True{}:
       fuzzpaint(V.count(yl, yh), fr, x, yl)
     case False{}:
-      V.paint(V.count(yl, yh), fr, x, yl, (mid + (yl - M.cy()) * iscale : U32), iscale, src, cm)
+      mcol.tr(U32.is_eq((cm >> 28n : U32), 0), fr, x, src, yl, yh, mid, iscale, cm)
 
 def mcol(fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
   +fz = U32.is_eq(cm, M.none())
