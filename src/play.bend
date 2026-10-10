@@ -3,7 +3,7 @@ import ./tab.bend as T
 import ./fixed.bend as F
 import ./state.bend as S
 import ./sim.bend as C
-import ./tick.bend as K
+import ./game.bend as K
 import ./boot.bend as B
 import ./draw.bend as D
 

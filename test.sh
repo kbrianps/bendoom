@@ -25,6 +25,7 @@ $BEND wadinfo.bend -o "$TMP/wadinfo" >/dev/null 2>&1 || { echo "build wadinfo fa
 $BEND automap.bend -o "$TMP/automap" >/dev/null 2>&1 || { echo "build automap failed"; exit 1; }
 $BEND shot.bend -o "$TMP/shot" >/dev/null 2>&1 || { echo "build shot failed"; exit 1; }
 $BEND walk.bend -o "$TMP/walk" >/dev/null 2>&1 || { echo "build walk failed"; exit 1; }
+$BEND demo.bend -o "$TMP/demo" >/dev/null 2>&1 || { echo "build demo failed"; exit 1; }
 
 for wad in freedoom1 freedoom2; do
   python3 tests/wadinfo.py "$WADS/$wad.wad" > "$TMP/$wad.want"
@@ -53,9 +54,22 @@ walk() {
     echo "$sha  $TMP/walk.bmp" | sha256sum -c --quiet &&
     ok "walk: $name" || bad "walk: $name ($got)"
 }
-walk "ride the lift down" "779 299 4294967168 0" 766035b16e49f0b7ffe963d2e9d78efae5b33e36ac65cba9b94fe9b3f3bbb4d7 200 1
-walk "open a door" "600 712 4294967168 0" bef75a60590d1420ce8f3be2ddf428ab3fb513359d09eaf8ead7bae352b5f498 at 600 712 180 1 0 2 128 40 0
-"$TMP/walk" "$WADS/freedoom1.wad" E1M1 "$TMP/exit.bmp" at -370 1296 180 1 0 2 128 10 0 | grep -q " 1$" &&
+walk "ride the lift down" "710 254 4294967168 0 hp=87" 3eb6a5761aa1826d263214ff9326ae21908f2c489e03b3b399a461905ae1eb36 200 1
+walk "open a door" "600 712 4294967168 0 hp=100" bef75a60590d1420ce8f3be2ddf428ab3fb513359d09eaf8ead7bae352b5f498 at 600 712 180 1 0 2 128 40 0
+"$TMP/walk" "$WADS/freedoom1.wad" E1M1 "$TMP/exit.bmp" at -370 1296 180 1 0 2 128 10 0 | grep -q " 1 hp=" &&
   ok "walk: exit switch" || bad "walk: exit switch"
+
+demo() {
+  local name=$1 wad=$2 ep=$3 map=$4 lump=$5 sha=$6; shift 6
+  python3 tests/mklmp.py "$TMP/$name.lmp" "$ep" "$map" "$@" &&
+    "$TMP/demo" "$WADS/$wad.wad" "$lump" "$TMP/$name.lmp" | sha256sum | grep -q "^$sha " &&
+    ok "demo: $name matches the reference engine tic by tic" || bad "demo: $name"
+}
+demo "E1M1 walk" freedoom1 1 1 E1M1 59b54c43a21e674e1d2678dea63372f9fc0d34099397494f41d5f70bd9ee19a7 300,50,0,0,0
+demo "E1M1 run" freedoom1 1 1 E1M1 35ed2ac1a377ee172359f370bcfdf8759d7753dd4ace6a626b16910cd45323fa 100,50,0,0,0 40,0,0,8,0 200,50,20,0,2 100,-30,0,248,0 300,50,0,4,2
+demo "E1M3 run" freedoom1 1 3 E1M3 3fd5a969021596cd11e6b821ad82f3bd90e1224c7af664e339bf54db56cab17a 150,50,0,0,0 60,0,0,6,0 300,50,-10,0,2 300,40,30,252,2
+demo "E3M2 to death" freedoom1 3 2 E3M2 e6dbd544d3a14e3a11eca4da52cf9a8d78d404ba9f55a18a18e0a33206a85f3e 400,50,0,2,2 63,50,10,254,2
+demo "MAP15 under fire" freedoom2 1 15 MAP15 5b879191d3055f078044353b5f3c86a5441074e875e14b97f8098c2c69b7c07b 200,50,0,0,2 60,0,0,6,0 300,50,-10,0,2 300,40,30,252,2
+demo "MAP30 run" freedoom2 1 30 MAP30 1a44cb009b62d5b3ddf0c301fc23eaeffa3ca148d02688414af946ed1a8ca328 200,50,0,0,2 60,0,0,6,0 300,50,-10,0,2 300,40,30,252,2
 
 [ "$FAILS" -eq 0 ] && echo "ALL TESTS PASS" || { echo "$FAILS FAILED"; exit 1; }

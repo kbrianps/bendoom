@@ -3,7 +3,7 @@ import ./tab.bend as T
 import ./fixed.bend as F
 import ./state.bend as S
 import ./sim.bend as C
-import ./mobj.bend as O
+import ./geo.bend as G
 
 def ret(+g: S.Sim, +b: Bool) -> S.Sim:
   S.sim.ret.set(g, C.b2u(b))
@@ -156,7 +156,7 @@ def pickup(+g: S.Sim, +sp: U32, +spr: U32) -> S.Sim:
 
 def taken(+g: S.Sim, +sp: U32) -> S.Sim:
   +g1 = C.when(C.has(S.m.flags(g, sp), 8388608), g, +h => S.p.items.set(h, (S.p.items(h) + 1 : U32)))
-  S.p.bonuscount.set(O.remove(g1, sp), (S.p.bonuscount(g1) + 6 : U32))
+  S.p.bonuscount.set(C.remove(G.unset(g1, sp), sp), (S.p.bonuscount(g1) + 6 : U32))
 
 def touch.go(+g: S.Sim, +sp: U32) -> S.Sim:
   +g1 = pickup(g, sp, S.m.sprite(g, sp))

@@ -6,7 +6,7 @@ import ./src/boot.bend as B
 import ./src/play.bend as P
 import ./src/sys.bend as Y
 import ./src/fixed.bend as F
-import ./src/map.bend as M
+import ./src/game.bend as M
 
 def num(+s: String) -> U32:
   Bool.pick(U32, String.eq(String.take(s, 1n), "-"),
@@ -37,7 +37,7 @@ def shoot(out: String, cmds: List<String>, p: S.Sim & Array<U32>) -> IO(Unit):
   +g = run(cmds, g0)
   +m = S.p.mo(g)
   do IO<Unit>:
-    IO.print(String.append(U32.show(F.sar(S.m.x(g, m), 16n)), String.append(" ", String.append(U32.show(F.sar(S.m.y(g, m), 16n)), String.append(" ", String.append(U32.show(F.sar(S.m.z(g, m), 16n)), String.append(" ", U32.show(S.sim.exit(g)))))))))
+    IO.print(String.append(U32.show(F.sar(S.m.x(g, m), 16n)), String.append(" ", String.append(U32.show(F.sar(S.m.y(g, m), 16n)), String.append(" ", String.append(U32.show(F.sar(S.m.z(g, m), 16n)), String.append(" ", String.append(U32.show(S.sim.exit(g)), String.append(" hp=", U32.show(S.p.health(g)))))))))))
     shot.out(out, D.render(S.mp.tb(g), S.sim.w(g), B.view(g), rom))
 
 def args(xs: List<String>) -> IO(Unit):

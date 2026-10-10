@@ -10,8 +10,7 @@ import ./tables.bend as X
 import ./info.bend as I
 import ./state.bend as S
 import ./sim.bend as C
-import ./mobj.bend as O
-import ./spec.bend as E
+import ./game.bend as O
 import ./sprite.bend as P
 
 type BB is Data:
@@ -176,11 +175,23 @@ def mapnum(+name: String) -> U32:
   Bool.pick(U32, String.starts_with(name, "MAP"), (digit(name, 3n) * 10 + digit(name, 4n) : U32), digit(name, 3n))
 
 def tm0() -> S.Tm:
-  S.Tm{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4294967295, [], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], 0, 0, 0, 0, 0, []}
+  S.Tm{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4294967295, [], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []}
+
+def segline(+s: L.Seg) -> U32:
+  match s:
+    case L.Seg{v1, v2, a, li, sd, of}:
+      li
+
+def seglines(n: Nat, +se: T.Vec<L.Seg>, +i: U32) -> List<&2, U32>:
+  match n:
+    case 0n:
+      []
+    case 1n+p:
+      segline(T.get(L.Seg, se, i, L.Seg{0, 0, 0, 0, 0, 0})) <> seglines(p, se, (i + 1 : U32))
 
 def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs) -> S.Lvl:
   match lv t:
-    case L.Level{+name, +th, +li, +si, +ve, se, ss, no, +sc, rj, +bm} D.Texs{+names, ts, sky, +fl, fd, +hs, +ta, +fa, +sw}:
+    case L.Level{+name, +th, +li, +si, +ve, +se, ss, no, +sc, +rj, +bm} D.Texs{+names, ts, sky, +fl, fd, +hs, +ta, +fa, +sw}:
       +nl = T.size(L.Line, li)
       +ns = T.size(L.Sector, sc)
       +ls = T.from_list(S.RLine, rlines(U32.to_nat(nl), li, ve, si, 0))
@@ -196,19 +207,22 @@ def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs) -> S.Lvl:
         List.append(&2, S.Anim, fanims(fl, fa), tanims(names, ta)), swv, T.size(U32, swv), scrollers(U32.to_nat(nl), li, 0),
         R.texs(w), R.flats(w), T.from_list(U32, hs), ns, nl, com, episode(name), mapnum(name), th, X.rndtable(), 2,
         T.from_list(U32, subsecs(U32.to_nat(T.size(L.Sub, R.subs(w))), w, 0)),
-        T.from_list(U32, E.crosstab()), T.from_list(U32, E.usetab()), []}
+        T.from_list(U32, O.crosstab()), T.from_list(U32, O.usetab()),
+        rj, T.from_list(U32, seglines(U32.to_nat(T.size(L.Seg, se)), se, 0)), []}
 
 def blank(+lv: L.Level, +w: R.World, +mp: S.Lvl, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim:
   match lv:
-    case L.Level{n, th, +li, si, ve, se, ss, no, sc, rj, bm}:
+    case L.Level{n, th, +li, si, ve, se, ss, no, +sc, rj, bm}:
       +nl = T.size(L.Line, li)
+      +ns = T.size(L.Sector, sc)
       S.Sim{w, mp, T.from_list(U32, specials(U32.to_nat(nl), li, 0)), T.new(U32, (S.mpr.bw(mp) * S.mpr.bh(mp) : U32), 0), T.new(U32, nl, 0), 1,
         T.new(S.Th, C.maxth(), S.TNone{}), T.new(U32, C.maxth(), 0), T.new(U32, C.maxth(), 0), [], 1, pl, 0, rnd,
-        T.new(U32, 30, 0), T.new(U32, 30, 0), T.new(U32, 64, 0), 0, tm0(), 0, 0, 0, 0, 0, []}
+        T.new(U32, 30, 0), T.new(U32, 30, 0), T.new(U32, 64, 0), 0, tm0(), 0, 0, 0, 0, 0,
+        T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, 32, 0), 0, 0, 0, [], 0, []}
 
 def start(+g: S.Sim) -> S.Sim:
   +g1 = S.p.secrets.set(S.p.items.set(S.p.kills.set(g, 0), 0), 0)
-  E.spawnspecials(O.spawnthings(g1))
+  O.spawnspecials(O.spawnthings(g1))
 
 def sim(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim:
   start(blank(lv, w, lvl(lv, t, w, tb), pl, rnd))
