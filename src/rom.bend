@@ -45,7 +45,7 @@ def yslopes(n: Nat, +i: U32) -> List<&2, U32>:
     case 0n:
       []
     case 1n+p:
-      F.div(10485760, F.abs((((i - 100) << 16n) + 32768 : U32))) <> yslopes(p, (i + 1 : U32))
+      F.div(10485760, F.abs((((i - M.cy()) << 16n) + 32768 : U32))) <> yslopes(p, (i + 1 : U32))
 
 def distscales(n: Nat, +tb: V.Tabs, +i: U32) -> List<&2, U32>:
   match n:
@@ -121,7 +121,7 @@ def build(+tb: V.Tabs, +pal: T.Vec<U32>, cmaps: List<&2, U32>, ts: List<&2, G.Te
   a0 = Array.new(U32, M.depth(U32.max(unused, (flat0 + 4096 * U32.from_nat(List.length(&2, List<&2, U32>, fs)) : U32))), 0)
   a1 = M.fill(List.take(&2, U32, pal.list(256n, pal, 0), 256n), M.fill(List.take(&2, U32, cmaps, 8704n), a0, M.cmap()), M.pal())
   a2 = M.fill(fuzztab(), M.fill(zlights(16n, 0), a1, M.zlight()), M.fuzz())
-  a3 = M.fill(yslopes(200n, 0), a2, M.yslope())
+  a3 = M.fill(yslopes(168n, 0), a2, M.yslope())
   a4 = M.fill(distscales(320n, tb, 0), a3, M.distscale())
   a5 = put.texs(ts, a4, M.texbase())
   put.flats(fs, a5, flat0)

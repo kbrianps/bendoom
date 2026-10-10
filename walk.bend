@@ -1,4 +1,5 @@
 import Base
+import ./src/hud.bend as U
 import ./src/state.bend as S
 import ./src/draw.bend as D
 import ./src/screen.bend as C
@@ -38,7 +39,7 @@ def shoot(out: String, cmds: List<String>, p: S.Sim & Array<U32>) -> IO(Unit):
   +m = S.p.mo(g)
   do IO<Unit>:
     IO.print(String.append(U32.show(F.sar(S.m.x(g, m), 16n)), String.append(" ", String.append(U32.show(F.sar(S.m.y(g, m), 16n)), String.append(" ", String.append(U32.show(F.sar(S.m.z(g, m), 16n)), String.append(" ", String.append(U32.show(S.sim.exit(g)), String.append(" hp=", U32.show(S.p.health(g)))))))))))
-    shot.out(out, D.render(S.mp.tb(g), S.sim.w(g), B.view(g), rom))
+    shot.out(out, U.render(g, rom))
 
 def args(xs: List<String>) -> IO(Unit):
   match xs:

@@ -9,6 +9,9 @@ import ./mem.bend as M
 type VS is Data:
   VS{scale: U32, idx: U32}
 
+type PSp is Data:
+  PSp{spr: U32, frm: U32, sx: U32, sy: U32, cm: U32}
+
 def fuzzpaint(n: Nat, fr: V.Frame, +x: U32, +y: U32) -> V.Frame:
   match n fr:
     case 1n+p V.Frame{fb, rom, ram, sd}:
@@ -25,12 +28,12 @@ def mcol.pick(fz: Bool, fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mi
     case True{}:
       fuzzpaint(V.count(yl, yh), fr, x, yl)
     case False{}:
-      V.paint(V.count(yl, yh), fr, x, yl, (mid + (yl - 100) * iscale : U32), iscale, src, cm)
+      V.paint(V.count(yl, yh), fr, x, yl, (mid + (yl - M.cy()) * iscale : U32), iscale, src, cm)
 
 def mcol(fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
   +fz = U32.is_eq(cm, M.none())
   +fyl = Bool.pick(U32, Bool.and(fz, U32.is_eq(yl, 0)), 1, yl)
-  +fyh = Bool.pick(U32, Bool.and(fz, U32.is_eq(yh, 199)), 198, yh)
+  +fyh = Bool.pick(U32, Bool.and(fz, U32.is_eq(yh, (M.vh() - 1 : U32))), (M.vh() - 2 : U32), yh)
   mcol.pick(fz, fr, x, src, fyl, fyh, mid, iscale, cm)
 
 def posts(n: Nat, go: Bool, fr: V.Frame, +x: U32, +col: U32, +td: U32, +top: U32, +scale: U32, +mid: U32, +iscale: U32, +cm: U32, +fc: U32, +cc: U32) -> V.Frame:
@@ -67,7 +70,7 @@ def seg.x(fr: V.Frame, +t: M.Info, +x: U32, +mc: U32, +scale: U32, +mid: U32, +l
       M.let(V.Frame, M.rd(ram, (mc + x : U32)), a1 => +tc =>
         M.let(V.Frame, M.rd(rom, (ps + (tc .&. m) : U32)), r1 => +post =>
           +go = Bool.and(Bool.not(U32.is_eq(tc, 32767)), Bool.and(Bool.not(U32.is_eq(ps, M.none())), Bool.not(U32.is_eq(post, M.none()))))
-          seg.col(go, V.Frame{fb, r1, M.wr(a1, (mc + x : U32), 32767), sd}, x, post, (6553600 - F.mul(mid, scale) : U32), scale, mid, (V.lightmap(light, scale) * 256 : U32), fclip, cclip)))
+          seg.col(go, V.Frame{fb, r1, M.wr(a1, (mc + x : U32), 32767), sd}, x, post, ((M.cy() << 16n) - F.mul(mid, scale) : U32), scale, mid, (V.lightmap(light, scale) * 256 : U32), fclip, cclip)))
 
 def seg.loop(n: Nat, fr: V.Frame, +t: M.Info, +x: U32, +mc: U32, +scale: U32, +step: U32, +mid: U32, +light: U32, +fclip: U32, +cclip: U32) -> V.Frame:
   match n:
@@ -195,7 +198,7 @@ def defaults(n: Nat, ram: Array<U32>, +i: U32) -> Array<U32>:
     case 1n+p:
       M.let(Array<U32>, M.rd(ram, (M.clipbot() + i : U32)), r1 => +cb =>
         M.let(Array<U32>, M.rd(r1, (M.cliptop() + i : U32)), r2 => +ct =>
-          r3 = M.wr(r2, (M.clipbot() + i : U32), Bool.pick(U32, U32.is_eq(cb, 4294967294), 200, cb))
+          r3 = M.wr(r2, (M.clipbot() + i : U32), Bool.pick(U32, U32.is_eq(cb, 4294967294), M.vh(), cb))
           defaults(p, M.wr(r3, (M.cliptop() + i : U32), Bool.pick(U32, U32.is_eq(ct, 4294967294), 4294967295, ct)), (i + 1 : U32))))
 
 def vis.col(fr: V.Frame, +x: U32, +frac: U32, +patch: U32, +top: U32, +scale: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
@@ -219,7 +222,7 @@ def vis.cols(n: Nat, fr: V.Frame, +x: U32, +frac: U32, +step: U32, +patch: U32, 
 def vis.draw(fr: V.Frame, +x1: U32, +x2: U32, +scale: U32, +mid: U32, +start: U32, +step: U32, +patch: U32, +cm: U32) -> V.Frame:
   match fr:
     case V.Frame{fb, rom, ram, sd}:
-      vis.cols(V.count(x1, x2), V.Frame{fb, rom, defaults(V.count(x1, x2), ram, x1), sd}, x1, start, step, patch, (6553600 - F.mul(mid, scale) : U32), scale, mid, F.abs(step), cm)
+      vis.cols(V.count(x1, x2), V.Frame{fb, rom, defaults(V.count(x1, x2), ram, x1), sd}, x1, start, step, patch, ((M.cy() << 16n) - F.mul(mid, scale) : U32), scale, mid, F.abs(step), cm)
 
 def sprite.go(fr: V.Frame, +w: R.World, +v: V.View, +x1: U32, +x2: U32, +scale: U32, +gx: U32, +gy: U32, +gz: U32, +gzt: U32, +mid: U32, +start: U32, +step: U32, +patch: U32, +cm: U32) -> V.Frame:
   match fr:
@@ -271,7 +274,7 @@ def collect(n: Nat, ram: Array<U32>, +i: U32, acc: List<&2, VS>) -> Array<U32> &
       (ram, acc)
     case 1n+p:
       M.let(Array<U32> & List<&2, VS>, M.rd(ram, M.vs(i, 2)), r1 => +sc =>
-        collect(p, r1, (i + 1 : U32), VS{sc, i} <> acc))
+        collect(p, r1, (i - 1 : U32), VS{sc, i} <> acc))
 
 def sprites(order: List<&2, VS>, fr: V.Frame, +w: R.World, +v: V.View) -> V.Frame:
   match order:
@@ -309,29 +312,82 @@ def drawmasked(fr: V.Frame, +w: R.World, +v: V.View) -> V.Frame:
   match fr:
     case V.Frame{fb, rom, ram, sd}:
       M.let(V.Frame, M.rd(ram, M.nvis()), r1 => +n =>
-        masked.segs(masked.sorted(collect(U32.to_nat(n), r1, 0, []), fb, rom, sd, w, v), w, v))
+        masked.segs(masked.sorted(collect(U32.to_nat(n), r1, (n - 1 : U32), []), fb, rom, sd, w, v), w, v))
 
-def topal.row(n: Nat, fb: Array<U32>, rom: Array<U32>, +x: U32, +y: U32) -> Array<U32> & Array<U32>:
+def topal.row(n: Nat, fb: Array<U32>, rom: Array<U32>, +x: U32, +y: U32, +pb: U32) -> Array<U32> & Array<U32>:
   match n:
     case 0n:
       (fb, rom)
     case 1n+p:
       M.let(Array<U32> & Array<U32>, M.rd(fb, S.at(x, y)), f1 => +i =>
-        M.let(Array<U32> & Array<U32>, M.rd(rom, (M.pal() + i : U32)), r1 => +c =>
-          topal.row(p, M.wr(f1, S.at(x, y), c), r1, (x + 1 : U32), y)))
+        M.let(Array<U32> & Array<U32>, M.rd(rom, (pb + i : U32)), r1 => +c =>
+          topal.row(p, M.wr(f1, S.at(x, y), c), r1, (x + 1 : U32), y, pb)))
 
-def topal.rows(n: Nat, r: Array<U32> & Array<U32>, +y: U32) -> Array<U32> & Array<U32>:
+def topal.rows(n: Nat, r: Array<U32> & Array<U32>, +y: U32, +pb: U32) -> Array<U32> & Array<U32>:
   match n:
     case 0n:
       r
     case 1n+p:
       (fb, rom) = r
-      topal.rows(p, topal.row(320n, fb, rom, 0, y), (y + 1 : U32))
+      topal.rows(p, topal.row(320n, fb, rom, 0, y, pb), (y + 1 : U32), pb)
 
-def out(fr: V.Frame) -> Array<U32> & Array<U32>:
+def out.at(fr: V.Frame, +pb: U32) -> Array<U32> & Array<U32>:
   match fr:
     case V.Frame{fb, rom, ram, sd}:
-      topal.rows(200n, (fb, rom), 0)
+      topal.rows(200n, (fb, rom), 0, pb)
+
+def out(fr: V.Frame) -> Array<U32> & Array<U32>:
+  out.at(fr, M.pal())
+
+def psp.draw(go: Bool, fr: V.Frame, +x1: U32, +x2: U32, +mid: U32, +start: U32, +step: U32, +patch: U32, +cm: U32) -> V.Frame:
+  match go:
+    case True{}:
+      vis.draw(fr, x1, x2, 65536, mid, start, step, patch, cm)
+    case False{}:
+      fr
+
+def psp.at(fr: V.Frame, +sx: U32, +sy: U32, +patch: U32, +flip: Bool, +width: U32, +left: U32, +top: U32, +cm: U32) -> V.Frame:
+  match fr:
+    case V.Frame{fb, rom, ram, sd}:
+      +tx = (sx - 10485760 - (left << 16n) : U32)
+      +x1 = F.sar((10485760 + tx : U32), 16n)
+      +x2 = (F.sar((10485760 + tx + (width << 16n) : U32), 16n) - 1 : U32)
+      +vx1 = F.max(x1, 0)
+      +vx2 = F.min(x2, 319)
+      +step = Bool.pick(U32, flip, 4294901760, 65536)
+      +start = (Bool.pick(U32, flip, ((width << 16n) - 1 : U32), 0) + Bool.pick(U32, F.gt(vx1, x1), (step * (vx1 - x1) : U32), 0) : U32)
+      +mid = (6553600 + 32768 - (sy - (top << 16n)) : U32)
+      +go = Bool.and(Bool.not(F.gt(x1, 320)), Bool.not(F.lt(x2, 0)))
+      +n = Bool.pick(Nat, go, V.count(vx1, vx2), 0n)
+      r1 = setn(n, setn(n, ram, (M.clipbot() + vx1 : U32), 4294967294), (M.cliptop() + vx1 : U32), 4294967294)
+      psp.draw(go, V.Frame{fb, rom, r1, sd}, vx1, vx2, mid, start, step, patch, cm)
+
+def psp.hdr(fr: V.Frame, +sx: U32, +sy: U32, +patch: U32, +flip: Bool, +cm: U32) -> V.Frame:
+  match fr:
+    case V.Frame{fb, rom, ram, sd}:
+      M.let(V.Frame, M.rd(rom, patch), r1 => +w0 =>
+        M.let(V.Frame, M.rd(r1, (patch + 1 : U32)), r2 => +w1 =>
+          M.let(V.Frame, M.rd(r2, (patch + 4 : U32)), r3 => +l0 =>
+            M.let(V.Frame, M.rd(r3, (patch + 5 : U32)), r4 => +l1 =>
+              M.let(V.Frame, M.rd(r4, (patch + 6 : U32)), r5 => +t0 =>
+                M.let(V.Frame, M.rd(r5, (patch + 7 : U32)), r6 => +t1 =>
+                  psp.at(V.Frame{fb, r6, ram, sd}, sx, sy, patch, flip, (w0 .|. (w1 << 8n) : U32), V.s16((l0 .|. (l1 << 8n) : U32)), V.s16((t0 .|. (t1 << 8n) : U32)), cm)))))))
+
+def psp.one(fr: V.Frame, +w: R.World, +p: PSp) -> V.Frame:
+  match p:
+    case PSp{+spr, +frm, +sx, +sy, +cm}:
+      +sf = R.sframe(w, (spr * 32 + (frm .&. 31) : U32))
+      psp.hdr(fr, sx, sy, V.sf.lump(sf, 0), V.sf.flip(sf, 0), cm)
+
+def psprites(ps: List<&2, PSp>, fr: V.Frame, +w: R.World) -> V.Frame:
+  match ps:
+    case +p <> t:
+      psprites(t, psp.one(fr, w, p), w)
+    case []:
+      fr
+
+def render.with(+tb: V.Tabs, +w: R.World, +v: V.View, ps: List<&2, PSp>, rom: Array<U32>) -> V.Frame:
+  psprites(ps, drawmasked(V.scene(tb, w, v, rom), w, v), w)
 
 def render(+tb: V.Tabs, +w: R.World, +v: V.View, rom: Array<U32>) -> Array<U32> & Array<U32>:
   out(drawmasked(V.scene(tb, w, v, rom), w, v))

@@ -79,13 +79,14 @@ mp = fields("lines:T.Vec<RLine> seclines:T.Vec<List<&2,U32>> secbox:T.Vec<U32> b
             "mi:T.Vec<U32> st:T.Vec<U32> tb:V.Tabs anims:List<&2,Anim> switches:T.Vec<U32> nswitch "
             "scrolls:List<&2,U32> tex0:T.Vec<M.Info> flat0:T.Vec<U32> theights:T.Vec<U32> nsec nlines "
             "commercial:Bool episode map things:T.Vec<L.Thing> rndt:T.Vec<U32> skill subsec:T.Vec<U32> xtab:T.Vec<U32> utab:T.Vec<U32> "
-            "reject:T.Vec<U32> segline:T.Vec<U32> nil:List<&2,Lvl>")
+            "reject:T.Vec<U32> segline:T.Vec<U32> hud:T.Vec<U32> nil:List<&2,Lvl>")
 record("Lvl", mp)
 
 sim = fields("w:R.World mp:Lvl lspec:T.Vec<U32> links:T.Vec<U32> valid:T.Vec<U32> vc ths:T.Vec<Th> tn:T.Vec<U32> "
              "tp:T.Vec<U32> free:List<&2,U32> next pl:T.Vec<U32> time rnd plats:T.Vec<U32> ceils:T.Vec<U32> "
              "buttons:T.Vec<U32> exit tm:Tm kills items secrets halt ret "
-             "secv:T.Vec<U32> sndt:T.Vec<U32> sndn:T.Vec<U32> brains:T.Vec<U32> nbrain brainon easy snd:List<&2,U32> tic nil:List<&2,Sim>")
+             "secv:T.Vec<U32> sndt:T.Vec<U32> sndn:T.Vec<U32> brains:T.Vec<U32> nbrain brainon easy snd:List<&2,U32> tic "
+             "mrnd wipe stface stcount stprio stlad stold stpainh stpainc stweap strnd hmsg hcount nil:List<&2,Sim>")
 record("Sim", sim)
 
 for i in range(len(tm)):

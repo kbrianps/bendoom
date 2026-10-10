@@ -12,6 +12,7 @@ import ./sprite.bend as P
 import ./info.bend as I
 import ./state.bend as S
 import ./setup.bend as U
+import ./hudtext.bend as H
 
 def view(+g: S.Sim) -> V.View:
   +m = S.p.mo(g)
@@ -32,26 +33,42 @@ def frames(+sp: P.Sprites) -> T.Vec<P.SFrame>:
 def eyes(+g: S.Sim) -> S.Sim:
   S.p.viewz.set(g, (S.m.z(g, S.p.mo(g)) + S.p.viewheight(g) : U32))
 
-def assemble(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim & Array<U32>:
+def hudaddrs(hbs: List<&2, List<&2, U32>>, +at: U32) -> List<&2, U32>:
+  match hbs:
+    case bs <> t:
+      at <> hudaddrs(t, (at + U32.from_nat(List.length(&2, U32, bs)) : U32))
+    case []:
+      []
+
+def assemble(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +hbs: List<&2, List<&2, U32>>, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim & Array<U32>:
   match t:
     case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw}:
       +tb = V.tabs()
       +ly = O.layout(ts, fd)
       +w0 = R.build(lv, t, ly, frames(sp))
       +sbytes = blobs(sbs)
-      (eyes(U.sim(lv, t, w0, tb, pl, rnd)),
-        M.fill(sbytes, O.build(tb, A.palette(pal), cm, ts, fd, (base + U32.from_nat(List.length(&2, U32, sbytes)) : U32), O.texs.end(ts, M.texbase())), base))
+      +pb = (base + U32.from_nat(List.length(&2, U32, sbytes)) : U32)
+      +pals = List.take(&2, U32, A.rgb(pal), 3584n)
+      +hbytes = blobs(hbs)
+      +hud = T.from_list(U32, pb <> hudaddrs(hbs, (pb + 3584 : U32)))
+      +all = List.append(&2, U32, sbytes, List.append(&2, U32, pals, hbytes))
+      (eyes(U.sim(lv, t, w0, tb, hud, pl, rnd)),
+        M.fill(all, O.build(tb, A.palette(pal), cm, ts, fd, (pb + 3584 + U32.from_nat(List.length(&2, U32, hbytes)) : U32), O.texs.end(ts, M.texbase())), base))
 
 def spritebase(+t: D.Texs) -> U32:
   match t:
     case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw}:
       (O.texs.end(ts, M.texbase()) + 4096 * U32.from_nat(List.length(&2, List<&2, U32>, fd)) : U32)
 
-def loaded(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, +pl: T.Vec<U32>, +rnd: U32, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
-  (w, sbs) = p
+def hudded(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +pl: T.Vec<U32>, +rnd: U32, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
+  (w, hbs) = p
   do IO<S.Sim & Array<U32>>:
     W.close(w)
-    IO.pure(S.Sim & Array<U32>, assemble(lv, pal, cm, t, sp, base, sbs, pl, rnd))
+    IO.pure(S.Sim & Array<U32>, assemble(lv, pal, cm, t, sp, base, sbs, hbs, pl, rnd))
+
+def loaded(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, +pl: T.Vec<U32>, +rnd: U32, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
+  (w, sbs) = p
+  IO.bind(W.Wad & List<&2, List<&2, U32>>, S.Sim & Array<U32>, W.get(w, H.hudnames()), q => hudded(lv, pal, cm, t, sp, base, sbs, pl, rnd, q))
 
 def sprite.lumps(+sp: P.Sprites) -> List<&2, W.Lump>:
   match sp:

@@ -122,6 +122,12 @@ def cliptop() -> U32:
 def negone() -> U32:
   244352
 
+def vh() -> U32:
+  168
+
+def cy() -> U32:
+  84
+
 def screenh() -> U32:
   244672
 

@@ -158,9 +158,25 @@ def taken(+g: S.Sim, +sp: U32) -> S.Sim:
   +g1 = C.when(C.has(S.m.flags(g, sp), 8388608), g, +h => S.p.items.set(h, (S.p.items(h) + 1 : U32)))
   S.p.bonuscount.set(C.remove(G.unset(g1, sp), sp), (S.p.bonuscount(g1) + 6 : U32))
 
+def msg.tab() -> T.Vec<U32>:
+  T.from_list(U32, [7, 8, 0, 0, 0, 9, 10, 13, 15, 14, 16, 18, 17, 19, 21, 11, 22, 23, 24, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43])
+
+def keybit(+spr: U32) -> U32:
+  T.get(U32, T.from_list(U32, [1, 4, 2, 8, 32, 16]), (spr - 62 : U32), 0)
+
+def msg.of(+spr: U32, +had: Bool, +hp: U32) -> U32:
+  +m = T.get(U32, msg.tab(), (spr - 55 : U32), 0)
+  Bool.pick(U32, Bool.and(U32.is_ge(spr, 62), U32.is_le(spr, 67)), Bool.pick(U32, had, 0, m),
+    Bool.pick(U32, U32.is_eq(spr, 69), Bool.pick(U32, F.lt(hp, 25), 20, 21), m))
+
+def message(+g: S.Sim, +m: U32) -> S.Sim:
+  C.when(U32.is_ne(m, 0), g, +h => S.p.message.set(h, m))
+
 def touch.go(+g: S.Sim, +sp: U32) -> S.Sim:
-  +g1 = pickup(g, sp, S.m.sprite(g, sp))
-  C.when(got(g1), g1, +h => taken(h, sp))
+  +spr = S.m.sprite(g, sp)
+  +had = C.has(S.p.cards(g), keybit(spr))
+  +g1 = pickup(g, sp, spr)
+  C.when(got(g1), g1, +h => taken(message(h, msg.of(spr, had, S.p.health(h))), sp))
 
 def touch(+g: S.Sim, +sp: U32, +t: U32) -> S.Sim:
   +delta = (S.m.z(g, sp) - S.m.z(g, t) : U32)

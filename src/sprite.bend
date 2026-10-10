@@ -214,9 +214,16 @@ def thingkinds(n: Nat, +mi: T.Vec<U32>, +ths: T.Vec<L.Thing>, +i: U32) -> List<&
     case 1n+p:
       thing.kind(mi, T.get(L.Thing, ths, i, L.Thing{0, 0, 0, 0, 0})) <> thingkinds(p, mi, ths, (i + 1 : U32))
 
+def weapons(ss: List<&2, U32>, +st: T.Vec<U32>, +acc: List<&2, U32>) -> List<&2, U32>:
+  match ss:
+    case +s <> t:
+      weapons(t, st, chain.from(st, s, acc))
+    case []:
+      acc
+
 def needed(+mi: T.Vec<U32>, +st: T.Vec<U32>, +ths: T.Vec<L.Thing>) -> List<&2, U32>:
-  +ks = List.append(&2, U32, [0, 37, 38, 39, 40, 63, 73, 77], thingkinds(U32.to_nat(T.size(L.Thing, ths)), mi, ths, 0))
-  chain.from(st, 895, reach(ks, mi, st, [], []))
+  +ks = List.append(&2, U32, [0, 33, 34, 35, 37, 38, 39, 40, 42, 63, 73, 77], thingkinds(U32.to_nat(T.size(L.Thing, ths)), mi, ths, 0))
+  weapons([5, 4, 3, 2, 12, 11, 10, 13, 17, 20, 19, 18, 21, 30, 51, 50, 49, 52, 55, 59, 58, 57, 60, 63, 76, 75, 74, 77, 79, 83, 82, 81, 84, 88, 70, 69, 67, 71, 34, 33, 32, 35, 47], st, chain.from(st, 895, reach(ks, mi, st, [], [])))
 
 def sprites.of(+all: List<&2, W.Lump>, +cs: List<&2, U32>, +base: U32) -> Sprites:
   +names = T.from_list(String, I.sprnames())

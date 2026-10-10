@@ -1,4 +1,5 @@
 import Base
+import ./hud.bend as U
 import ./tab.bend as T
 import ./fixed.bend as F
 import ./state.bend as S
@@ -22,7 +23,8 @@ def code.bit(+c: U32) -> U32:
             Bool.pick(U32, Bool.or(U32.is_eq(c, 46), U32.is_eq(c, 100)), 32,
               Bool.pick(U32, Bool.or(U32.is_eq(c, 65592), U32.is_eq(c, 65596)), 64,
                 Bool.pick(U32, Bool.or(U32.is_eq(c, 32), U32.is_eq(c, 101)), 128,
-                  Bool.pick(U32, Bool.and(U32.is_ge(c, 49), U32.is_le(c, 55)), (256 << U32.to_nat((c - 48 : U32)) : U32), 0)))))))))
+                  Bool.pick(U32, Bool.and(U32.is_ge(c, 49), U32.is_le(c, 55)), (256 << U32.to_nat((c - 48 : U32)) : U32),
+                    Bool.pick(U32, Bool.or(Bool.or(U32.is_eq(c, 65595), U32.is_eq(c, 65598)), U32.is_eq(c, 102)), 65536, 0))))))))))
 
 def press(+keys: U32, +c: U32, +down: Bool) -> U32:
   Bool.pick(U32, down, (keys .|. code.bit(c) : U32), (keys .&. (4294967295 - code.bit(c)) : U32))
@@ -76,7 +78,7 @@ def cmd(+g: S.Sim, +keys: U32, +turnheld: U32) -> S.Sim:
   +turn = amount(keys, 4, 8, tspeed)
   +fwd = amount(keys, 1, 2, Bool.pick(U32, run, 50, 25))
   +side = amount(keys, 32, 16, Bool.pick(U32, run, 40, 24))
-  +bt = (Bool.pick(U32, held(keys, 128), 2, 0) .|. weapon(7n, keys, 0) : U32)
+  +bt = (Bool.pick(U32, held(keys, 65536), 1, 0) .|. Bool.pick(U32, held(keys, 128), 2, 0) .|. weapon(7n, keys, 0) : U32)
   S.p.buttons.set(S.p.side.set(S.p.fwd.set(S.p.turn.set(g, turn), fwd), side), bt)
 
 def done(+g: S.Sim) -> Bool:
@@ -169,7 +171,7 @@ def frame.out(+s: S.Sim, +path: String, +k: U32, +t0: U32, +tics: U32, +h: U32, 
 def frame(g: Game) -> Game & Array<U32>:
   match g:
     case Game{+s, rom, +path, +k, +t0, +tics, +h}:
-      frame.out(s, path, k, t0, tics, h, D.render(S.mp.tb(s), S.sim.w(s), B.view(s), rom))
+      frame.out(s, path, k, t0, tics, h, U.render(s, rom))
 
 def start(+s: S.Sim, rom: Array<U32>, +path: String, +now: U32) -> Game:
   Game{s, rom, path, 0, now, 0, 0}

@@ -189,7 +189,7 @@ def seglines(n: Nat, +se: T.Vec<L.Seg>, +i: U32) -> List<&2, U32>:
     case 1n+p:
       segline(T.get(L.Seg, se, i, L.Seg{0, 0, 0, 0, 0, 0})) <> seglines(p, se, (i + 1 : U32))
 
-def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs) -> S.Lvl:
+def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>) -> S.Lvl:
   match lv t:
     case L.Level{+name, +th, +li, +si, +ve, +se, ss, no, +sc, +rj, +bm} D.Texs{+names, ts, sky, +fl, fd, +hs, +ta, +fa, +sw}:
       +nl = T.size(L.Line, li)
@@ -208,7 +208,7 @@ def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs) -> S.Lvl:
         R.texs(w), R.flats(w), T.from_list(U32, hs), ns, nl, com, episode(name), mapnum(name), th, X.rndtable(), 2,
         T.from_list(U32, subsecs(U32.to_nat(T.size(L.Sub, R.subs(w))), w, 0)),
         T.from_list(U32, O.crosstab()), T.from_list(U32, O.usetab()),
-        rj, T.from_list(U32, seglines(U32.to_nat(T.size(L.Seg, se)), se, 0)), []}
+        rj, T.from_list(U32, seglines(U32.to_nat(T.size(L.Seg, se)), se, 0)), hud, []}
 
 def blank(+lv: L.Level, +w: R.World, +mp: S.Lvl, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim:
   match lv:
@@ -218,14 +218,15 @@ def blank(+lv: L.Level, +w: R.World, +mp: S.Lvl, +pl: T.Vec<U32>, +rnd: U32) -> 
       S.Sim{w, mp, T.from_list(U32, specials(U32.to_nat(nl), li, 0)), T.new(U32, (S.mpr.bw(mp) * S.mpr.bh(mp) : U32), 0), T.new(U32, nl, 0), 1,
         T.new(S.Th, C.maxth(), S.TNone{}), T.new(U32, C.maxth(), 0), T.new(U32, C.maxth(), 0), [], 1, pl, 0, rnd,
         T.new(U32, 30, 0), T.new(U32, 30, 0), T.new(U32, 64, 0), 0, tm0(), 0, 0, 0, 0, 0,
-        T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, 32, 0), 0, 0, 0, [], 0, []}
+        T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, 32, 0), 0, 0, 0, [], 0,
+        0, 2, 0, 0, 0, 4294967295, 4294967295, 4294967295, 0, 0, 0, 0, 0, []}
 
 def start(+g: S.Sim) -> S.Sim:
   +g1 = S.p.secrets.set(S.p.items.set(S.p.kills.set(g, 0), 0), 0)
   O.spawnspecials(O.spawnthings(g1))
 
-def sim(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim:
-  start(blank(lv, w, lvl(lv, t, w, tb), pl, rnd))
+def sim(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim:
+  start(blank(lv, w, lvl(lv, t, w, tb, hud), pl, rnd))
 
 def newplayer() -> T.Vec<U32>:
   T.set(U32, T.new(U32, 64, 0), 1, 2)

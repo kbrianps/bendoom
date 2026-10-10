@@ -92,13 +92,13 @@ def reborn(+g: S.Sim) -> S.Sim:
   +g4 = S.p.ammo0.set(S.p.own1.set(S.p.own0.set(g3, 1), 1), 50)
   S.p.max3.set(S.p.max2.set(S.p.max1.set(S.p.max0.set(g4, 200), 50), 300), 50)
 
-def spawnplayer(+g: S.Sim, +x: U32, +y: U32, +a: U32) -> S.Sim:
+def spawnplayer?(+g: S.Sim, +x: U32, +y: U32, +a: U32) -> S.Sim:
   +g0 = C.when(U32.is_eq(S.p.state(g), 2), g, +h => reborn(h))
   +m = C.newid(g0)
   +g1 = spawn(g0, (x << 16n : U32), (y << 16n : U32), onfloor(), 0)
   +g2 = S.m.health.set(S.m.player.set(S.m.angle.set(g1, m, angle45(a)), m, 1), m, S.p.health(g1))
   +g3 = S.p.damagecount.set(S.p.message.set(S.p.refire.set(S.p.state.set(S.p.mo.set(g2, m), 0), 0), 0), 0)
-  S.p.viewheight.set(S.p.fixedcm.set(S.p.extralight.set(S.p.bonuscount.set(g3, 0), 0), 0), viewheight())
+  st.start(setuppsprites(S.p.viewheight.set(S.p.fixedcm.set(S.p.extralight.set(S.p.bonuscount.set(g3, 0), 0), 0), viewheight())))
 
 def kind(n: Nat, +g: S.Sim, +ed: U32, +i: U32) -> U32:
   match n:
@@ -181,14 +181,14 @@ def kill.tics(+g: S.Sim, +t: U32) -> S.Sim:
   +tc = (S.m.tics(g1, t) - (r .&. 3) : U32)
   S.m.tics.set(g1, t, Bool.pick(U32, F.lt(tc, 1), 1, tc))
 
-def kill(+g: S.Sim, +src: U32, +t: U32) -> S.Sim:
+def kill?(+g: S.Sim, +src: U32, +t: U32) -> S.Sim:
   +k = S.m.type(g, t)
   +f0 = C.clr(S.m.flags(g, t), 16793604)
   +f1 = (Bool.pick(U32, U32.is_eq(k, 18), f0, C.clr(f0, 512)) .|. 1049600 : U32)
   +g1 = S.m.height.set(S.m.flags.set(g, t, f1), t, F.sar(S.m.height(g, t), 2n))
   +g2 = C.when(C.has(f1, 4194304), g1, +h => S.p.kills.set(h, (S.p.kills(h) + 1 : U32)))
   +pl = U32.is_ne(S.m.player(g2, t), 0)
-  +g3 = C.when(pl, g2, +h => S.p.state.set(S.m.flags.set(h, t, C.clr(S.m.flags(h, t), 2)), 1))
+  +g3 = C.when(pl, g2, +h => setpsp(S.p.state.set(S.m.flags.set(h, t, C.clr(S.m.flags(h, t), 2)), 1), 0, winfo(S.p.ready(h), 2)))
   +xd = C.info(g3, k, 13)
   +xs = Bool.and(F.lt(S.m.health(g3, t), F.neg(C.info(g3, k, 2))), U32.is_ne(xd, 0))
   +g4 = setstate(g3, t, Bool.pick(U32, xs, xd, C.info(g3, k, 12)))
@@ -1814,7 +1814,10 @@ def turntoward(+g: S.Sim, +m: U32, +att: U32) -> S.Sim:
   C.br(Bool.or(U32.is_lt(d, 59652323), U32.is_gt(d, 4235314973)), g, +h => S.p.damagecount.set(S.m.angle.set(h, m, a), dec(S.p.damagecount(h))),
     +h => S.m.angle.set(h, m, Bool.pick(U32, U32.is_lt(d, 2147483648), (ma + 59652323 : U32), (ma - 59652323 : U32))))
 
-def deaththink(+g: S.Sim) -> S.Sim:
+def deaththink?(+g: S.Sim) -> S.Sim:
+  deaththink.go(movepsprites(g))
+
+def deaththink.go(+g: S.Sim) -> S.Sim:
   +m = S.p.mo(g)
   +v0 = S.p.viewheight(g)
   +v1 = Bool.pick(U32, F.gt(v0, 393216), (v0 - 65536 : U32), v0)
@@ -1847,7 +1850,7 @@ def powers(+g: S.Sim, +m: U32) -> S.Sim:
   +g6 = S.p.bonuscount.set(S.p.damagecount.set(g5, dec(S.p.damagecount(g5))), dec(S.p.bonuscount(g5)))
   S.p.fixedcm.set(g6, colormap(g6))
 
-def live(+g: S.Sim, +m: U32) -> S.Sim:
+def live?(+g: S.Sim, +m: U32) -> S.Sim:
   +r = S.m.reaction(g, m)
   +g1 = C.br(U32.is_ne(r, 0), g, +h => S.m.reaction.set(h, m, (r - 1 : U32)), +h => moveplayer(h))
   +g2 = calcheight(g1)
@@ -1856,7 +1859,7 @@ def live(+g: S.Sim, +m: U32) -> S.Sim:
   +b = S.p.buttons(g4)
   +g5 = C.when(C.has(b, 4), g4, +h => newweapon(h, b))
   +g6 = C.br(C.has(b, 2), g5, +h => C.when(U32.is_eq(S.p.usedown(h), 0), h, +k => S.p.usedown.set(uselines(k), 1)), +h => S.p.usedown.set(h, 0))
-  powers(g6, m)
+  powers(movepsprites(g6), m)
 
 def playerthink(+g: S.Sim) -> S.Sim:
   +m = S.p.mo(g)
@@ -1891,9 +1894,9 @@ def runthinkers(+g: S.Sim) -> S.Sim:
   +first = C.tnext(g, 0)
   runthinkers.go(65536n, U32.is_ne(first, 0), g, first)
 
-def ticker(+g: S.Sim) -> S.Sim:
+def ticker?(+g: S.Sim) -> S.Sim:
   +g1 = update(runthinkers(playerthink(S.sim.snd.set(g, []))))
-  S.sim.tic.set(S.sim.time.set(g1, (S.sim.time(g1) + 1 : U32)), (S.sim.tic(g1) + 1 : U32))
+  hu.ticker(st.ticker(S.sim.tic.set(S.sim.time.set(g1, (S.sim.time(g1) + 1 : U32)), (S.sim.tic(g1) + 1 : U32))))
 
 def yes(+g: S.Sim) -> Bool:
   U32.is_eq(S.sim.ret(g), 1)
@@ -3202,3 +3205,431 @@ def action(+g: S.Sim, +m: U32, +a: U32) -> S.Sim:
                 +h => a.spawnfly(sound(h, m, 95), m),
                 +h => a.spawnfly(h, m)),
               +h => a.brainexplode(h, m)))))))
+
+
+def winfo(+w: U32, +f: U32) -> U32:
+  T.get(U32, T.from_list(U32, [5, 4, 3, 2, 5, 0, 0, 12, 11, 10, 13, 17, 1, 20, 19, 18, 21, 30, 0, 51, 50, 49, 52, 55,
+    3, 59, 58, 57, 60, 63, 2, 76, 75, 74, 77, 79, 2, 83, 82, 81, 84, 88, 5, 70, 69, 67, 71, 0, 1, 34, 33, 32, 35, 47]), (w * 6 + f : U32), 0)
+
+
+def nochange() -> U32:
+  10
+
+
+def bottom() -> U32:
+  8388608
+
+
+def top() -> U32:
+  2097152
+
+
+def psp(+g: S.Sim, +pos: U32, +f: U32) -> U32:
+  S.pget(g, (53 + pos * 4 + f : U32))
+
+
+def psp.set(+g: S.Sim, +pos: U32, +f: U32, +v: U32) -> S.Sim:
+  S.pput(g, (53 + pos * 4 + f : U32), v)
+
+
+def pammo(+g: S.Sim, +w: U32) -> U32:
+  I.ammo(g, I.wammo(w))
+
+
+def useammo(+g: S.Sim, +n: U32) -> S.Sim:
+  +k = I.wammo(S.p.ready(g))
+  I.ammo.set(g, k, (I.ammo(g, k) - n : U32))
+
+
+def psp.enter(+g: S.Sim, +pos: U32, +st: U32) -> S.Sim:
+  +g1 = psp.set(psp.set(g, pos, 0, st), pos, 1, C.state(g, st, 2))
+  +m1 = C.state(g1, st, 5)
+  C.when(U32.is_ne(m1, 0), g1, +h => psp.set(psp.set(h, pos, 2, (m1 << 16n : U32)), pos, 3, (C.state(h, st, 6) << 16n : U32)))
+
+
+def psp.go?(n: Nat, more: Bool, +g: S.Sim, +pos: U32, +st: U32) -> S.Sim:
+  match n more:
+    case 1n+p True{}:
+      C.br(U32.is_eq(st, 0), g, +h => psp.set(h, pos, 0, 0),
+        +h => psp.after(p, pact(psp.enter(h, pos, st), pos, C.state(h, st, 3)), pos))
+    case _ _:
+      g
+
+
+def psp.after?(n: Nat, +g: S.Sim, +pos: U32) -> S.Sim:
+  +cur = psp(g, pos, 0)
+  psp.go(n, Bool.and(U32.is_ne(cur, 0), U32.is_eq(psp(g, pos, 1), 0)), g, pos, C.state(g, cur, 4))
+
+
+def setpsp?(+g: S.Sim, +pos: U32, +st: U32) -> S.Sim:
+  psp.go(1000n, True{}, g, pos, st)
+
+
+def bringup?(+g: S.Sim) -> S.Sim:
+  +p0 = S.p.pending(g)
+  +pw = Bool.pick(U32, U32.is_eq(p0, nochange()), S.p.ready(g), p0)
+  +g1 = C.when(U32.is_eq(pw, 7), g, +h => sound(h, S.p.mo(h), 10))
+  setpsp(psp.set(S.p.pending.set(g1, nochange()), 0, 3, bottom()), 0, winfo(pw, 1))
+
+
+def setuppsprites?(+g: S.Sim) -> S.Sim:
+  +g1 = psp.set(psp.set(g, 0, 0, 0), 1, 0, 0)
+  bringup(S.p.pending.set(g1, S.p.ready(g1)))
+
+
+def ammo.pick(+g: S.Sim) -> U32:
+  +com = S.mp.commercial(g)
+  Bool.pick(U32, Bool.and(U32.is_ne(I.own(g, 5), 0), U32.is_ne(I.ammo(g, 2), 0)), 5,
+    Bool.pick(U32, Bool.and(Bool.and(U32.is_ne(I.own(g, 8), 0), U32.is_gt(I.ammo(g, 1), 2)), com), 8,
+      Bool.pick(U32, Bool.and(U32.is_ne(I.own(g, 3), 0), U32.is_ne(I.ammo(g, 0), 0)), 3,
+        Bool.pick(U32, Bool.and(U32.is_ne(I.own(g, 2), 0), U32.is_ne(I.ammo(g, 1), 0)), 2,
+          Bool.pick(U32, U32.is_ne(I.ammo(g, 0), 0), 1,
+            Bool.pick(U32, U32.is_ne(I.own(g, 7), 0), 7,
+              Bool.pick(U32, Bool.and(U32.is_ne(I.own(g, 4), 0), U32.is_ne(I.ammo(g, 3), 0)), 4,
+                Bool.pick(U32, Bool.and(U32.is_ne(I.own(g, 6), 0), U32.is_gt(I.ammo(g, 2), 40)), 6, 0))))))))
+
+
+def checkammo?(+g: S.Sim) -> S.Sim:
+  +w = S.p.ready(g)
+  +k = I.wammo(w)
+  +cnt = Bool.pick(U32, U32.is_eq(w, 6), 40, Bool.pick(U32, U32.is_eq(w, 8), 2, 1))
+  +ok = Bool.or(U32.is_eq(k, 5), U32.is_ge(I.ammo(g, k), cnt))
+  C.br(ok, g, +h => S.sim.ret.set(h, 1),
+    +h => S.sim.ret.set(setpsp(S.p.pending.set(h, ammo.pick(h)), 0, winfo(w, 2)), 0))
+
+
+def fireweapon.go?(+g: S.Sim) -> S.Sim:
+  +mo = S.p.mo(g)
+  +g1 = setpsp(setstate(g, mo, 154), 0, winfo(S.p.ready(g), 4))
+  noise(g1, mo, mo)
+
+
+def fireweapon?(+g: S.Sim) -> S.Sim:
+  +g1 = checkammo(g)
+  C.when(yes(g1), g1, +h => fireweapon.go(h))
+
+
+def ready.bob(+g: S.Sim, +pos: U32) -> S.Sim:
+  +tb = S.mp.tb(g)
+  +bob = S.p.bob(g)
+  +a = ((128 * S.sim.time(g)) .&. 8191 : U32)
+  +g1 = psp.set(g, pos, 2, (65536 + F.mul(bob, V.sine(tb, (a + 2048 : U32))) : U32))
+  psp.set(g1, pos, 3, (top() + F.mul(bob, V.sine(tb, (a .&. 4095 : U32))) : U32))
+
+
+def ready.fire?(+g: S.Sim, +pos: U32) -> S.Sim:
+  +w = S.p.ready(g)
+  C.br(C.has(S.p.buttons(g), 1), g,
+    +h => C.br(Bool.or(U32.is_eq(S.p.attackdown(h), 0), Bool.and(U32.is_ne(w, 4), U32.is_ne(w, 6))), h,
+      +k => fireweapon(S.p.attackdown.set(k, 1)),
+      +k => ready.bob(k, pos)),
+    +h => ready.bob(S.p.attackdown.set(h, 0), pos))
+
+
+def w.weaponready?(+g: S.Sim, +pos: U32) -> S.Sim:
+  +mo = S.p.mo(g)
+  +ms = S.m.state(g, mo)
+  +g1 = C.when(Bool.or(U32.is_eq(ms, 154), U32.is_eq(ms, 155)), g, +h => setstate(h, mo, 149))
+  +g2 = C.when(Bool.and(U32.is_eq(S.p.ready(g1), 7), U32.is_eq(psp(g1, pos, 0), 67)), g1, +h => sound(h, mo, 11))
+  C.br(Bool.or(U32.is_ne(S.p.pending(g2), nochange()), U32.is_eq(S.p.health(g2), 0)), g2,
+    +h => setpsp(h, 0, winfo(S.p.ready(h), 2)),
+    +h => ready.fire(h, pos))
+
+
+def w.refire?(+g: S.Sim) -> S.Sim:
+  +go = Bool.and(Bool.and(C.has(S.p.buttons(g), 1), U32.is_eq(S.p.pending(g), nochange())), U32.is_ne(S.p.health(g), 0))
+  C.br(go, g, +h => fireweapon(S.p.refire.set(h, (S.p.refire(h) + 1 : U32))), +h => checkammo(S.p.refire.set(h, 0)))
+
+
+def w.lower?(+g: S.Sim, +pos: U32) -> S.Sim:
+  +sy = (psp(g, pos, 3) + 393216 : U32)
+  +g1 = psp.set(g, pos, 3, sy)
+  C.br(F.lt(sy, bottom()), g1, +h => h,
+    +h => C.br(U32.is_eq(S.p.state(h), 1), h, +k => psp.set(k, pos, 3, bottom()),
+      +k => C.br(U32.is_eq(S.p.health(k), 0), k, +q => setpsp(q, 0, 0),
+        +q => bringup(S.p.ready.set(q, S.p.pending(q))))))
+
+
+def w.raise?(+g: S.Sim, +pos: U32) -> S.Sim:
+  +sy = (psp(g, pos, 3) - 393216 : U32)
+  +g1 = psp.set(g, pos, 3, sy)
+  C.when(F.le(sy, top()), g1, +h => setpsp(psp.set(h, pos, 3, top()), 0, winfo(S.p.ready(h), 3)))
+
+
+def w.gunflash?(+g: S.Sim) -> S.Sim:
+  setpsp(setstate(g, S.p.mo(g), 155), 1, winfo(S.p.ready(g), 5))
+
+
+def melee.slope(+g: S.Sim, +mo: U32, +an: U32, +dist: U32, +dmg: U32) -> S.Sim:
+  +g1 = aim(g, mo, an, dist)
+  +lt = S.tm.ltarget(g1)
+  S.sim.ret.set(lineattack(g1, mo, an, dist, S.sim.ret(g1), dmg), lt)
+
+
+def w.punch.hit(+g: S.Sim, +mo: U32, +lt: U32) -> S.Sim:
+  C.when(U32.is_ne(lt, 0), g, +h => S.m.angle.set(sound(h, mo, 83), mo, toward(h, mo, lt)))
+
+
+def w.punch(+g: S.Sim) -> S.Sim:
+  +mo = S.p.mo(g)
+  +d0 = (((C.rnd(g) % 10) + 1) << 1n : U32)
+  +g1 = C.rnd.next(g)
+  +dmg = Bool.pick(U32, U32.is_ne(S.p.pw1(g1), 0), (d0 * 10 : U32), d0)
+  +an = (S.m.angle(g1, mo) + (subr(g1) << 18n) : U32)
+  +g2 = melee.slope(subr.next(g1), mo, an, 4194304, dmg)
+  w.punch.hit(g2, mo, S.sim.ret(g2))
+
+
+def saw.turn(+g: S.Sim, +mo: U32, +lt: U32) -> S.Sim:
+  +an = toward(g, mo, lt)
+  +ma = S.m.angle(g, mo)
+  +d = (an - ma : U32)
+  +na = Bool.pick(U32, U32.is_gt(d, 2147483648),
+    Bool.pick(U32, U32.is_lt(d, 4241280205), (an + 51130563 : U32), (ma - 53687091 : U32)),
+    Bool.pick(U32, U32.is_gt(d, 53687091), (an - 51130563 : U32), (ma + 53687091 : U32)))
+  +g1 = S.m.angle.set(sound(g, mo, 13), mo, na)
+  S.m.flags.set(g1, mo, (S.m.flags(g1, mo) .|. 128 : U32))
+
+
+def w.saw(+g: S.Sim) -> S.Sim:
+  +mo = S.p.mo(g)
+  +dmg = (2 * ((C.rnd(g) % 10) + 1) : U32)
+  +g1 = C.rnd.next(g)
+  +an = (S.m.angle(g1, mo) + (subr(g1) << 18n) : U32)
+  +g2 = melee.slope(subr.next(g1), mo, an, 4194305, dmg)
+  +lt = S.sim.ret(g2)
+  C.br(U32.is_eq(lt, 0), g2, +h => sound(h, mo, 12), +h => saw.turn(h, mo, lt))
+
+
+def aim.try(+g: S.Sim, +mo: U32, +an: U32, f: S.Sim -> S.Sim) -> S.Sim:
+  +g1 = aim(S.tm.vx.set(g, an), mo, an, 67108864)
+  C.br(U32.is_ne(S.tm.ltarget(g1), 0), g1, +h => h, f)
+
+
+def bulletslope(+g: S.Sim, +mo: U32) -> S.Sim:
+  +an = S.m.angle(g, mo)
+  aim.try(g, mo, an, +h => aim.try(h, mo, (an + 67108864 : U32), +k => aim.try(k, mo, (an - 67108864 : U32), +q => q)))
+
+
+def gunshot(+g: S.Sim, +mo: U32, +acc: Bool, +slope: U32) -> S.Sim:
+  +dmg = (5 * ((C.rnd(g) % 3) + 1) : U32)
+  +g1 = C.rnd.next(g)
+  +a0 = S.m.angle(g1, mo)
+  C.br(acc, g1, +h => lineattack(h, mo, a0, 134217728, slope, dmg),
+    +h => lineattack(subr.next(h), mo, (a0 + (subr(h) << 18n) : U32), 134217728, slope, dmg))
+
+
+def gunshots(n: Nat, +g: S.Sim, +mo: U32, +slope: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      gunshots(p, gunshot(g, mo, False{}, slope), mo, slope)
+
+
+def pellets(n: Nat, +g: S.Sim, +mo: U32, +slope: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      +dmg = (5 * ((C.rnd(g) % 3) + 1) : U32)
+      +g1 = C.rnd.next(g)
+      +an = (S.m.angle(g1, mo) + (subr(g1) << 19n) : U32)
+      +g2 = subr.next(g1)
+      +sl = (slope + (subr(g2) << 5n) : U32)
+      pellets(p, lineattack(subr.next(g2), mo, an, 134217728, sl, dmg), mo, slope)
+
+
+def fire.prep?(+g: S.Sim, +n: U32, +flash: U32) -> S.Sim:
+  +mo = S.p.mo(g)
+  +g1 = useammo(setstate(g, mo, 155), n)
+  bulletslope(setpsp(g1, 1, flash), mo)
+
+
+def w.firepistol?(+g: S.Sim) -> S.Sim:
+  +g1 = fire.prep(sound(g, S.p.mo(g), 1), 1, winfo(S.p.ready(g), 5))
+  gunshot(g1, S.p.mo(g1), U32.is_eq(S.p.refire(g1), 0), S.sim.ret(g1))
+
+
+def w.fireshotgun?(+g: S.Sim) -> S.Sim:
+  +g1 = fire.prep(sound(g, S.p.mo(g), 2), 1, winfo(S.p.ready(g), 5))
+  gunshots(7n, g1, S.p.mo(g1), S.sim.ret(g1))
+
+
+def w.fireshotgun2?(+g: S.Sim) -> S.Sim:
+  +g1 = fire.prep(sound(g, S.p.mo(g), 4), 2, winfo(S.p.ready(g), 5))
+  pellets(20n, g1, S.p.mo(g1), S.sim.ret(g1))
+
+
+def w.firecgun.go?(+g: S.Sim, +pos: U32) -> S.Sim:
+  +g1 = fire.prep(g, 1, (winfo(S.p.ready(g), 5) + psp(g, pos, 0) - 52 : U32))
+  gunshot(g1, S.p.mo(g1), U32.is_eq(S.p.refire(g1), 0), S.sim.ret(g1))
+
+
+def w.firecgun?(+g: S.Sim, +pos: U32) -> S.Sim:
+  +g1 = sound(g, S.p.mo(g), 1)
+  C.when(U32.is_ne(pammo(g1, S.p.ready(g1)), 0), g1, +h => w.firecgun.go(h, pos))
+
+
+def pmissile.aim(+g: S.Sim, +mo: U32) -> S.Sim:
+  +an = S.m.angle(g, mo)
+  aim.try(g, mo, an, +h => aim.try(h, mo, (an + 67108864 : U32), +k => aim.try(k, mo, (an - 67108864 : U32), +q => S.sim.ret.set(S.tm.vx.set(q, an), 0))))
+
+
+def pmissile(+g: S.Sim, +mo: U32, +k: U32) -> S.Sim:
+  +g1 = pmissile.aim(g, mo)
+  +an = S.tm.vx(g1)
+  +slope = S.sim.ret(g1)
+  +id = C.newid(g1)
+  +g2 = spawn(g1, S.m.x(g1, mo), S.m.y(g1, mo), (S.m.z(g1, mo) + 2097152 : U32), k)
+  +ss = C.info(g2, k, 4)
+  +g3 = S.m.target.set(C.when(U32.is_ne(ss, 0), g2, +h => sound(h, id, ss)), id, mo)
+  +sp = C.info(g3, k, 15)
+  +g4 = missile.aim(g3, id, an)
+  missile.check(S.m.momz.set(g4, id, F.mul(sp, slope)), id)
+
+
+def w.fireplasma?(+g: S.Sim) -> S.Sim:
+  +g0 = useammo(g, 1)
+  +r = (C.rnd(g0) .&. 1 : U32)
+  +g1 = setpsp(C.rnd.next(g0), 1, (winfo(S.p.ready(g0), 5) + r : U32))
+  pmissile(g1, S.p.mo(g1), 34)
+
+
+def pact?(+g: S.Sim, +pos: U32, +a: U32) -> S.Sim:
+  C.br(U32.is_le(a, 11), g,
+    +h => C.br(U32.is_le(a, 5), h,
+      +h => C.br(U32.is_le(a, 2), h,
+        +h => C.br(U32.is_le(a, 1), h,
+          +h => C.when(U32.is_eq(a, 1), h, +k => S.p.extralight.set(k, 0)),
+          +h => w.weaponready(h, pos)),
+        +h => C.br(U32.is_le(a, 3), h,
+          +h => w.lower(h, pos),
+          +h => C.br(U32.is_le(a, 4), h, +k => w.raise(k, pos), +k => w.punch(k)))),
+      +h => C.br(U32.is_le(a, 8), h,
+        +h => C.br(U32.is_le(a, 6), h,
+          +h => w.refire(h),
+          +h => C.br(U32.is_le(a, 7), h, +k => w.firepistol(k), +k => S.p.extralight.set(k, 1))),
+        +h => C.br(U32.is_le(a, 9), h,
+          +h => w.fireshotgun(h),
+          +h => C.br(U32.is_le(a, 10), h, +k => S.p.extralight.set(k, 2), +k => w.fireshotgun2(k))))),
+    +h => C.br(U32.is_le(a, 16), h,
+      +h => C.br(U32.is_le(a, 13), h,
+        +h => C.br(U32.is_le(a, 12), h, +k => checkammo(k), +k => sound(k, S.p.mo(k), 5)),
+        +h => C.br(U32.is_le(a, 14), h,
+          +h => sound(h, S.p.mo(h), 7),
+          +h => C.br(U32.is_le(a, 15), h, +k => w.refire(sound(k, S.p.mo(k), 6)), +k => w.firecgun(k, pos)))),
+      +h => C.br(U32.is_le(a, 19), h,
+        +h => C.br(U32.is_le(a, 17), h,
+          +h => w.gunflash(h),
+          +h => C.br(U32.is_le(a, 18), h, +k => pmissile(useammo(k, 1), S.p.mo(k), 33), +k => w.saw(k))),
+        +h => C.br(U32.is_le(a, 20), h,
+          +h => w.fireplasma(h),
+          +h => C.br(U32.is_le(a, 21), h, +k => sound(k, S.p.mo(k), 9), +k => pmissile(useammo(k, 40), S.p.mo(k), 35))))))
+
+
+def psp.tick?(+g: S.Sim, +pos: U32) -> S.Sim:
+  +st = psp(g, pos, 0)
+  +tc = psp(g, pos, 1)
+  C.when(Bool.and(U32.is_ne(st, 0), U32.is_ne(tc, 4294967295)), g,
+    +h => C.br(U32.is_eq(tc, 1), psp.set(h, pos, 1, 0), +k => setpsp(k, pos, C.state(k, psp(k, pos, 0), 4)), +k => psp.set(k, pos, 1, (tc - 1 : U32))))
+
+
+def movepsprites?(+g: S.Sim) -> S.Sim:
+  +g1 = psp.tick(psp.tick(g, 0), 1)
+  psp.set(psp.set(g1, 1, 2, psp(g1, 0, 2)), 1, 3, psp(g1, 0, 3))
+
+
+def owned(n: Nat, +g: S.Sim, +i: U32, +acc: U32) -> U32:
+  match n:
+    case 0n:
+      acc
+    case 1n+p:
+      owned(p, g, (i + 1 : U32), (acc .|. (C.b2u(U32.is_ne(I.own(g, i), 0)) << U32.to_nat(i)) : U32))
+
+
+def st.start(+g: S.Sim) -> S.Sim:
+  S.sim.hcount.set(S.sim.stweap.set(S.sim.stold.set(S.sim.stface.set(g, 0), 4294967295), owned(9n, g, 0, 0)), 0)
+
+
+def st.pain(+g: S.Sim) -> S.Sim:
+  +h0 = S.p.health(g)
+  +h = Bool.pick(U32, F.gt(h0, 100), 100, h0)
+  C.when(U32.is_ne(h, S.sim.stpainh(g)), g, +k => S.sim.stpainh.set(S.sim.stpainc.set(k, (8 * (sdiv(((100 - h) * 5 : U32), 101)) : U32)), h))
+
+
+def st.face(+g: S.Sim, +prio: U32, +count: U32, +off: U32) -> S.Sim:
+  +g1 = st.pain(g)
+  S.sim.stprio.set(S.sim.stcount.set(S.sim.stface.set(g1, (S.sim.stpainc(g1) + off : U32)), count), prio)
+
+
+def st.dead(+g: S.Sim) -> S.Sim:
+  C.when(Bool.and(U32.is_lt(S.sim.stprio(g), 10), U32.is_eq(S.p.health(g), 0)), g,
+    +h => S.sim.stcount.set(S.sim.stface.set(S.sim.stprio.set(h, 9), 41), 1))
+
+
+def st.grin(+g: S.Sim) -> S.Sim:
+  +now = owned(9n, g, 0, 0)
+  +grin = U32.is_ne(now, S.sim.stweap(g))
+  C.when(Bool.and(U32.is_lt(S.sim.stprio(g), 9), U32.is_ne(S.p.bonuscount(g), 0)), g,
+    +h => C.when(grin, S.sim.stweap.set(h, now), +k => st.face(k, 8, 70, 6)))
+
+
+def st.much(+g: S.Sim) -> Bool:
+  F.gt((S.p.health(g) - S.sim.stold(g) : U32), 20)
+
+
+def st.turn(+g: S.Sim) -> S.Sim:
+  +mo = S.p.mo(g)
+  +bga = toward(g, mo, S.p.attacker(g))
+  +ma = S.m.angle(g, mo)
+  +gt = U32.is_gt(bga, ma)
+  +diff = Bool.pick(U32, gt, (bga - ma : U32), (ma - bga : U32))
+  +i = Bool.pick(Bool, gt, U32.is_gt(diff, 2147483648), U32.is_le(diff, 2147483648))
+  st.face(g, 7, 35, Bool.pick(U32, U32.is_lt(diff, 536870912), 7, Bool.pick(U32, i, 3, 4)))
+
+
+def st.hit(+g: S.Sim) -> S.Sim:
+  +att = S.p.attacker(g)
+  C.when(Bool.and(Bool.and(U32.is_lt(S.sim.stprio(g), 8), U32.is_ne(S.p.damagecount(g), 0)), Bool.and(U32.is_ne(att, 0), U32.is_ne(att, S.p.mo(g)))), g,
+    +h => C.br(st.much(h), h, +k => st.face(k, 7, 35, 5), +k => st.turn(k)))
+
+
+def st.hurt(+g: S.Sim) -> S.Sim:
+  C.when(Bool.and(U32.is_lt(S.sim.stprio(g), 7), U32.is_ne(S.p.damagecount(g), 0)), g,
+    +h => C.br(st.much(h), h, +k => st.face(k, 7, 35, 5), +k => st.face(k, 6, 35, 7)))
+
+
+def st.rampage(+g: S.Sim) -> S.Sim:
+  +lad = S.sim.stlad(g)
+  C.when(U32.is_lt(S.sim.stprio(g), 6), g,
+    +h => C.br(U32.is_ne(S.p.attackdown(h), 0), h,
+      +k => C.br(U32.is_eq(lad, 4294967295), k, +q => S.sim.stlad.set(q, 70),
+        +q => C.br(U32.is_eq(lad, 1), q, +z => S.sim.stlad.set(st.face(z, 5, 1, 7), 1), +z => S.sim.stlad.set(z, (lad - 1 : U32)))),
+      +k => S.sim.stlad.set(k, 4294967295)))
+
+
+def st.god(+g: S.Sim) -> S.Sim:
+  C.when(Bool.and(U32.is_lt(S.sim.stprio(g), 5), Bool.or(C.has(S.p.cheats(g), 2), U32.is_ne(S.p.pw0(g), 0))), g,
+    +h => S.sim.stcount.set(S.sim.stface.set(S.sim.stprio.set(h, 4), 40), 1))
+
+
+def st.idle(+g: S.Sim) -> S.Sim:
+  +g1 = C.when(U32.is_eq(S.sim.stcount(g), 0), g, +h => st.face(h, 0, 17, (S.sim.strnd(h) % 3 : U32)))
+  S.sim.stcount.set(g1, (S.sim.stcount(g1) - 1 : U32))
+
+
+def st.ticker(+g: S.Sim) -> S.Sim:
+  +r = ((S.sim.mrnd(g) + 1) .&. 255 : U32)
+  +g1 = S.sim.strnd.set(S.sim.mrnd.set(g, r), T.get(U32, S.mp.rndt(g), r, 0))
+  +g2 = st.idle(st.god(st.rampage(st.hurt(st.hit(st.grin(st.dead(g1)))))))
+  +g3 = S.sim.stold.set(g2, S.p.health(g2))
+  +w = S.sim.wipe(g3)
+  C.when(U32.is_ne(w, 0), S.sim.wipe.set(g3, (w - 1 : U32)), +h => C.when(U32.is_eq(w, 1), h, +k => S.sim.mrnd.set(k, ((S.sim.mrnd(k) + 64) .&. 255 : U32))))
+
+
+def hu.ticker(+g: S.Sim) -> S.Sim:
+  +c = S.sim.hcount(g)
+  +g1 = S.sim.hcount.set(g, Bool.pick(U32, U32.is_ne(c, 0), (c - 1 : U32), 0))
+  +m = S.p.message(g1)
+  C.when(U32.is_ne(m, 0), g1, +h => S.p.message.set(S.sim.hcount.set(S.sim.hmsg.set(h, m), 140), 0))

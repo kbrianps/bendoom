@@ -13,7 +13,7 @@ The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): ever
 | 3 | Floors, ceilings, sky, sprites and masked textures | done |
 | 4 | Player and world: movement, collision, doors, lifts, line and sector specials | done |
 | 5 | Every monster, with the original states and AI | done |
-| 6 | Weapons, items, ammo, HUD and status bar | |
+| 6 | Weapons, items, ammo, HUD and status bar | done |
 | 7 | Menus, in-game automap, skills, intermission, finales, every episode and Doom II | |
 | 8 | Sound, music, saves and `.lmp` demos, played back in sync | |
 
@@ -22,24 +22,25 @@ The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): ever
     bend doom.bend -o doom
     ./doom doom.wad E1M1
 
-`doom` opens a 640x400 window at the map's first player start and runs the game at Doom's 35 tics a second. The arrow keys or W and S walk and turn, A and D or comma and period strafe, Shift runs, Space or E uses, 1 to 7 pick a weapon and Escape quits.
+`doom` opens a 640x400 window at the map's first player start and runs the game at Doom's 35 tics a second. The arrow keys or W and S walk and turn, A and D or comma and period strafe, Shift runs, Ctrl or F fires, Space or E uses, 1 to 7 pick a weapon and Escape quits.
 
-The simulation is a port of id's: movement with momentum, friction, view bob and step-ups; collision against walls, things and the blockmap; doors, locked doors, lifts, floors, ceilings, crushers, stairs, donuts and light effects; walk, use and shoot line specials, switches and their timed return, teleports, animated flats and textures, scrolling walls, damaging and secret sectors; item pickups; and the exit, which loads the next map, or a death, which restarts the current one. Monsters see, hear, chase and attack as id's do: sight through the REJECT table and the BSP, sound flooding through sectors, melee, hitscan and missile attacks, homing revenant rockets, the arch-vile's resurrections and flame, pain elementals and lost souls, the boss deaths that open E1M8 and MAP07, and the Icon of Sin's cube spawner. Weapons do not fire until stage 6. Until stage 7, finishing an episode's last map (E?M8, MAP30) goes on to the next episode's first map.
+The simulation is a port of id's: movement with momentum, friction, view bob and step-ups; collision against walls, things and the blockmap; doors, locked doors, lifts, floors, ceilings, crushers, stairs, donuts and light effects; walk, use and shoot line specials, switches and their timed return, teleports, animated flats and textures, scrolling walls, damaging and secret sectors; item pickups; and the exit, which loads the next map, or a death, which restarts the current one. Monsters see, hear, chase and attack as id's do: sight through the REJECT table and the BSP, sound flooding through sectors, melee, hitscan and missile attacks, homing revenant rockets, the arch-vile's resurrections and flame, pain elementals and lost souls, the boss deaths that open E1M8 and MAP07, and the Icon of Sin's cube spawner. Every weapon fires as id's do, from the fist and chainsaw to the BFG, with its raise, lower, refire and flash states, autoaim, ammo use and the switch when it runs out. The status bar shows ammo, health, armor, arms, keys and the face, which looks around, grins, winces and turns toward the damage with the same random numbers as the original; pickup and locked-door messages show at the top, and damage, bonus and radiation suits tint the palette. Until stage 7, finishing an episode's last map (E?M8, MAP30) goes on to the next episode's first map.
 
     bend shot.bend -o shot
     ./shot doom.wad E1M1 e1m1.bmp
 
-`shot` renders the same view from the player start into a 320x200 BMP.
+`shot` renders the same view from the player start, with the status bar and weapon, into a 320x200 BMP.
 
     bend walk.bend -o walk
     ./walk doom.wad E1M1 out.bmp 200 1 at 600 712 180 2 128
 
-`walk` plays a script without a window and saves the last frame. Each pair is a number of tics and the keys held through them as a bit mask: 1 forward, 2 back, 4 and 8 turn left and right, 16 and 32 strafe left and right, 64 run, 128 use, and 512, 1024 and so on up to 32768 pick weapons 1 to 7. `at X Y ANGLE` places the player. It prints the player's position, floor height, whether the level was exited, and the player's health.
+`walk` plays a script without a window and saves the last frame. Each pair is a number of tics and the keys held through them as a bit mask: 1 forward, 2 back, 4 and 8 turn left and right, 16 and 32 strafe left and right, 64 run, 128 use, 65536 fire, and 512, 1024 and so on up to 32768 pick weapons 1 to 7. `at X Y ANGLE` places the player. It prints the player's position, floor height, whether the level was exited, and the player's health.
 
     bend demo.bend -o demo
     ./demo doom.wad E1M1 run.lmp
+    ./demo doom.wad E1M1 run.lmp 200 frame.bmp
 
-`demo` plays a vanilla `.lmp` demo's tic commands without a window and prints one line per tic: the level time, the random index, the player's position, angle and health, the number of mobjs and a hash of every mobj's position, angle, state, tics, health and flags. The same line printed by a reference engine shows where the two part.
+`demo` plays a vanilla `.lmp` demo's tic commands without a window and prints one line per tic: the level time, the random index, the player's position, angle and health, the number of mobjs and a hash of every mobj's position, angle, state, tics, health and flags, and a hash of the player's weapon, ammo and weapon sprites. A tic and a file name save that tic's frame as a BMP, and `give` before them starts the player with every weapon and full ammo. The same line printed by a reference engine shows where the two part.
 
     bend automap.bend -o automap
     ./automap doom.wad E1M1 e1m1.bmp
@@ -53,7 +54,7 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 
 ## Tests
 
-`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps and three rendered views against their known images, plays three short walks through E1M1: riding a lift down, opening a door and pressing the exit switch, and plays six demos across Doom and Doom II maps, built by `tests/mklmp.py`, whose traces must match the ones Chocolate Doom prints for the same demos, tic by tic, monsters included. `BEND=path/to/bend ./test.sh` picks the compiler.
+`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps and three rendered views against their known images, plays three short walks through E1M1: riding a lift down, opening a door and pressing the exit switch, and plays nine demos across Doom and Doom II maps, among them a pistol fight and every weapon fired on MAP01, and checks one frame of the pistol fight, weapon and status bar included, which is pixel for pixel the frame Chocolate Doom draws, built by `tests/mklmp.py`, whose traces must match the ones Chocolate Doom prints for the same demos, tic by tic, monsters included. `BEND=path/to/bend ./test.sh` picks the compiler.
 
 ## Layout
 
@@ -75,19 +76,22 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 | `src/state.bend` | the simulation's records and their accessors: lines, the move state, the level, the world with its mobjs, sectors, sides and the player |
 | `src/sim.bend` | thinker lists, mobj ids, `P_Random`, and the helpers the rest builds on |
 | `src/geo.bend` | `p_maputl.c`: point sides, line openings, sector and blockmap links, blockmap iteration and path traversal |
-| `src/game.bend` | the game proper, one module because Doom's parts call each other: `p_mobj.c` spawning and state changes, `p_map.c` and `p_maputl.c` moves, slides, sight and aiming, hitscans and radius damage, `p_inter.c` damage and death, `p_enemy.c` monster AI and every action function, every line and sector special of `p_spec.c` and its kin, `p_user.c` and `P_Ticker` |
-| `src/items.bend` | `P_TouchSpecialThing`: health, armor, ammo, weapons, keys and powers |
+| `src/game.bend` | the game proper, one module because Doom's parts call each other: `p_mobj.c` spawning and state changes, `p_map.c` and `p_maputl.c` moves, slides, sight and aiming, hitscans and radius damage, `p_inter.c` damage and death, `p_enemy.c` monster AI and every action function, every line and sector special of `p_spec.c` and its kin, `p_pspr.c` weapons, `p_user.c`, the status bar and HUD tickers and `P_Ticker` |
+| `src/items.bend` | `P_TouchSpecialThing`: health, armor, ammo, weapons, keys and powers, and their messages |
+| `src/hud.bend`, `src/hudtext.bend` | `st_stuff.c` and `hu_stuff.c` drawn: the status bar, its numbers, keys and face, the message line in the HUD font, the weapon sprites and the palette tints |
 | `src/setup.bend` | `p_setup.c`: the level's lines, blockmap, sector boxes, animations and switches, and its thinkers at the start |
 | `src/boot.bend`, `src/play.bend` | loading a map and its textures, the input to tic commands, the 35 Hz loop and level changes |
 | `src/automap.bend`, `src/bmp.bend`, `src/sys.bend` | the automap drawn into an array, BMP output, writing files |
 | `tools/gen_tables.py` | generates `src/tables.bend` from id Software's `tables.c` and `m_random.c` |
 | `tools/gen_state.py` | generates `src/state.bend` |
 | `tools/gen_tabs.py` | generates the walk-over and use tables of `src/game.bend` from the special numbers in `p_spec.c` and `p_switch.c` |
+| `tools/gen_hud.py` | generates `src/hudtext.bend`: the status bar and font lump names and the pickup messages |
 | `tools/gen_info.py` | generates `src/info.bend` from id Software's `info.c`, `info.h`, `sounds.h` and `p_mobj.h` |
 
 ## Limits
 
 - **Bend 2.0.36**, native build (`-o`). The programs run under `bend file.bend` too, but a whole WAD overflows the JS lane's stack.
+- The invulnerability and light amplification colormaps tint the weapon but not yet the world, and the fuzz of spectres advances only on frames that are drawn.
 - Map nodes must be in Doom's original format; ZDoom's extended nodes come later, with PWAD support.
 
 The code is GPL-2.0, the license of Doom's source. The WADs are not included.

@@ -335,7 +335,7 @@ def count(+yl: U32, +yh: U32) -> Nat:
 def column(go: Bool, fr: Frame, +t: M.Info, +tc: U32, +x: U32, +yl: U32, +yh: U32, +mid: U32, +step: U32, +cm: U32) -> Frame:
   match go:
     case True{}:
-      paint(count(yl, yh), fr, x, yl, (mid + (yl - 100) * step : U32), step, colbase(t, tc), cm)
+      paint(count(yl, yh), fr, x, yl, (mid + (yl - M.cy()) * step : U32), step, colbase(t, tc), cm)
     case False{}:
       fr
 
@@ -368,7 +368,7 @@ def wcol.a(fb: Array<U32>, rom: Array<U32>, ram: Array<U32>, sd: List<&2, Range>
           +cm = (lightmap(light, scale) * 256 : U32)
           +isc = (4294967295 / scale : U32)
           +tm = F.min(F.sar(high, 12n), (f0 - 1 : U32))
-          +c1 = Bool.pick(U32, hm, 200, Bool.pick(U32, Bool.not(ht), Bool.pick(U32, markc, (yl - 1 : U32), c0), Bool.pick(U32, F.ge(tm, yl), tm, (yl - 1 : U32))))
+          +c1 = Bool.pick(U32, hm, M.vh(), Bool.pick(U32, Bool.not(ht), Bool.pick(U32, markc, (yl - 1 : U32), c0), Bool.pick(U32, F.ge(tm, yl), tm, (yl - 1 : U32))))
           +bm = F.max(F.sar((low + 4095 : U32), 12n), (c1 + 1 : U32))
           +f1 = Bool.pick(U32, hm, 4294967295, Bool.pick(U32, Bool.not(hb), Bool.pick(U32, markf, (yh + 1 : U32), f0), Bool.pick(U32, F.le(bm, yh), bm, (yh + 1 : U32))))
           ram5 = M.wr(M.wr(ram4, (M.ceilclip() + x : U32), c1), (M.floorclip() + x : U32), f1)
@@ -632,7 +632,7 @@ def store.sec(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +
           F.neg(F.mul(sstep, wt)), F.neg(F.mul(sstep, wb)),
           Bool.pick(U32, ht, F.neg(F.mul(sstep, wh)), 0),
           Bool.pick(U32, hb, F.neg(F.mul(sstep, wl)), 0), masked, 0},
-        Cols{start, s1, (409600 - F.mul(wt, s1) : U32), (409600 - F.mul(wb, s1) : U32), (409600 - F.mul(wh, s1) : U32), (409600 - F.mul(wl, s1) : U32)},
+        Cols{start, s1, ((M.cy() << 12n) - F.mul(wt, s1) : U32), ((M.cy() << 12n) - F.mul(wb, s1) : U32), ((M.cy() << 12n) - F.mul(wh, s1) : U32), ((M.cy() << 12n) - F.mul(wl, s1) : U32)},
         U32.to_nat((stop - start + 1 : U32)), start, stop)
 
 def store.side(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +vz: U32, +va: U32, +ex: U32, +x1: U32, +y1: U32, +x2: U32, +y2: U32, +an: U32, +of: U32, +fl: U32, +bk: U32, +sd: R.RSide, +a1: U32, +start: U32, +stop: U32) -> Frame:
@@ -857,7 +857,7 @@ def frame(st: St) -> Frame:
 def skypaint(n: Nat, fr: Frame, +x: U32, +y: U32, +col: U32) -> Frame:
   match n fr:
     case 1n+p Frame{fb, rom, ram, sd}:
-      M.let(Frame, M.rd(rom, (col + (y .&. 127) : U32)), rom1 => +t =>
+      M.let(Frame, M.rd(rom, (col + ((y + 100 - M.cy()) .&. 127) : U32)), rom1 => +t =>
         M.let(Frame, M.rd(rom1, (M.cmap() + t : U32)), rom2 => +c =>
           skypaint(p, Frame{S.put(fb, x, y, c), rom2, ram, sd}, x, (y + 1 : U32), col)))
     case _ f:
@@ -877,14 +877,20 @@ def skycols(n: Nat, fr: Frame, +tb: Tabs, +sk: M.Info, +va: U32, +p: U32, +x: U3
     case 1n+q:
       skycols(q, skycol(fr, tb, sk, va, p, x), tb, sk, va, p, (x + 1 : U32))
 
-def spanpaint(n: Nat, fr: Frame, +x: U32, +y: U32, +xf: U32, +yf: U32, +xs: U32, +ys: U32, +pic: U32, +cm: U32) -> Frame:
+def spanpaint.go(n: Nat, fr: Frame, +x: U32, +y: U32, +pos: U32, +step: U32, +pic: U32, +cm: U32) -> Frame:
   match n fr:
     case 1n+p Frame{fb, rom, ram, sd}:
-      M.let(Frame, M.rd(rom, (pic + ((yf >> 10n) .&. 4032) + ((xf >> 16n) .&. 63) : U32)), rom1 => +t =>
+      M.let(Frame, M.rd(rom, (pic + ((pos >> 4n) .&. 4032) + (pos >> 26n) : U32)), rom1 => +t =>
         M.let(Frame, M.rd(rom1, (cm + t : U32)), rom2 => +c =>
-          spanpaint(p, Frame{S.put(fb, x, y, c), rom2, ram, sd}, (x + 1 : U32), y, (xf + xs : U32), (yf + ys : U32), xs, ys, pic, cm)))
+          spanpaint.go(p, Frame{S.put(fb, x, y, c), rom2, ram, sd}, (x + 1 : U32), y, (pos + step : U32), step, pic, cm)))
     case _ f:
       f
+
+def pack(+xf: U32, +yf: U32) -> U32:
+  (((xf << 10n) .&. 4294901760) .|. ((yf >> 6n) .&. 65535) : U32)
+
+def spanpaint(n: Nat, fr: Frame, +x: U32, +y: U32, +xf: U32, +yf: U32, +xs: U32, +ys: U32, +pic: U32, +cm: U32) -> Frame:
+  spanpaint.go(n, fr, x, y, pack(xf, yf), pack(xs, ys), pic, cm)
 
 def mapplane(fr: Frame, +tb: Tabs, +cx: Ctx, +y: U32, +x1: U32, +x2: U32) -> Frame:
   match fr cx:
@@ -1022,9 +1028,9 @@ def setn(n: Nat, ram: Array<U32>, +i: U32, +v: U32) -> Array<U32>:
 
 def fresh() -> Array<U32>:
   r1 = setn(320n, Array.new(U32, M.ramdepth(), 0), M.ceilclip(), 4294967295)
-  r2 = setn(320n, r1, M.floorclip(), 200)
+  r2 = setn(320n, r1, M.floorclip(), M.vh())
   r3 = setn(320n, r2, M.negone(), 4294967295)
-  r4 = setn(320n, r3, M.screenh(), 200)
+  r4 = setn(320n, r3, M.screenh(), M.vh())
   M.wr(r4, M.lastopening(), M.openings())
 
 def scene(+tb: Tabs, +w: R.World, +v: View, rom: Array<U32>) -> Frame:

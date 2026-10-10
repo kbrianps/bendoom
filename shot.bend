@@ -1,4 +1,5 @@
 import Base
+import ./src/hud.bend as U
 import ./src/state.bend as S
 import ./src/draw.bend as D
 import ./src/screen.bend as C
@@ -11,7 +12,7 @@ def shot.out(out: String, r: Array<U32> & Array<U32>) -> IO(Unit):
 
 def shoot(out: String, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
-  shot.out(out, D.render(S.mp.tb(g), S.sim.w(g), B.view(g), rom))
+  shot.out(out, U.render(g, rom))
 
 def args(xs: List<String>) -> IO(Unit):
   match xs:
