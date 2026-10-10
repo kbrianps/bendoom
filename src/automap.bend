@@ -1,5 +1,5 @@
 import Base
-import ./i32.bend as I
+import ./fixed.bend as F
 import ./tab.bend as T
 import ./level.bend as L
 
@@ -12,7 +12,7 @@ def size() -> U32:
 def grow(b: L.Box, v: L.Vertex) -> L.Box:
   match b v:
     case L.Box{t, bo, le, r} L.Vertex{+x, +y}:
-      L.Box{I.max(t, y), I.min(bo, y), I.min(le, x), I.max(r, x)}
+      L.Box{F.max(t, y), F.min(bo, y), F.min(le, x), F.max(r, x)}
 
 def bounds(n: Nat, +vs: T.Vec<L.Vertex>, +i: U32, b: L.Box) -> L.Box:
   match n:

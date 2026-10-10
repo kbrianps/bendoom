@@ -3,24 +3,13 @@ import ./src/wad.bend as W
 import ./src/level.bend as L
 import ./src/automap.bend as A
 import ./src/bmp.bend as P
-
-def saved(p: File & Result<&1, &1, U32 & String, Unit>) -> IO(Unit):
-  (f, r) = p
-  do IO<Unit>:
-    IO.pass(Unit, r)
-    File.close(f)
-
-def save(path: String, bytes: List<&2, U32>) -> IO(Unit):
-  do IO<Unit>:
-    f : File <- IO.try(File, File.open(path, "w"))
-    p : File & Result<&1, &1, U32 & String, Unit> <- File.write_bytes(f, bytes)
-    saved(p)
+import ./src/sys.bend as Y
 
 def draw(out: String, pal: List<&2, U32>, p: W.Wad & L.Level) -> IO(Unit):
   (w, lv) = p
   do IO<Unit>:
     W.close(w)
-    save(out, P.encode(A.size(), A.size(), A.render(lv, A.palette(pal))))
+    Y.save(out, P.encode(A.size(), A.size(), P.own(Array.to_list(~U32, A.render(lv, A.palette(pal))))))
 
 def level(+name: String, out: String, p: W.Wad & List<&2, U32>) -> IO(Unit):
   (w, pal) = p

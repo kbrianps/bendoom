@@ -23,6 +23,7 @@ WADS="$CACHE/$FREEDOOM"
 
 $BEND wadinfo.bend -o "$TMP/wadinfo" >/dev/null 2>&1 || { echo "build wadinfo failed"; exit 1; }
 $BEND automap.bend -o "$TMP/automap" >/dev/null 2>&1 || { echo "build automap failed"; exit 1; }
+$BEND shot.bend -o "$TMP/shot" >/dev/null 2>&1 || { echo "build shot failed"; exit 1; }
 
 for wad in freedoom1 freedoom2; do
   python3 tests/wadinfo.py "$WADS/$wad.wad" > "$TMP/$wad.want"
@@ -32,13 +33,16 @@ for wad in freedoom1 freedoom2; do
     ok "$wad.wad: all $n maps read as the reference reads them" || bad "$wad.wad maps"
 done
 
-shot() {
-  "$TMP/automap" "$WADS/$1.wad" "$2" "$TMP/$2.bmp" &&
-    echo "$3  $TMP/$2.bmp" | sha256sum -c --quiet &&
-    ok "automap of $2" || bad "automap of $2"
+image() {
+  "$TMP/$1" "$WADS/$2.wad" "$3" "$TMP/$1-$3.bmp" &&
+    echo "$4  $TMP/$1-$3.bmp" | sha256sum -c --quiet &&
+    ok "$1 of $3" || bad "$1 of $3"
 }
-shot freedoom1 E1M1 ca6f083a70a9de12621b0d5091353234ef2eed3733b23aa128c548d88ae3a85e
-shot freedoom1 E4M7 28cdab142d2b33cb8ee3999b66dcf9fe0c6e1a564d2fa15feba7ffe21a25d833
-shot freedoom2 MAP01 b3751262f55ae35c9d7d76d93f7910ef52cf67f39820960c83a85735962c16ba
+image automap freedoom1 E1M1 ca6f083a70a9de12621b0d5091353234ef2eed3733b23aa128c548d88ae3a85e
+image automap freedoom1 E4M7 28cdab142d2b33cb8ee3999b66dcf9fe0c6e1a564d2fa15feba7ffe21a25d833
+image automap freedoom2 MAP01 b3751262f55ae35c9d7d76d93f7910ef52cf67f39820960c83a85735962c16ba
+image shot freedoom1 E1M1 305eb022edb41763a581722f630573f18156e4a953b58237bec74eb9074cd63a
+image shot freedoom1 E3M3 835aef2ebb4deb5d5710e849eca6877e4c2c19b236de995c5bcf216892d3d827
+image shot freedoom2 MAP01 4a97935d9e7f2e37a363e83aa1905bbf830a0467cd0bed023f22a5257c8570b7
 
 [ "$FAILS" -eq 0 ] && echo "ALL TESTS PASS" || { echo "$FAILS FAILED"; exit 1; }

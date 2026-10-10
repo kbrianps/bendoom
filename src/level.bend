@@ -1,6 +1,5 @@
 import Base
 import ./bytes.bend as B
-import ./i32.bend as I
 import ./tab.bend as T
 import ./wad.bend as W
 
@@ -46,7 +45,7 @@ type Level is Data:
     blockmap: T.Vec<U32>}
 
 def s(+w: U32) -> U32:
-  I.from_s16(w)
+  B.s16(w)
 
 def things(ws: List<&2, U32>) -> List<&2, Thing>:
   match ws:
@@ -107,13 +106,6 @@ def sectors(ws: List<&2, U32>) -> List<&2, Sector>:
 def parts() -> List<&2, String>:
   ["THINGS", "LINEDEFS", "SIDEDEFS", "VERTEXES", "SEGS", "SSECTORS", "NODES", "SECTORS", "REJECT", "BLOCKMAP"]
 
-def pick(+ls: List<&2, W.Lump>, names: List<&2, String>) -> List<&2, W.Lump>:
-  match names:
-    case n <> t:
-      W.part(ls, n) <> pick(ls, t)
-    case []:
-      []
-
 def vec(-A: Data, xs: List<&2, A>) -> T.Vec<A>:
   T.from_list(A, xs)
 
@@ -142,5 +134,5 @@ def load(w: W.Wad, +name: String) -> IO(W.Wad & Level):
   match w:
     case W.Wad{file, +d}:
       IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Level,
-        W.lumps(pick(List.take(&2, W.Lump, W.from(name, d), 11n), parts()), W.Wad{file, d}),
+        W.lumps(W.parts(List.take(&2, W.Lump, W.from(name, d), 11n), parts()), W.Wad{file, d}),
         p => load.fin(name, p))

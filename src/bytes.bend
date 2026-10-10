@@ -7,6 +7,9 @@ def words(xs: List<&2, U32>) -> List<&2, U32>:
     case _:
       []
 
+def s16(+w: U32) -> U32:
+  Bool.pick(U32, U32.is_ge(w, 32768), (w .|. 4294901760 : U32), w)
+
 def u32(lo: U32, hi: U32) -> U32:
   (lo .|. (hi << 16n) : U32)
 

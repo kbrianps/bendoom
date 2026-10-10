@@ -2,14 +2,14 @@
 
 The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): every episode of Doom and Doom II, every monster and weapon, menus, saves, the automap and the original demos playing in sync. It is built in stages.
 
-<p align="center"><img src="docs/automap-e1m1.png" width="512" alt="The automap of Freedoom's E1M1, drawn by automap.bend"></p>
+<p align="center"><img src="docs/walls-e1m1.png" width="640" alt="Freedoom's E1M1 from the player start, drawn by shot.bend"></p>
 
 ## Stages
 
 | | Stage | State |
 |---|---|---|
 | 1 | WAD and maps: any IWAD's directory, every map lump, the palette, the automap as an image | done |
-| 2 | Walls: BSP traversal, composite textures, light and colormaps, a window | |
+| 2 | Walls: BSP traversal, composite textures, light and colormaps, a window | done |
 | 3 | Floors, ceilings, sky, sprites and masked textures | |
 | 4 | Player and world: movement, collision, doors, lifts, line and sector specials | |
 | 5 | Every monster, with the original states and AI | |
@@ -18,6 +18,16 @@ The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): ever
 | 8 | Sound, music, saves and `.lmp` demos, played back in sync | |
 
 ## Use
+
+    bend doom.bend -o doom
+    ./doom doom.wad E1M1
+
+`doom` opens a 640x400 window at the map's first player start. The arrow keys or W and S walk and turn, A and D or comma and period strafe, Shift runs and Escape quits. Walls are drawn as Doom draws them; floors and ceilings are flat colors until stage 3, and there is no collision until stage 4.
+
+    bend shot.bend -o shot
+    ./shot doom.wad E1M1 e1m1.bmp
+
+`shot` renders the same view from the player start into a 320x200 BMP.
 
     bend automap.bend -o automap
     ./automap doom.wad E1M1 e1m1.bmp
@@ -31,7 +41,7 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 
 ## Tests
 
-`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps against their known images. `BEND=path/to/bend ./test.sh` picks the compiler.
+`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps and three rendered views against their known images. `BEND=path/to/bend ./test.sh` picks the compiler.
 
 ## Layout
 
@@ -40,8 +50,15 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 | `src/wad.bend` | the WAD header and directory, lumps read on demand at their offset |
 | `src/level.bend` | a map's lumps as typed records |
 | `src/tab.bend` | `Vec`, a shared, indexable table for data read once and looked up often |
-| `src/bytes.bend`, `src/i32.bend` | little-endian words, lump names, signed 32-bit arithmetic on `U32` |
-| `src/automap.bend`, `src/bmp.bend` | the automap drawn into an array, written as a BMP |
+| `src/bytes.bend` | little-endian words, lump names, signed 16-bit values |
+| `src/fixed.bend`, `src/tables.bend` | Doom's 16.16 fixed point on `U32`, and its sine, tangent, arctangent and random tables |
+| `src/gfx.bend`, `src/load.bend` | patches, `PNAMES`, `TEXTURE1`/`TEXTURE2`, and composite textures built column by column as Doom builds them |
+| `src/world.bend` | a map in the form the renderer reads: fixed-point segs and sides with texture ids |
+| `src/render.bend` | the BSP walk, solid-segment clipping and wall columns, after `r_bsp.c` and `r_segs.c` |
+| `src/screen.bend` | the 320x200 frame as a 512x512 Morton-ordered array, which maps onto a window image directly |
+| `src/boot.bend`, `src/play.bend` | loading a map and its textures, the player start, input and movement |
+| `src/automap.bend`, `src/bmp.bend`, `src/sys.bend` | the automap drawn into an array, BMP output, writing files |
+| `tools/gen_tables.py` | generates `src/tables.bend` from id Software's `tables.c` and `m_random.c` |
 
 ## Limits
 

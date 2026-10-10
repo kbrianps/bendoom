@@ -68,3 +68,17 @@ def depth(+n: U32) -> Nat:
 def from_list(-A: Data, +xs: List<&2, A>) -> Vec<A>:
   +n = U32.from_nat(List.length(&2, A, xs))
   Vec{n, build(A, depth(n), xs)}
+
+def set.go(-A: Data, t: Tab<A>, b: Bool, +i: U32, v: A) -> Tab<A>:
+  match t b:
+    case TNode{l, h} False{}:
+      TNode{set.go(A, l, odd((i >> 1n : U32)), (i >> 1n : U32), v), h}
+    case TNode{l, h} True{}:
+      TNode{l, set.go(A, h, odd((i >> 1n : U32)), (i >> 1n : U32), v)}
+    case _ _:
+      TLeaf{v}
+
+def set(-A: Data, v: Vec<A>, +i: U32, x: A) -> Vec<A>:
+  match v:
+    case Vec{n, t}:
+      Vec{n, set.go(A, t, odd(i), i, x)}

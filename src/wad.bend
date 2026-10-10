@@ -142,3 +142,15 @@ def maps(ls: List<&2, Lump>) -> List<&2, Lump>:
       maps.put(heads("THINGS", t), l, maps(t))
     case []:
       []
+
+def parts(+ls: List<&2, Lump>, names: List<&2, String>) -> List<&2, Lump>:
+  match names:
+    case n <> t:
+      part(ls, n) <> parts(ls, t)
+    case []:
+      []
+
+def get(w: Wad, names: List<&2, String>) -> IO(Wad & List<&2, List<&2, U32>>):
+  match w:
+    case Wad{file, +d}:
+      lumps(parts(d, names), Wad{file, d})
