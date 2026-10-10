@@ -15,7 +15,7 @@ The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): ever
 | 5 | Every monster, with the original states and AI | done |
 | 6 | Weapons, items, ammo, HUD and status bar | done |
 | 7 | Menus, in-game automap, skills, intermission, finales, every episode and Doom II | done |
-| 8 | Sound, music, saves and `.lmp` demos, played back in sync | |
+| 8 | Sound, music, saves and `.lmp` demos, played back in sync | done |
 
 ## Use
 
@@ -26,6 +26,8 @@ The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): ever
 `doom` opens a 640x400 window and runs the game at Doom's 35 tics a second. With only a WAD it starts at the title screen, which cycles through the title, credits and help pages until a key opens the main menu; with a map it starts on that map at the medium skill. The arrow keys or W and S walk and turn, A and D or comma and period strafe, Shift runs, Ctrl or F fires, Space or E uses and 1 to 7 pick a weapon. Escape opens the menu: new game with its episode and skill screens, options with messages, mouse sensitivity and volumes, the read-this pages, end game and quit, with the arrow keys, Enter and Backspace, and Y or N for the questions; F1 to F10 are the help, save, load, sound, quick save, end game, messages, quick load and quit keys of the original. Tab opens the automap, where the arrows pan, minus and equals zoom, 0 shows the whole map, F follows the player, G draws the grid, M marks a spot and C clears the marks. The cheats are id's: iddqd, idkfa, idfa, idclip or idspispopd, and iddt in the automap.
 
 The simulation is a port of id's: movement with momentum, friction, view bob and step-ups; collision against walls, things and the blockmap; doors, locked doors, lifts, floors, ceilings, crushers, stairs, donuts and light effects; walk, use and shoot line specials, switches and their timed return, teleports, animated flats and textures, scrolling walls, damaging and secret sectors; item pickups; and the exit, which loads the next map, or a death, which restarts the current one. Monsters see, hear, chase and attack as id's do: sight through the REJECT table and the BSP, sound flooding through sectors, melee, hitscan and missile attacks, homing revenant rockets, the arch-vile's resurrections and flame, pain elementals and lost souls, the boss deaths that open E1M8 and MAP07, and the Icon of Sin's cube spawner. Every weapon fires as id's do, from the fist and chainsaw to the BFG, with its raise, lower, refire and flash states, autoaim, ammo use and the switch when it runs out. The status bar shows ammo, health, armor, arms, keys and the face, which looks around, grins, winces and turns toward the damage with the same random numbers as the original; pickup and locked-door messages show at the top, and damage, bonus and radiation suits tint the palette. Finishing a map shows the intermission, with kills, items, secrets and times counted up and the next map's place on the episode map; the end of an episode, Doom II's text screens between its chapters and the end of the game play the finales, from the bunny scroller to the cast call.
+
+Sound effects are mixed in 8 channels at 22050 Hz with vanilla's channel stealing, distance attenuation and stereo separation, started wherever the original starts them: doors, lifts, switches, pickups, weapons, monsters, menus, the intermission and the finales. Music plays the WAD's MUS and MIDI lumps through a port of Chocolate Doom's OPL driver, the `GENMIDI` instruments on 9 voices, into an FM synthesizer modelled on Nuked OPL3 at 11025 Hz, sample for sample what that driver and chip produce; each level, the intermission, the finales and the title pick their song, and the options menu sets both volumes. The six save slots write the whole game state to `doomsav0.dsg` to `doomsav5.dsg`, and the title loop plays the WAD's demos between its pages.
 
     bend shot.bend -o shot
     ./shot doom.wad E1M1 e1m1.bmp
@@ -41,7 +43,15 @@ The simulation is a port of id's: movement with momentum, friction, view bob and
     ./demo doom.wad E1M1 run.lmp
     ./demo doom.wad E1M1 run.lmp 200 frame.bmp
 
-`demo` plays a vanilla `.lmp` demo's tic commands without a window and prints one line per tic: the level time, the random index, the player's position, angle and health, the number of mobjs and a hash of every mobj's position, angle, state, tics, health and flags, and a hash of the player's weapon, ammo and weapon sprites. A tic and a file name save that tic's frame as a BMP, and `give` before them starts the player with every weapon and full ammo. `keys TIC CODE DOWN ... end` presses and releases keys at given tics, with the window's key codes, so the menus and the automap can be driven from a demo, and `every N PREFIX` saves every Nth frame as `PREFIX_TIC.bmp`. The same line printed by a reference engine shows where the two part.
+`demo` plays a vanilla `.lmp` demo's tic commands without a window and prints one line per tic: the level time, the random index, the player's position, angle and health, the number of mobjs and a hash of every mobj's position, angle, state, tics, health and flags, and a hash of the player's weapon, ammo and weapon sprites. A tic and a file name save that tic's frame as a BMP, and `give` before them starts the player with every weapon and full ammo. `keys TIC CODE DOWN ... end` presses and releases keys at given tics, with the window's key codes, so the menus and the automap can be driven from a demo, and `every N PREFIX` saves every Nth frame as `PREFIX_TIC.bmp`. The same line printed by a reference engine shows where the two part. `sound` prints the sound starts instead: the tic, the sound and the kind of thing that made it.
+
+    bend listen.bend -o listen
+    ./listen doom.wad E1M1 run.lmp run.wav
+
+    bend song.bend -o song
+    ./song doom.wad D_E1M1 60 e1m1.wav
+
+`listen` plays a demo without a window and writes its sound effects and music to a 22050 Hz stereo WAV. `song` renders a music lump for the given number of seconds, looping, to a 11025 Hz mono WAV.
 
     bend automap.bend -o automap
     ./automap doom.wad E1M1 e1m1.bmp
@@ -55,7 +65,7 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 
 ## Tests
 
-`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps and three rendered views against their known images, plays three short walks through E1M1: riding a lift down, opening a door and pressing the exit switch, and plays nine demos across Doom and Doom II maps, among them a pistol fight and every weapon fired on MAP01, and checks one frame of the pistol fight, weapon and status bar included, which is pixel for pixel the frame Chocolate Doom draws, then drives the menus and the in-game automap with keys and checks those frames, and an intermission and a finale screen, all pixel for pixel Chocolate Doom's too, built by `tests/mklmp.py`, whose traces must match the ones Chocolate Doom prints for the same demos, tic by tic, monsters included. `BEND=path/to/bend ./test.sh` picks the compiler.
+`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps and three rendered views against their known images, plays three short walks through E1M1: riding a lift down, opening a door and pressing the exit switch, and plays nine demos across Doom and Doom II maps, among them a pistol fight and every weapon fired on MAP01, and checks one frame of the pistol fight, weapon and status bar included, which is pixel for pixel the frame Chocolate Doom draws, then drives the menus and the in-game automap with keys and checks those frames, and an intermission and a finale screen, all pixel for pixel Chocolate Doom's too, built by `tests/mklmp.py`, whose traces must match the ones Chocolate Doom prints for the same demos, tic by tic, monsters included. Four demos check every sound start against Chocolate Doom's, and three songs, Doom's and Doom II's, MUS and MIDI, a loop included, check the music sample for sample against Chocolate Doom's OPL output. `BEND=path/to/bend ./test.sh` picks the compiler.
 
 ## Layout
 
@@ -85,11 +95,16 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 | `src/flow.bend` | `d_main.c` and `g_game.c`'s flow: the title pages, events to the menu, automap and cheats, the pause while the menu is up, level changes, `wi_stuff.c`'s intermission and `f_finale.c`'s text, bunny and cast screens, and which screen is drawn |
 | `src/menu.bend` | `m_menu.c`: every menu, its items, the skull cursor, sliders, the message boxes and their routines |
 | `src/am.bend` | `am_map.c`: the in-game automap with panning, zoom, follow, grid, marks, the player arrow and the iddt cheat, lines clipped and drawn as id's are |
+| `src/sound.bend`, `src/sfxinfo.bend` | `s_sound.c` and `i_sdlsound.c`: channels, priorities, attenuation, separation, the sound lumps and the mixer |
+| `src/music.bend`, `src/opltab.bend` | MUS and MIDI parsing, `i_oplmusic.c`'s voice allocation and instruments, and the OPL synthesizer with its sine, exponent and envelope tables |
+| `src/save.bend`, `src/disk.bend` | the game state packed into a save and read back, and the slot files |
 | `src/automap.bend`, `src/bmp.bend`, `src/sys.bend` | the automap drawn into an array, BMP output, writing files |
 | `tools/gen_tables.py` | generates `src/tables.bend` from id Software's `tables.c` and `m_random.c` |
 | `tools/gen_state.py` | generates `src/state.bend` |
 | `tools/gen_tabs.py` | generates the walk-over and use tables of `src/game.bend` from the special numbers in `p_spec.c` and `p_switch.c` |
 | `tools/gen_hud.py` | generates `src/hudtext.bend`: the status bar and font lump names and the pickup messages |
+| `tools/gen_sfx.py` | generates `src/sfxinfo.bend` from id Software's `sounds.c` |
+| `tools/gen_opl.py` | generates `src/opltab.bend` from Chocolate Doom's `i_oplmusic.c` and Nuked OPL3's tables |
 | `tools/gen_info.py` | generates `src/info.bend` from id Software's `info.c`, `info.h`, `sounds.h` and `p_mobj.h` |
 
 ## Limits
@@ -97,7 +112,7 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 - **Bend 2.0.36**, native build (`-o`). The programs run under `bend file.bend` too, but a whole WAD overflows the JS lane's stack.
 - The invulnerability and light amplification colormaps tint the weapon but not yet the world, and the fuzz of spectres advances only on frames that are drawn.
 - The menu's detail and screen size options are kept but not drawn: the view is always full detail with the status bar.
-- Saves, sound and music come in stage 8; their menu items open but do nothing yet. The title loop shows its pages but skips the demos between them until then.
+- Music is OPL only, as Doom's Adlib and Sound Blaster cards played it; there is no General MIDI or OPL3 mode. Saves are this port's own format, not vanilla's `.dsg` layout.
 - Map nodes must be in Doom's original format; ZDoom's extended nodes come later, with PWAD support.
 
 The code is GPL-2.0, the license of Doom's source. The WADs are not included.

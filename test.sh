@@ -26,6 +26,7 @@ $BEND automap.bend -o "$TMP/automap" >/dev/null 2>&1 || { echo "build automap fa
 $BEND shot.bend -o "$TMP/shot" >/dev/null 2>&1 || { echo "build shot failed"; exit 1; }
 $BEND walk.bend -o "$TMP/walk" >/dev/null 2>&1 || { echo "build walk failed"; exit 1; }
 $BEND demo.bend -o "$TMP/demo" >/dev/null 2>&1 || { echo "build demo failed"; exit 1; }
+$BEND song.bend -o "$TMP/song" >/dev/null 2>&1 || { echo "build song failed"; exit 1; }
 
 for wad in freedoom1 freedoom2; do
   python3 tests/wadinfo.py "$WADS/$wad.wad" > "$TMP/$wad.want"
@@ -74,6 +75,26 @@ demo "MAP30 run" freedoom2 1 30 MAP30 32ec3da5ce94fa123915dd2c3ea81c10a5c3decb43
 demo "E1M1 pistol fight" freedoom1 1 1 E1M1 608671ffca4c76c4fc7d2164f4dc90cd4fc80ec32b12756a1af05568e30a2ec3 40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3
 GIVE=give demo "MAP01 every weapon" freedoom2 1 1 MAP01 df54c15d868df895bc4bce94f93b13ec657b4e20979c17eea855fcf7287c5a82 30,0,0,0,20 40,0,0,0,1 30,0,0,0,68 40,50,0,0,1 30,0,0,0,28 60,0,0,4,1 30,0,0,0,36 30,0,0,0,1 30,0,0,0,44 60,30,0,0,1
 GIVE=give demo "MAP01 saw, fist, plasma" freedoom2 1 1 MAP01 85d6f180d4c69db941b35a61cba88edd02f2bf5fcc009df39eef142eabb0e7f6 30,0,0,0,52 60,0,0,0,1 30,0,0,0,4 60,50,0,0,1 30,0,0,0,60 80,50,0,0,1 30,0,0,0,12 60,0,0,8,1
+
+sound() {
+  local name=$1 wad=$2 ep=$3 map=$4 lump=$5 sha=$6; shift 6
+  python3 tests/mklmp.py "$TMP/demo.lmp" "$ep" "$map" "$@" &&
+    "$TMP/demo" "$WADS/$wad.wad" "$lump" "$TMP/demo.lmp" ${GIVE:-} sound | sha256sum | grep -q "^$sha " &&
+    ok "sound: $name starts the reference engine's sounds tic by tic" || bad "sound: $name"
+}
+sound "E1M1 run" freedoom1 1 1 E1M1 780bc51ddb2d41284a41c06c017b982fd706735def5942b5387118f1c3445e30 100,50,0,0,0 40,0,0,8,0 200,50,20,0,2 100,-30,0,248,0 300,50,0,4,2
+sound "MAP15 under fire" freedoom2 1 15 MAP15 8707678daab3ef8c64113da0fa8ae876d55361b25e6604f2da271c10838d85c8 200,50,0,0,2 60,0,0,6,0 300,50,-10,0,2 300,40,30,252,2
+sound "E1M1 pistol fight" freedoom1 1 1 E1M1 9526bbb4e97709b49afe3c303dd6e5d33fd74314c728f28511ae8554a70916f3 40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3
+GIVE=give sound "MAP01 every weapon" freedoom2 1 1 MAP01 729a6aaed25290a022a8cbaeab608b63928c83bd0e286a3d60ac51a45f649290 30,0,0,0,20 40,0,0,0,1 30,0,0,0,68 40,50,0,0,1 30,0,0,0,28 60,0,0,4,1 30,0,0,0,36 30,0,0,0,1 30,0,0,0,44 60,30,0,0,1
+
+song() {
+  "$TMP/song" "$WADS/$1.wad" "$2" "$3" "$TMP/song.wav" &&
+    echo "$4  $TMP/song.wav" | sha256sum -c --quiet &&
+    ok "music: $3 seconds of $2" || bad "music: $2"
+}
+song freedoom1 D_E1M1 10 78b9c6a66cb7c4e7ae16396d80b8b98338b7ce09b3eaca8a26e1fbca3c1bfcfe
+song freedoom1 D_INTER 80 16a078aab1e54868eac11c0a738b3634786249847e57143fdceaee0cbed2f113
+song freedoom2 D_RUNNIN 10 b9b50ec44823dcebe8c2939d1a4b86b4c03e0945c8ae0263d02b820e8de40516
 
 python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3 &&
   "$TMP/demo" "$WADS/freedoom1.wad" E1M1 "$TMP/demo.lmp" 330 "$TMP/frame.bmp" >/dev/null &&

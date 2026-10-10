@@ -12,7 +12,7 @@ import ./src/tab.bend as T
 import ./src/disk.bend as Dk
 
 type Opts is Data:
-  Opts{all: Bool, at: U32, out: String, ex: U32, ks: List<&2, U32>}
+  Opts{all: U32, at: U32, out: String, ex: U32, ks: List<&2, U32>}
 
 type Fk is Data:
   Fk{g: S.Sim, ks: List<&2, U32>}
@@ -94,11 +94,35 @@ def shot.name(+gt: U32, +at: U32, +out: String) -> String:
 def stop(+g: S.Sim, +gt: U32, +at: U32) -> S.Sim:
   C.when(Bool.and(U32.is_ne(U.ui(g, 168), 0), U32.is_ge(gt, (at .&. 2147483647 : U32))), g, +h => U.ui.set(h, 119, 1))
 
-def play.trace(level: Bool, +g: S.Sim) -> IO(Unit):
-  match level:
+def snd.kind(+g: S.Sim, +o: U32) -> String:
+  Bool.pick(String, U32.is_eq(o, 0), "-1", Bool.pick(String, U32.is_ge(o, 16777216), U32.show((o - 16777216 + 1000 : U32)), U32.show(S.m.type(g, o))))
+
+def snd.line(+g: S.Sim, +x: U32) -> String:
+  String.append("S ", words([U32.show((S.sim.time(g) - 1 : U32)), U32.show((x % 128 : U32)), snd.kind(g, (x / 128 : U32))]))
+
+def snd.print(on: Bool, +s: String) -> IO(Unit):
+  match on:
     case True{}:
-      IO.print(trace(g))
+      IO.print(s)
     case False{}:
+      IO.pure(Unit, Unit{})
+
+def snd.lines(+g: S.Sim, xs: List<&2, U32>) -> IO(Unit):
+  match xs:
+    case +x <> t:
+      do IO<Unit>:
+        snd.lines(g, t)
+        snd.print(U32.is_ne((x % 128 : U32), 0), snd.line(g, x))
+    case []:
+      IO.pure(Unit, Unit{})
+
+def play.trace(level: Bool, snd: Bool, +g: S.Sim) -> IO(Unit):
+  match level snd:
+    case True{} True{}:
+      snd.lines(g, S.sim.snd(g))
+    case True{} False{}:
+      IO.print(trace(g))
+    case False{} _:
       IO.pure(Unit, Unit{})
 
 def fire.go?(now: Bool, +t: U32, +c: U32, +d: U32, rest: List<&2, U32>, +g: S.Sim, +gt: U32) -> Fk:
@@ -115,22 +139,22 @@ def fire?(ks: List<&2, U32>, +g: S.Sim, +gt: U32) -> Fk:
     case _:
       Fk{g, []}
 
-def play?(+g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
+def play?(+g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32) -> IO(Unit):
   play.go(Q.quit(g), U32.is_ne(Q.pending(g), 0), g, rom, path, gt, at, out, ex, ks, all)
 
-def play.reloaded?(+old: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool, p: S.Sim & Array<U32>) -> IO(Unit):
+def play.reloaded?(+old: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
   play(Q.adopt(old, g), rom, path, gt, at, out, ex, ks, all)
 
-def play.boot?(+g: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
+def play.boot?(+g: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32) -> IO(Unit):
   IO.bind(S.Sim & Array<U32>, Unit, B.boot(path, Q.target(g), Q.player(g), Q.carry(g)),
     p => play.reloaded(g, path, gt, at, out, ex, ks, all, p))
 
-def play.restored?(+path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool, p: S.Sim & Array<U32>) -> IO(Unit):
+def play.restored?(+path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
   play(g, rom, path, gt, at, out, ex, ks, all)
 
-def play.load?(c4: Bool, c5: Bool, c6: Bool, c7: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
+def play.load?(c4: Bool, c5: Bool, c6: Bool, c7: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32) -> IO(Unit):
   match c4 c5 c6 c7:
     case True{} _ _ _:
       IO.bind(List<&2, U32>, Unit, B.demolump(path, Q.demo.lump(g)), +bs => play.boot(Q.demo.loaded(g, bs), path, gt, at, out, ex, ks, all))
@@ -143,7 +167,7 @@ def play.load?(c4: Bool, c5: Bool, c6: Bool, c7: Bool, +g: S.Sim, rom: Array<U32
     case _ _ _ _:
       play.boot(g, path, gt, at, out, ex, ks, all)
 
-def play.go?(quit: Bool, load: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
+def play.go?(quit: Bool, load: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32) -> IO(Unit):
   match quit load:
     case True{} _:
       IO.pure(Unit, Unit{})
@@ -153,14 +177,14 @@ def play.go?(quit: Bool, load: Bool, +g: S.Sim, rom: Array<U32>, +path: String, 
     case False{} False{}:
       play.tic(fire(ks, g, gt), rom, path, gt, at, out, ex, all)
 
-def play.tic?(fk: Fk, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, +all: Bool) -> IO(Unit):
+def play.tic?(fk: Fk, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, +all: U32) -> IO(Unit):
   match fk:
     case Fk{+g, ks1}:
-      +g0 = C.when(Bool.and(all, Bool.and(U32.is_eq(S.sim.gs(g), 0), U32.is_eq(S.sim.time(g), 0))), g, +h => give(h))
+      +g0 = C.when(Bool.and(U32.is_ne((all .&. 1 : U32), 0), Bool.and(U32.is_eq(S.sim.gs(g), 0), U32.is_eq(S.sim.time(g), 0))), g, +h => give(h))
       +g1 = stop(exits(Q.tick(g0), ex), gt, at)
       +gt1 = (gt + 1 : U32)
       do IO<Unit>:
-        play.trace(Bool.and(U32.is_eq(S.sim.gs(g1), 0), Bool.not(Q.quit(g1))), g1)
+        play.trace(Bool.and(U32.is_eq(S.sim.gs(g1), 0), Bool.not(Q.quit(g1))), U32.is_ne((all .&. 2 : U32), 0), g1)
         play.snap(shot.hit(gt1, at), Bool.or(shot.hit(gt1, at), Bool.and(U32.is_ne((at >> 31n : U32), 0), U32.is_ne(gt1, 1))), S.sim.snd.set(g1, []), rom, path, gt1, at, out, ex, ks1, all)
 
 def save.if(hit: Bool, +file: String, fb: Array<U32>) -> IO(Unit):
@@ -170,17 +194,17 @@ def save.if(hit: Bool, +file: String, fb: Array<U32>) -> IO(Unit):
     case False{}:
       IO.pure(Unit, Unit{})
 
-def play.saved?(hit: Bool, +g: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool, +file: String, r: Array<U32> & Array<U32>) -> IO(Unit):
+def play.saved?(hit: Bool, +g: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32, +file: String, r: Array<U32> & Array<U32>) -> IO(Unit):
   (fb, rom) = r
   do IO<Unit>:
     save.if(hit, file, fb)
     play(g, rom, path, gt, at, out, ex, ks, all)
 
-def play.drawn?(hit: Bool, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool, +file: String, r: S.Sim & (Array<U32> & Array<U32>)) -> IO(Unit):
+def play.drawn?(hit: Bool, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32, +file: String, r: S.Sim & (Array<U32> & Array<U32>)) -> IO(Unit):
   (+g, p) = r
   play.saved(hit, g, path, gt, at, out, ex, ks, all, file, p)
 
-def play.snap?(hit: Bool, draw: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: Bool) -> IO(Unit):
+def play.snap?(hit: Bool, draw: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32) -> IO(Unit):
   match draw:
     case True{}:
       play.drawn(hit, path, gt, at, out, ex, ks, all, shot.name(gt, at, out), Q.render(g, rom))
@@ -193,7 +217,7 @@ def give(+g: S.Sim) -> S.Sim:
   +g3 = S.p.ammo3.set(S.p.ammo2.set(S.p.ammo1.set(S.p.ammo0.set(g2, S.p.max0(g2)), S.p.max1(g2)), S.p.max2(g2)), S.p.max3(g2))
   S.p.armortype.set(S.p.armor.set(g3, 200), 2)
 
-def start.go?(+all: Bool, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +path: String, bs: List<&2, U32>, p: S.Sim & Array<U32>) -> IO(Unit):
+def start.go?(+all: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +path: String, bs: List<&2, U32>, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
   play(Q.demo.start(U.ui.set(g, 129, 1), T.from_list(U32, bs)), rom, path, 0, at, out, ex, ks, all)
 
@@ -209,7 +233,7 @@ def loaded(+all: Opts, +path: String, name: String, r: File & Result<&1, &1, U32
     +bs : List<&2, U32> <- IO.pass(List<&2, U32>, res)
     IO.bind(S.Sim & Array<U32>, Unit, B.skilled(path, name, Maybe.default(&2, U32, List.get(&2, U32, bs, 1n), 2)), p => start(all, path, bs, p))
 
-def titled.go?(+all: Bool, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +path: String, p: S.Sim & Array<U32>) -> IO(Unit):
+def titled.go?(+all: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +path: String, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
   play(Q.boot.title(U.ui.set(g, 168, 1)), rom, path, 0, at, out, ex, ks, all)
 
@@ -243,7 +267,7 @@ def num(+x: String) -> U32:
 def opts?(xs: List<String>, +o: Opts) -> Opts:
   match xs o:
     case +x <> +t Opts{+all, +at, +out, +ex, +ks}:
-      opts.one(String.eq(x, "give"), String.eq(x, "exit"), String.eq(x, "secret"), x, t, all, at, out, ex, ks)
+      opts.one(String.eq(x, "give"), String.eq(x, "exit"), String.eq(x, "secret"), x, t, Bool.pick(U32, String.eq(x, "sound"), (all .|. 2 : U32), all), at, out, ex, ks)
     case [] _:
       o
 
@@ -256,43 +280,45 @@ def opts.keys?(xs: List<String>, +o: Opts) -> Opts:
     case _ _:
       o
 
-def opts.at?(every: Bool, +x: String, n: String, f: String, r: List<String>, +all: Bool, +at: U32, +out: String, +ex: U32, +ks: List<&2, U32>) -> Opts:
+def opts.at?(every: Bool, +x: String, n: String, f: String, r: List<String>, +all: U32, +at: U32, +out: String, +ex: U32, +ks: List<&2, U32>) -> Opts:
   match every:
     case True{}:
       opts(r, Opts{all, (num(n) .|. 2147483648 : U32), f, ex, ks})
     case False{}:
       opts(f <> r, Opts{all, num(x), n, ex, ks})
 
-def opts.one?(give: Bool, ex1: Bool, sec: Bool, +x: String, t: List<String>, +all: Bool, +at: U32, +out: String, +ex: U32, +ks: List<&2, U32>) -> Opts:
+def opts.one?(give: Bool, ex1: Bool, sec: Bool, +x: String, t: List<String>, +all: U32, +at: U32, +out: String, +ex: U32, +ks: List<&2, U32>) -> Opts:
   match give ex1 sec t:
     case True{} _ _ _:
-      opts(t, Opts{True{}, at, out, ex, ks})
+      opts(t, Opts{(all .|. 1 : U32), at, out, ex, ks})
     case False{} True{} _ n <> r:
       opts(r, Opts{all, at, out, num(n), ks})
     case False{} False{} True{} n <> r:
       opts(r, Opts{all, at, out, (num(n) .|. 2147483648 : U32), ks})
     case False{} False{} False{} r:
-      opts.rest(String.eq(x, "keys"), x, r, all, at, out, ex, ks)
+      opts.rest(String.eq(x, "keys"), String.eq(x, "sound"), x, r, all, at, out, ex, ks)
     case _ _ _ _:
       Opts{all, at, out, ex, ks}
 
-def opts.rest?(keys: Bool, +x: String, t: List<String>, +all: Bool, +at: U32, +out: String, +ex: U32, +ks: List<&2, U32>) -> Opts:
-  match keys t:
-    case True{} r:
+def opts.rest?(keys: Bool, snd: Bool, +x: String, t: List<String>, +all: U32, +at: U32, +out: String, +ex: U32, +ks: List<&2, U32>) -> Opts:
+  match keys snd t:
+    case True{} _ r:
       opts.keys(r, Opts{all, at, out, ex, ks})
-    case False{} n <> f <> r:
+    case False{} True{} r:
+      opts(r, Opts{all, at, out, ex, ks})
+    case False{} False{} n <> f <> r:
       opts.at(String.eq(x, "every"), x, n, f, r, all, at, out, ex, ks)
-    case False{} f <> r:
+    case False{} False{} f <> r:
       opts(r, Opts{all, num(x), f, ex, ks})
-    case _ _:
+    case _ _ _:
       Opts{all, at, out, ex, ks}
 
 def args(xs: List<String>) -> IO(Unit):
   match xs:
     case prog <> path <> name <> lmp <> t:
-      run(opts(t, Opts{False{}, 4294967295, "", 0, []}), path, name, lmp)
+      run(opts(t, Opts{0, 4294967295, "", 0, []}), path, name, lmp)
     case _:
-      IO.die(Unit, 2, "usage: demo FILE.wad MAP DEMO.lmp [give] [exit TIC] [secret TIC] [every N PREFIX] [keys TIC CODE DOWN ... end] [TIC OUT.bmp]")
+      IO.die(Unit, 2, "usage: demo FILE.wad MAP DEMO.lmp [give] [exit TIC] [secret TIC] [every N PREFIX] [keys TIC CODE DOWN ... end] [sound] [TIC OUT.bmp]")
 
 def main() -> IO(Unit):
   do IO<Unit>:

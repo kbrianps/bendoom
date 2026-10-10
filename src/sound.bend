@@ -8,12 +8,13 @@ import ./render.bend as V
 import ./hud.bend as U
 import ./wad.bend as W
 import ./sfxinfo.bend as X
+import ./music.bend as Ms
 
 type Ch is Data:
   Ch{sfx: U32, org: U32, pos: U32, lv: U32, rv: U32}
 
 type Mix is Type:
-  Mix{bank: Array<U32>, idx: T.Vec<U32>, pri: T.Vec<U32>, chans: List<&2, Ch>}
+  Mix{bank: Array<U32>, idx: T.Vec<U32>, pri: T.Vec<U32>, chans: List<&2, Ch>, mus: Ms.Mu}
 
 def rate() -> U32:
   22050
@@ -68,28 +69,29 @@ def total(+bss: List<&2, List<&2, U32>>) -> U32:
 def depth(+n: U32) -> Nat:
   Bool.pick(Nat, U32.is_le(n, 1), 0n, 1n+U32.log2((n - 1 : U32)))
 
-def built(r: Array<U32> & List<&2, U32>) -> Mix:
+def built(mus: Ms.Mu, r: Array<U32> & List<&2, U32>) -> Mix:
   (a, idx) = r
-  Mix{a, T.from_list(U32, List.append(&2, U32, [0, 0, 65536], idx)), T.from_list(U32, X.prios()), nochans()}
+  Mix{a, T.from_list(U32, List.append(&2, U32, [0, 0, 65536], idx)), T.from_list(U32, X.prios()), nochans(), mus}
 
-def build(+bss: List<&2, List<&2, U32>>) -> Mix:
+def build(mus: Ms.Mu, +bss: List<&2, List<&2, U32>>) -> Mix:
   +n = total(bss)
-  built(fill(bss, Array.new(U32, depth((n + 1 : U32)), 128), 0, []))
+  built(mus, fill(bss, Array.new(U32, depth((n + 1 : U32)), 128), 0, []))
 
-def got(p: W.Wad & List<&2, List<&2, U32>>) -> IO(Mix):
+def got(mus: Ms.Mu, p: W.Wad & List<&2, List<&2, U32>>) -> IO(Mix):
   (w, bss) = p
   do IO<Mix>:
     W.close(w)
-    return build(bss)
+    return build(mus, bss)
 
-def load(path: String) -> IO(Mix):
+def load(+path: String) -> IO(Mix):
   do IO<Mix>:
+    mus : Ms.Mu <- Ms.load(path)
     w : W.Wad <- W.open(path)
     p : W.Wad & List<&2, List<&2, U32>> <- W.get(w, X.lumps())
-    got(p)
+    got(mus, p)
 
 def silent() -> Mix:
-  Mix{Array.new(U32, 0n, 128), T.from_list(U32, [0, 0, 65536]), T.from_list(U32, X.prios()), nochans()}
+  Mix{Array.new(U32, 0n, 128), T.from_list(U32, [0, 0, 65536]), T.from_list(U32, X.prios()), nochans(), Ms.silent()}
 
 def volume(+g: S.Sim) -> U32:
   (U.ui(g, 113) * 8 : U32)
@@ -302,22 +304,33 @@ def pcm(xs: List<&2, U32>) -> List<&2, F32>:
     case []:
       []
 
-def rendered(+pri: T.Vec<U32>, +idx: T.Vec<U32>, r: (List<&2, U32> & Array<U32>) & List<&2, Ch>) -> Mix & List<&2, U32>:
+def zipadd(xs: List<&2, U32>, ys: List<&2, U32>) -> List<&2, U32>:
+  match xs ys:
+    case +x <> xt +y <> yt:
+      (x + y : U32) <> zipadd(xt, yt)
+    case a _:
+      a
+
+def joined(a: Array<U32>, +idx: T.Vec<U32>, +pri: T.Vec<U32>, cs: List<&2, Ch>, acc: List<&2, U32>, r: Ms.Mu & List<&2, U32>) -> Mix & List<&2, U32>:
+  (mus, ms) = r
+  (Mix{a, idx, pri, cs, mus}, zipadd(acc, ms))
+
+def rendered(+pri: T.Vec<U32>, +idx: T.Vec<U32>, mus: Ms.Mu, r: (List<&2, U32> & Array<U32>) & List<&2, Ch>) -> Mix & List<&2, U32>:
   (p, cs) = r
   (acc, a) = p
-  (Mix{a, idx, pri, cs}, acc)
+  joined(a, idx, pri, cs, acc, Ms.render(mus))
 
 def render(m: Mix) -> Mix & List<&2, U32>:
   match m:
-    case Mix{a, +idx, +pri, cs}:
-      rendered(pri, idx, mix.all(cs, acc0(U32.to_nat(frames())), a, idx))
+    case Mix{a, +idx, +pri, cs, mus}:
+      rendered(pri, idx, mus, mix.all(cs, acc0(U32.to_nat(frames())), a, idx))
 
 def tic(m: Mix, +g: S.Sim) -> Mix:
   match m:
-    case Mix{a, +idx, +pri, cs}:
-      Mix{a, idx, pri, update(events(S.sim.snd(g), cs, pri, g), g)}
+    case Mix{a, +idx, +pri, cs, mus}:
+      Mix{a, idx, pri, update(events(S.sim.snd(g), cs, pri, g), g), Ms.tic(mus, g)}
 
 def heard(m: Mix, +g: S.Sim) -> Mix:
   match m:
-    case Mix{a, +idx, +pri, cs}:
-      Mix{a, idx, pri, events(S.sim.snd(g), cs, pri, g)}
+    case Mix{a, +idx, +pri, cs, mus}:
+      Mix{a, idx, pri, events(S.sim.snd(g), cs, pri, g), mus}
