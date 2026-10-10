@@ -221,8 +221,8 @@ def weapons(ss: List<&2, U32>, +st: T.Vec<U32>, +acc: List<&2, U32>) -> List<&2,
     case []:
       acc
 
-def needed(+mi: T.Vec<U32>, +st: T.Vec<U32>, +ths: T.Vec<L.Thing>) -> List<&2, U32>:
-  +ks = List.append(&2, U32, [0, 33, 34, 35, 37, 38, 39, 40, 42, 63, 73, 77], thingkinds(U32.to_nat(T.size(L.Thing, ths)), mi, ths, 0))
+def needed(+mi: T.Vec<U32>, +st: T.Vec<U32>, +ths: T.Vec<L.Thing>, +extra: List<&2, U32>) -> List<&2, U32>:
+  +ks = List.append(&2, U32, List.append(&2, U32, [0, 33, 34, 35, 37, 38, 39, 40, 42, 63, 73, 77], extra), thingkinds(U32.to_nat(T.size(L.Thing, ths)), mi, ths, 0))
   weapons([5, 4, 3, 2, 12, 11, 10, 13, 17, 20, 19, 18, 21, 30, 51, 50, 49, 52, 55, 59, 58, 57, 60, 63, 76, 75, 74, 77, 79, 83, 82, 81, 84, 88, 70, 69, 67, 71, 34, 33, 32, 35, 47], st, chain.from(st, 895, reach(ks, mi, st, [], [])))
 
 def sprites.of(+all: List<&2, W.Lump>, +cs: List<&2, U32>, +base: U32) -> Sprites:

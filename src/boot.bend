@@ -36,13 +36,14 @@ def eyes(+g: S.Sim) -> S.Sim:
 def hudaddrs(hbs: List<&2, List<&2, U32>>, +at: U32) -> List<&2, U32>:
   match hbs:
     case bs <> t:
-      at <> hudaddrs(t, (at + U32.from_nat(List.length(&2, U32, bs)) : U32))
+      +n = U32.from_nat(List.length(&2, U32, bs))
+      Bool.pick(U32, U32.is_eq(n, 0), 0, at) <> hudaddrs(t, (at + n : U32))
     case []:
       []
 
-def assemble(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +hbs: List<&2, List<&2, U32>>, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim & Array<U32>:
+def assemble(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +hbs: List<&2, List<&2, U32>>, +mode: U32, +pl: T.Vec<U32>, +cv: T.Vec<U32>) -> S.Sim & Array<U32>:
   match t:
-    case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw}:
+    case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw, tbs, fbs}:
       +tb = V.tabs()
       +ly = O.layout(ts, fd)
       +w0 = R.build(lv, t, ly, frames(sp))
@@ -50,25 +51,78 @@ def assemble(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +
       +pb = (base + U32.from_nat(List.length(&2, U32, sbytes)) : U32)
       +pals = List.take(&2, U32, A.rgb(pal), 3584n)
       +hbytes = blobs(hbs)
-      +hud = T.from_list(U32, pb <> hudaddrs(hbs, (pb + 3584 : U32)))
+      +hud = T.from_list(U32, pb <> (mode .&. 15 : U32) <> (mode >> 4n : U32) <> hudaddrs(hbs, (pb + 3584 : U32)))
       +all = List.append(&2, U32, sbytes, List.append(&2, U32, pals, hbytes))
-      (eyes(U.sim(lv, t, w0, tb, hud, pl, rnd)),
+      (eyes(U.sim(lv, t, w0, tb, hud, pl, cv)),
         M.fill(all, O.build(tb, A.palette(pal), cm, ts, fd, (pb + 3584 + U32.from_nat(List.length(&2, U32, hbytes)) : U32), O.texs.end(ts, M.texbase())), base))
 
 def spritebase(+t: D.Texs) -> U32:
   match t:
-    case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw}:
+    case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw, tbs, fbs}:
       (O.texs.end(ts, M.texbase()) + 4096 * U32.from_nat(List.length(&2, List<&2, U32>, fd)) : U32)
 
-def hudded(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +pl: T.Vec<U32>, +rnd: U32, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
+def hudded(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +mode: U32, +pl: T.Vec<U32>, +cv: T.Vec<U32>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
   (w, hbs) = p
   do IO<S.Sim & Array<U32>>:
     W.close(w)
-    IO.pure(S.Sim & Array<U32>, assemble(lv, pal, cm, t, sp, base, sbs, hbs, pl, rnd))
+    IO.pure(S.Sim & Array<U32>, assemble(lv, pal, cm, t, sp, base, sbs, hbs, mode, pl, cv))
 
-def loaded(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, +pl: T.Vec<U32>, +rnd: U32, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
+def level.name(+lv: L.Level) -> String:
+  match lv:
+    case L.Level{+n, th, li, si, ve, se, ss, no, sc, rj, bm}:
+      n
+
+def mode.d(+m: U32, r: W.Wad & Bool) -> W.Wad & U32:
+  (w, +m31) = r
+  (w, (m .|. Bool.pick(U32, m31, 16, 0) : U32))
+
+def mode.c(+d2: Bool, +e4: Bool, r: W.Wad & Bool) -> W.Wad & U32:
+  (w, +e3) = r
+  mode.d(Bool.pick(U32, d2, 3, Bool.pick(U32, e4, 2, Bool.pick(U32, e3, 1, 0))), W.has(w, "MAP31"))
+
+def mode.b(+d2: Bool, r: W.Wad & Bool) -> W.Wad & U32:
+  (w, +e4) = r
+  mode.c(d2, e4, W.has(w, "E3M1"))
+
+def mode.a(r: W.Wad & Bool) -> W.Wad & U32:
+  (w, +d2) = r
+  mode.b(d2, W.has(w, "E4M1"))
+
+def mode.of(w: W.Wad) -> W.Wad & U32:
+  mode.a(W.has(w, "MAP01"))
+
+def fin.flat(+com: Bool, +ep: U32, +map: U32) -> String:
+  Bool.pick(String, com,
+    Bool.pick(String, U32.is_eq(map, 6), "SLIME16", Bool.pick(String, U32.is_eq(map, 11), "RROCK14", Bool.pick(String, U32.is_eq(map, 20), "RROCK07",
+      Bool.pick(String, U32.is_eq(map, 30), "RROCK17", Bool.pick(String, U32.is_eq(map, 15), "RROCK13", Bool.pick(String, U32.is_eq(map, 31), "RROCK19", "-")))))),
+    Bool.pick(String, U32.is_ne(map, 8), "-", Bool.pick(String, U32.is_eq(ep, 1), "FLOOR4_8", Bool.pick(String, U32.is_eq(ep, 2), "SFLR6_1", Bool.pick(String, U32.is_eq(ep, 3), "MFLR8_4", "MFLR8_3")))))
+
+def fin.art(+com: Bool, +retail: Bool, +ep: U32, +map: U32) -> String:
+  Bool.pick(String, Bool.or(com, U32.is_ne(map, 8)), "-",
+    Bool.pick(String, U32.is_eq(ep, 1), Bool.pick(String, retail, "CREDIT", "HELP2"), Bool.pick(String, U32.is_eq(ep, 2), "VICTORY2", Bool.pick(String, U32.is_eq(ep, 4), "ENDPIC", "-"))))
+
+def fin.names(+com: Bool, +retail: Bool, +ep: U32, +map: U32) -> List<&2, String>:
+  +bunny = Bool.and(Bool.not(com), Bool.and(U32.is_eq(ep, 3), U32.is_eq(map, 8)))
+  +ends = Bool.pick(List<&2, String>, bunny, ["PFUB1", "PFUB2", "END0", "END1", "END2", "END3", "END4", "END5", "END6"], ["-", "-", "-", "-", "-", "-", "-", "-", "-"])
+  fin.flat(com, ep, map) <> fin.art(com, retail, ep, map) <> List.append(&2, String, ends, [Bool.pick(String, Bool.and(com, U32.is_eq(map, 30)), "BOSSBACK", "-")])
+
+def ui.ep(+com: Bool, +ep: U32) -> List<&2, String>:
+  Bool.pick(List<&2, String>, com, H.uiep4(), Bool.pick(List<&2, String>, U32.is_eq(ep, 1), H.uiep0(), Bool.pick(List<&2, String>, U32.is_eq(ep, 2), H.uiep1(), Bool.pick(List<&2, String>, U32.is_eq(ep, 3), H.uiep2(), H.uiep3()))))
+
+def ui.names(+name: String, +mode: U32) -> List<&2, String>:
+  +com = String.starts_with(name, "MAP")
+  +ep = U.episode(name)
+  +map = U.mapnum(name)
+  List.append(&2, String, H.hudnames(), List.append(&2, String, H.uifixed(), List.append(&2, String, ui.ep(com, ep),
+    List.append(&2, String, fin.names(com, U32.is_eq((mode .&. 15 : U32), 2), ep, map), H.uimenu()))))
+
+def loaded.go(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +pl: T.Vec<U32>, +cv: T.Vec<U32>, r: W.Wad & U32) -> IO(S.Sim & Array<U32>):
+  (w, +mode) = r
+  IO.bind(W.Wad & List<&2, List<&2, U32>>, S.Sim & Array<U32>, W.get(w, ui.names(level.name(lv), mode)), q => hudded(lv, pal, cm, t, sp, base, sbs, mode, pl, cv, q))
+
+def loaded(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, +pl: T.Vec<U32>, +cv: T.Vec<U32>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
   (w, sbs) = p
-  IO.bind(W.Wad & List<&2, List<&2, U32>>, S.Sim & Array<U32>, W.get(w, H.hudnames()), q => hudded(lv, pal, cm, t, sp, base, sbs, pl, rnd, q))
+  loaded.go(lv, pal, cm, t, sp, base, sbs, pl, cv, mode.of(w))
 
 def sprite.lumps(+sp: P.Sprites) -> List<&2, W.Lump>:
   match sp:
@@ -80,34 +134,52 @@ def level.things(+lv: L.Level) -> T.Vec<L.Thing>:
     case L.Level{n, +th, li, si, ve, se, ss, no, sc, rj, bm}:
       th
 
-def sprited(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +pl: T.Vec<U32>, +rnd: U32, r: W.Wad & List<&2, W.Lump>) -> IO(S.Sim & Array<U32>):
+def sprited(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +pl: T.Vec<U32>, +cv: T.Vec<U32>, r: W.Wad & List<&2, W.Lump>) -> IO(S.Sim & Array<U32>):
   (w, all) = r
-  +cs = P.needed(T.from_list(U32, I.mobjinfo()), T.from_list(U32, I.states()), level.things(lv))
+  +cast = Bool.pick(List<&2, U32>, String.eq(level.name(lv), "MAP30"), [1, 2, 10, 11, 12, 18, 14, 17, 15, 20, 22, 5, 8, 3, 19, 21, 0], [])
+  +cs = P.needed(T.from_list(U32, I.mobjinfo()), T.from_list(U32, I.states()), level.things(lv), cast)
   +base = spritebase(t)
   +sp = P.sprites.of(all, cs, base)
-  IO.bind(W.Wad & List<&2, List<&2, U32>>, S.Sim & Array<U32>, W.lumps(sprite.lumps(sp), w), q => loaded(lv, pal, cm, t, sp, base, pl, rnd, q))
+  IO.bind(W.Wad & List<&2, List<&2, U32>>, S.Sim & Array<U32>, W.lumps(sprite.lumps(sp), w), q => loaded(lv, pal, cm, t, sp, base, pl, cv, q))
 
-def textured(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +pl: T.Vec<U32>, +rnd: U32, p: W.Wad & D.Texs) -> IO(S.Sim & Array<U32>):
+def textured(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +pl: T.Vec<U32>, +cv: T.Vec<U32>, p: W.Wad & D.Texs) -> IO(S.Sim & Array<U32>):
   (w, ts) = p
-  sprited(lv, pal, cm, ts, pl, rnd, W.between(w, "S_START", "S_END"))
+  sprited(lv, pal, cm, ts, pl, cv, W.between(w, "S_START", "S_END"))
 
-def level(+pal: List<&2, U32>, cm: List<&2, U32>, +pl: T.Vec<U32>, +rnd: U32, p: W.Wad & L.Level) -> IO(S.Sim & Array<U32>):
+def level(+pal: List<&2, U32>, cm: List<&2, U32>, +pl: T.Vec<U32>, +cv: T.Vec<U32>, p: W.Wad & L.Level) -> IO(S.Sim & Array<U32>):
   (w, +lv) = p
-  IO.bind(W.Wad & D.Texs, S.Sim & Array<U32>, D.textures(w, lv), q => textured(lv, pal, cm, pl, rnd, q))
+  IO.bind(W.Wad & D.Texs, S.Sim & Array<U32>, D.textures(w, lv, T.get(U32, cv, 4, 0)), q => textured(lv, pal, cm, pl, cv, q))
 
-def got(+name: String, +pl: T.Vec<U32>, +rnd: U32, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
+def got(+name: String, +pl: T.Vec<U32>, +cv: T.Vec<U32>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
   (w, bss) = p
   match bss:
     case pal <> cm <> t:
-      IO.bind(W.Wad & L.Level, S.Sim & Array<U32>, L.load(w, name), q => level(pal, cm, pl, rnd, q))
+      IO.bind(W.Wad & L.Level, S.Sim & Array<U32>, L.load(w, name), q => level(pal, cm, pl, cv, q))
     case _:
       IO.die(S.Sim & Array<U32>, 1, "no PLAYPAL or COLORMAP")
 
-def boot(path: String, +name: String, +pl: T.Vec<U32>, +rnd: U32) -> IO(S.Sim & Array<U32>):
+def boot(path: String, +name: String, +pl: T.Vec<U32>, +cv: T.Vec<U32>) -> IO(S.Sim & Array<U32>):
   do IO<S.Sim & Array<U32>>:
     w : W.Wad <- W.open(path)
     p : W.Wad & List<&2, List<&2, U32>> <- W.get(w, ["PLAYPAL", "COLORMAP"])
-    got(name, pl, rnd, p)
+    got(name, pl, cv, p)
+
+def carry(+rnd: U32, +sk: U32, +mrnd: U32, +wipe: U32, +sky: U32) -> T.Vec<U32>:
+  T.from_list(U32, [rnd, sk, mrnd, wipe, sky])
+
+def skilled(path: String, +name: String, +sk: U32) -> IO(S.Sim & Array<U32>):
+  boot(path, name, U.newplayer(), carry(0, sk, 0, 2, 0))
 
 def new(path: String, +name: String) -> IO(S.Sim & Array<U32>):
-  boot(path, name, U.newplayer(), 0)
+  skilled(path, name, 2)
+
+def first.go(+path: String, r: W.Wad & Bool) -> IO(S.Sim & Array<U32>):
+  (w, +d2) = r
+  do IO<S.Sim & Array<U32>>:
+    W.close(w)
+    new(path, Bool.pick(String, d2, "MAP01", "E1M1"))
+
+def first(+path: String) -> IO(S.Sim & Array<U32>):
+  do IO<S.Sim & Array<U32>>:
+    w : W.Wad <- W.open(path)
+    first.go(path, W.has(w, "MAP01"))

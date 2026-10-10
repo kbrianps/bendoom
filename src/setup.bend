@@ -151,18 +151,18 @@ def flatid(+fl: List<&2, String>, xs: List<&2, String>) -> List<&2, U32>:
     case []:
       []
 
-def tanims(+names: List<&2, String>, xss: List<&2, List<&2, String>>) -> List<&2, S.Anim>:
-  match xss:
-    case xs <> t:
-      S.Anim{True{}, texid(names, xs), 0, 8} <> tanims(names, t)
-    case []:
+def tanims(+names: List<&2, String>, xss: List<&2, List<&2, String>>, bs: List<&2, U32>) -> List<&2, S.Anim>:
+  match xss bs:
+    case xs <> t b <> u:
+      S.Anim{True{}, texid(names, xs), b, 8} <> tanims(names, t, u)
+    case _ _:
       []
 
-def fanims(+fl: List<&2, String>, xss: List<&2, List<&2, String>>) -> List<&2, S.Anim>:
-  match xss:
-    case xs <> t:
-      S.Anim{False{}, flatid(fl, xs), 0, 8} <> fanims(fl, t)
-    case []:
+def fanims(+fl: List<&2, String>, xss: List<&2, List<&2, String>>, bs: List<&2, U32>) -> List<&2, S.Anim>:
+  match xss bs:
+    case xs <> t b <> u:
+      S.Anim{False{}, flatid(fl, xs), b, 8} <> fanims(fl, t, u)
+    case _ _:
       []
 
 def digit(+s: String, n: Nat) -> U32:
@@ -189,9 +189,23 @@ def seglines(n: Nat, +se: T.Vec<L.Seg>, +i: U32) -> List<&2, U32>:
     case 1n+p:
       segline(T.get(L.Seg, se, i, L.Seg{0, 0, 0, 0, 0, 0})) <> seglines(p, se, (i + 1 : U32))
 
-def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>) -> S.Lvl:
+def halve(n: Nat, +st: T.Vec<U32>, +i: U32) -> T.Vec<U32>:
+  match n:
+    case 0n:
+      st
+    case 1n+p:
+      +a = (i * 7 + 2 : U32)
+      halve(p, T.set(U32, st, a, (T.get(U32, st, a, 0) >> 1n : U32)), (i + 1 : U32))
+
+def fast.states(+sk: U32, +st: T.Vec<U32>) -> T.Vec<U32>:
+  Bool.pick(T.Vec<U32>, U32.is_eq(sk, 4), halve(13n, st, 477), st)
+
+def fast.info(+sk: U32, +mi: T.Vec<U32>) -> T.Vec<U32>:
+  Bool.pick(T.Vec<U32>, U32.is_eq(sk, 4), T.set(U32, T.set(U32, T.set(U32, mi, 383, 1310720), 751, 1310720), 728, 1310720), mi)
+
+def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>, +sk: U32) -> S.Lvl:
   match lv t:
-    case L.Level{+name, +th, +li, +si, +ve, +se, ss, no, +sc, +rj, +bm} D.Texs{+names, ts, sky, +fl, fd, +hs, +ta, +fa, +sw}:
+    case L.Level{+name, +th, +li, +si, +ve, +se, ss, no, +sc, +rj, +bm} D.Texs{+names, ts, sky, +fl, fd, +hs, +ta, +fa, +sw, +tbs, +fbs}:
       +nl = T.size(L.Line, li)
       +ns = T.size(L.Sector, sc)
       +ls = T.from_list(S.RLine, rlines(U32.to_nat(nl), li, ve, si, 0))
@@ -203,14 +217,53 @@ def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>) ->
       +swv = T.from_list(U32, texid(names, sw))
       +com = String.starts_with(name, "MAP")
       S.Lvl{ls, sl, T.from_list(U32, secboxes(U32.to_nat(ns), ls, sl, ox, oy, bw, bh, 0)), bm, ox, oy, bw, bh,
-        T.from_list(U32, I.mobjinfo()), T.from_list(U32, I.states()), tb,
-        List.append(&2, S.Anim, fanims(fl, fa), tanims(names, ta)), swv, T.size(U32, swv), scrollers(U32.to_nat(nl), li, 0),
-        R.texs(w), R.flats(w), T.from_list(U32, hs), ns, nl, com, episode(name), mapnum(name), th, X.rndtable(), 2,
+        fast.info(sk, T.from_list(U32, I.mobjinfo())), fast.states(sk, T.from_list(U32, I.states())), tb,
+        List.append(&2, S.Anim, fanims(fl, fa, fbs), tanims(names, ta, tbs)), swv, T.size(U32, swv), scrollers(U32.to_nat(nl), li, 0),
+        R.texs(w), R.flats(w), T.from_list(U32, hs), ns, nl, com, episode(name), mapnum(name), th, X.rndtable(), sk,
         T.from_list(U32, subsecs(U32.to_nat(T.size(L.Sub, R.subs(w))), w, 0)),
         T.from_list(U32, O.crosstab()), T.from_list(U32, O.usetab()),
         rj, T.from_list(U32, seglines(U32.to_nat(T.size(L.Seg, se)), se, 0)), hud, []}
 
-def blank(+lv: L.Level, +w: R.World, +mp: S.Lvl, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim:
+def skynum(+lv: L.Level, +sky: U32) -> U32:
+  match lv:
+    case L.Level{+n, th, li, si, ve, se, ss, no, sc, rj, bm}:
+      +map = mapnum(n)
+      Bool.pick(U32, U32.is_ne(sky, 0), sky, Bool.pick(U32, String.starts_with(n, "MAP"), Bool.pick(U32, U32.is_lt(map, 12), 1, Bool.pick(U32, U32.is_lt(map, 21), 2, 3)), episode(n)))
+
+type Bx is Data:
+  Bx{x0: U32, y0: U32, x1: U32, y1: U32}
+
+def amb.one(+b: Bx, +v: L.Vertex) -> Bx:
+  match b v:
+    case Bx{+a, +c, +e, +f} L.Vertex{+x, +y}:
+      +px = (x << 16n : U32)
+      +py = (y << 16n : U32)
+      Bx{Bool.pick(U32, F.lt(px, a), px, a), Bool.pick(U32, F.lt(py, c), py, c),
+        Bool.pick(U32, Bool.and(Bool.not(F.lt(px, a)), F.gt(px, e)), px, e), Bool.pick(U32, Bool.and(Bool.not(F.lt(py, c)), F.gt(py, f)), py, f)}
+
+def amb(n: Nat, +vs: T.Vec<L.Vertex>, +i: U32, +b: Bx) -> Bx:
+  match n:
+    case 0n:
+      b
+    case 1n+p:
+      amb(p, vs, (i + 1 : U32), amb.one(b, T.get(L.Vertex, vs, i, L.Vertex{0, 0})))
+
+def sets(xs: List<&2, U32>, +v: T.Vec<U32>) -> T.Vec<U32>:
+  match xs:
+    case +i <> +x <> t:
+      sets(t, T.set(U32, v, i, x))
+    case _:
+      v
+
+def ui0(+sky: U32, +b: Bx) -> T.Vec<U32>:
+  match b:
+    case Bx{+x0, +y0, +x1, +y1}:
+      +a = F.div(20971520, (x1 - x0 : U32))
+      +c = F.div(11010048, (y1 - y0 : U32))
+      sets([99, sky, 91, x0, 92, y0, 93, x1, 94, y1, 95, Bool.pick(U32, F.lt(a, c), a, c), 96, F.div(11010048, 2097152),
+        103, 10, 111, 5, 112, 7, 113, 8, 114, 8, 126, 4294967295, 132, 2, 141, 1, 156, 13107, 164, 65536, 165, 65536], T.new(U32, 256, 0))
+
+def blank(+lv: L.Level, +w: R.World, +mp: S.Lvl, +pl: T.Vec<U32>, +rnd: U32, +mrnd: U32, +wipe: U32, +sky: U32, +cv: T.Vec<U32>) -> S.Sim:
   match lv:
     case L.Level{n, th, +li, si, ve, se, ss, no, +sc, rj, bm}:
       +nl = T.size(L.Line, li)
@@ -218,15 +271,15 @@ def blank(+lv: L.Level, +w: R.World, +mp: S.Lvl, +pl: T.Vec<U32>, +rnd: U32) -> 
       S.Sim{w, mp, T.from_list(U32, specials(U32.to_nat(nl), li, 0)), T.new(U32, (S.mpr.bw(mp) * S.mpr.bh(mp) : U32), 0), T.new(U32, nl, 0), 1,
         T.new(S.Th, C.maxth(), S.TNone{}), T.new(U32, C.maxth(), 0), T.new(U32, C.maxth(), 0), [], 1, pl, 0, rnd,
         T.new(U32, 30, 0), T.new(U32, 30, 0), T.new(U32, 64, 0), 0, tm0(), 0, 0, 0, 0, 0,
-        T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, 32, 0), 0, 0, 0, [], 0,
-        0, 2, 0, 0, 0, 4294967295, 4294967295, 4294967295, 0, 0, 0, 0, 0, []}
+        T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, ns, 0), T.new(U32, 32, 0), 0, 0, 0, [], T.get(U32, cv, 10, 0),
+        mrnd, wipe, 0, T.get(U32, cv, 5, 0), T.get(U32, cv, 6, 0), T.get(U32, cv, 7, 4294967295), 4294967295, T.get(U32, cv, 8, 4294967295), T.get(U32, cv, 9, 0), 0, 0, 0, 0, 0, 0, ui0(sky, amb(U32.to_nat(T.size(L.Vertex, ve)), ve, 0, Bx{2147483647, 2147483647, 2147483649, 2147483649})), T.new(U32, nl, 0), []}
 
 def start(+g: S.Sim) -> S.Sim:
   +g1 = S.p.secrets.set(S.p.items.set(S.p.kills.set(g, 0), 0), 0)
   O.spawnspecials(O.spawnthings(g1))
 
-def sim(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>, +pl: T.Vec<U32>, +rnd: U32) -> S.Sim:
-  start(blank(lv, w, lvl(lv, t, w, tb, hud), pl, rnd))
+def sim(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>, +pl: T.Vec<U32>, +cv: T.Vec<U32>) -> S.Sim:
+  start(blank(lv, w, lvl(lv, t, w, tb, hud, T.get(U32, cv, 1, 2)), pl, T.get(U32, cv, 0, 0), T.get(U32, cv, 2, 0), T.get(U32, cv, 3, 2), skynum(lv, T.get(U32, cv, 4, 0)), cv))
 
 def newplayer() -> T.Vec<U32>:
   T.set(U32, T.new(U32, 64, 0), 1, 2)

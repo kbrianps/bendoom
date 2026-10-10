@@ -7,6 +7,7 @@ import ./sim.bend as C
 import ./game.bend as K
 import ./boot.bend as B
 import ./draw.bend as D
+import ./flow.bend as Q
 
 type Game is Type:
   Game{sim: S.Sim, rom: Array<U32>, path: String, keys: U32, t0: U32, tics: U32, held: U32}
@@ -32,35 +33,22 @@ def press(+keys: U32, +c: U32, +down: Bool) -> U32:
 def held(+keys: U32, +b: U32) -> Bool:
   U32.is_ne((keys .&. b : U32), 0)
 
-def quits(+e: Event) -> Bool:
-  match e:
-    case Key{+c, +d}:
-      Bool.and(U32.is_eq(c, 27), d)
-    case Close{}:
-      True{}
-    case _:
-      False{}
+def event(+e: Event, +r: Run) -> Run:
+  match e r:
+    case Key{+c, +d} Run{+g, +k}:
+      +g1 = Q.respond(g, c, d)
+      Run{g1, Bool.pick(U32, Q.eaten(g1), k, press(k, c, d))}
+    case Close{} Run{+g, +k}:
+      Run{Q.close(g), k}
+    case _ q:
+      q
 
-def event(+e: Event, +keys: U32) -> U32:
-  match e:
-    case Key{+c, +d}:
-      press(keys, c, d)
-    case _:
-      keys
-
-def events.go(es: List<Event>, +keys: U32, +quit: Bool) -> U32 & Bool:
+def events(es: List<Event>, +r: Run) -> Run:
   match es:
     case +e <> t:
-      events.go(t, event(e, keys), Bool.or(quit, quits(e)))
+      events(t, event(e, r))
     case []:
-      (keys, quit)
-
-def alive(r: U32 & Bool) -> Maybe<U32>:
-  (k, q) = r
-  Bool.pick(Maybe<U32>, q, None{}, Some{k})
-
-def events(es: List<Event>, +keys: U32) -> Maybe<U32>:
-  alive(events.go(es, keys, False{}))
+      r
 
 def amount(+keys: U32, +pos: U32, +neg: U32, +v: U32) -> U32:
   (Bool.pick(U32, held(keys, pos), v, 0) - Bool.pick(U32, held(keys, neg), v, 0) : U32)
@@ -84,62 +72,42 @@ def cmd(+g: S.Sim, +keys: U32, +turnheld: U32) -> S.Sim:
 def done(+g: S.Sim) -> Bool:
   Bool.or(U32.is_ne(S.sim.exit(g), 0), U32.is_eq(S.p.state(g), 2))
 
-def runs(n: Nat, more: Bool, +g: S.Sim, +keys: U32, +h: U32) -> Run:
+def steps(n: Nat, more: Bool, +g: S.Sim, +keys: U32, +h: U32) -> S.Sim:
   match n more:
     case 1n+p True{}:
       +h1 = Bool.pick(U32, held(keys, 12), (h + 1 : U32), 0)
       +g1 = K.ticker(cmd(g, keys, h1))
-      runs(p, Bool.not(done(g1)), g1, keys, h1)
+      steps(p, Bool.not(done(g1)), g1, keys, h1)
+    case _ _:
+      g
+
+def stopped(+g: S.Sim) -> Bool:
+  Bool.or(U32.is_ne(Q.pending(g), 0), Q.quit(g))
+
+def runs(n: Nat, more: Bool, +g: S.Sim, +keys: U32, +h: U32) -> Run:
+  match n more:
+    case 1n+p True{}:
+      +h1 = Bool.pick(U32, held(keys, 12), (h + 1 : U32), 0)
+      +g1 = Q.tick(cmd(g, keys, h1))
+      runs(p, Bool.not(stopped(g1)), g1, keys, h1)
     case _ _:
       Run{g, h}
 
-def digit(+d: U32) -> String:
-  T.get(String, T.from_list(String, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]), d, "0")
+def reload(+old: S.Sim, +path: String, +keys: U32, +t0: U32, +tics: U32, p: S.Sim & Array<U32>) -> IO(Maybe<Game>):
+  (+g, rom) = p
+  IO.pure(Maybe<Game>, Some{Game{Q.adopt(old, g), rom, path, keys, t0, tics, 0}})
 
-def mapname(+com: Bool, +ep: U32, +map: U32) -> String:
-  Bool.pick(String, com, String.append("MAP", String.append(digit((map / 10 : U32)), digit((map % 10 : U32)))),
-    String.append("E", String.append(digit(ep), String.append("M", digit(map)))))
-
-def back9(+ep: U32) -> U32:
-  Bool.pick(U32, U32.is_eq(ep, 1), 4, Bool.pick(U32, U32.is_eq(ep, 2), 6, Bool.pick(U32, U32.is_eq(ep, 3), 7, 3)))
-
-def next.doom(+ep: U32, +map: U32, +secret: Bool) -> String:
-  +nep = Bool.pick(U32, U32.is_eq(ep, 4), 1, (ep + 1 : U32))
-  Bool.pick(String, secret, mapname(False{}, ep, 9),
-    Bool.pick(String, U32.is_eq(map, 9), mapname(False{}, ep, back9(ep)),
-      Bool.pick(String, U32.is_eq(map, 8), mapname(False{}, nep, 1), mapname(False{}, ep, (map + 1 : U32)))))
-
-def next.doom2(+map: U32, +secret: Bool) -> String:
-  +n = Bool.pick(U32, secret, Bool.pick(U32, U32.is_eq(map, 15), 31, 32),
-    Bool.pick(U32, Bool.or(U32.is_eq(map, 31), U32.is_eq(map, 32)), 16, Bool.pick(U32, U32.is_eq(map, 30), 1, (map + 1 : U32))))
-  mapname(True{}, 1, n)
-
-def next(+g: S.Sim) -> String:
-  +secret = U32.is_eq(S.sim.exit(g), 2)
-  Bool.pick(String, S.mp.commercial(g), next.doom2(S.mp.map(g), secret), next.doom(S.mp.episode(g), S.mp.map(g), secret))
-
-def finish(+g: S.Sim) -> T.Vec<U32>:
-  +g1 = S.p.pw5.set(S.p.pw4.set(S.p.pw3.set(S.p.pw2.set(S.p.pw1.set(S.p.pw0.set(g, 0), 0), 0), 0), 0), 0)
-  S.sim.pl(S.p.bonuscount.set(S.p.damagecount.set(S.p.fixedcm.set(S.p.extralight.set(S.p.cards.set(g1, 0), 0), 0), 0), 0))
-
-def here(+g: S.Sim) -> String:
-  mapname(S.mp.commercial(g), S.mp.episode(g), S.mp.map(g))
-
-def reload(+path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32, p: S.Sim & Array<U32>) -> IO(Maybe<Game>):
-  (g, rom) = p
-  IO.pure(Maybe<Game>, Some{Game{g, rom, path, keys, t0, tics, h}})
-
-def settle.go(ex: Bool, re: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32) -> IO(Maybe<Game>):
-  match ex re:
+def settle.go(quit: Bool, load: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32) -> IO(Maybe<Game>):
+  match quit load:
     case True{} _:
-      IO.bind(S.Sim & Array<U32>, Maybe<Game>, B.boot(path, next(g), finish(g), S.sim.rnd(g)), p => reload(path, keys, t0, tics, 0, p))
+      IO.pure(Maybe<Game>, None{})
     case False{} True{}:
-      IO.bind(S.Sim & Array<U32>, Maybe<Game>, B.boot(path, here(g), S.sim.pl(g), S.sim.rnd(g)), p => reload(path, keys, t0, tics, 0, p))
+      IO.bind(S.Sim & Array<U32>, Maybe<Game>, B.boot(path, Q.target(g), Q.player(g), Q.carry(g)), p => reload(g, path, keys, t0, tics, p))
     case False{} False{}:
       IO.pure(Maybe<Game>, Some{Game{g, rom, path, keys, t0, tics, h}})
 
 def settle(+g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32) -> IO(Maybe<Game>):
-  settle.go(U32.is_ne(S.sim.exit(g), 0), U32.is_eq(S.p.state(g), 2), g, rom, path, keys, t0, tics, h)
+  settle.go(Q.quit(g), U32.is_ne(Q.pending(g), 0), g, rom, path, keys, t0, tics, h)
 
 def ran(r: Run, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32) -> IO(Maybe<Game>):
   match r:
@@ -150,33 +118,30 @@ def step(+g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics:
   +due = (((now - t0) * 35) / 1000 : U32)
   +lag = Bool.pick(U32, U32.is_gt(due, tics), (due - tics : U32), 0)
   +n = U32.min(lag, 4)
-  ran(runs(U32.to_nat(n), True{}, g, keys, h), rom, path, keys, t0, Bool.pick(U32, U32.is_gt(lag, 4), due, (tics + n : U32)))
+  ran(runs(U32.to_nat(n), Bool.not(stopped(g)), g, keys, h), rom, path, keys, t0, Bool.pick(U32, U32.is_gt(lag, 4), due, (tics + n : U32)))
 
-def advance(m: Maybe<U32>, g: Game) -> IO(Maybe<Game>):
-  match m g:
-    case Some{+k} Game{+s, rom, +path, ok, +t0, +tics, +h}:
+def advance(r: Run, g: Game) -> IO(Maybe<Game>):
+  match r g:
+    case Run{+s, +k} Game{old, rom, +path, ok, +t0, +tics, +h}:
       IO.bind(Nat, Maybe<Game>, IO.now(), now => step(s, rom, path, k, t0, tics, h, U32.from_nat(now)))
-    case None{} _:
-      IO.pure(Maybe<Game>, None{})
 
 def tick(es: List<Event>, g: Game) -> IO(Maybe<Game>):
   match g:
     case Game{+s, rom, +path, +k, +t0, +tics, +h}:
-      advance(events(es, k), Game{s, rom, path, k, t0, tics, h})
+      advance(events(es, Run{s, k}), Game{s, rom, path, k, t0, tics, h})
 
-def frame.out(+s: S.Sim, +path: String, +k: U32, +t0: U32, +tics: U32, +h: U32, r: Array<U32> & Array<U32>) -> Game & Array<U32>:
+def frame.fb(+s: S.Sim, +path: String, +k: U32, +t0: U32, +tics: U32, +h: U32, r: Array<U32> & Array<U32>) -> Game & Array<U32>:
   (fb, rom) = r
   (Game{s, rom, path, k, t0, tics, h}, fb)
+
+def frame.out(+path: String, +k: U32, +t0: U32, +tics: U32, +h: U32, r: S.Sim & (Array<U32> & Array<U32>)) -> Game & Array<U32>:
+  (+s, p) = r
+  frame.fb(s, path, k, t0, tics, h, p)
 
 def frame(g: Game) -> Game & Array<U32>:
   match g:
     case Game{+s, rom, +path, +k, +t0, +tics, +h}:
-      frame.out(s, path, k, t0, tics, h, U.render(s, rom))
+      frame.out(path, k, t0, tics, h, Q.render(s, rom))
 
 def start(+s: S.Sim, rom: Array<U32>, +path: String, +now: U32) -> Game:
   Game{s, rom, path, 0, now, 0, 0}
-
-def run.of(+r: Run) -> S.Sim:
-  match r:
-    case Run{+g, h}:
-      g

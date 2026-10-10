@@ -86,7 +86,7 @@ sim = fields("w:R.World mp:Lvl lspec:T.Vec<U32> links:T.Vec<U32> valid:T.Vec<U32
              "tp:T.Vec<U32> free:List<&2,U32> next pl:T.Vec<U32> time rnd plats:T.Vec<U32> ceils:T.Vec<U32> "
              "buttons:T.Vec<U32> exit tm:Tm kills items secrets halt ret "
              "secv:T.Vec<U32> sndt:T.Vec<U32> sndn:T.Vec<U32> brains:T.Vec<U32> nbrain brainon easy snd:List<&2,U32> tic "
-             "mrnd wipe stface stcount stprio stlad stold stpainh stpainc stweap strnd hmsg hcount nil:List<&2,Sim>")
+             "mrnd wipe stface stcount stprio stlad stold stpainh stpainc stweap strnd hmsg hcount gs act ui:T.Vec<U32> seen:T.Vec<U32> nil:List<&2,Sim>")
 record("Sim", sim)
 
 for i in range(len(tm)):

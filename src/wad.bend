@@ -81,6 +81,11 @@ def find(ls: List<&2, Lump>, +name: String, acc: Lump) -> Lump:
     case []:
       acc
 
+def has(w: Wad, +name: String) -> Wad & Bool:
+  match w:
+    case Wad{file, +d}:
+      (Wad{file, d}, named(name, find(d, name, Lump{"-", 0, 0})))
+
 def heads(+name: String, +ls: List<&2, Lump>) -> Bool:
   match ls:
     case l <> t:

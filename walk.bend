@@ -25,7 +25,7 @@ def run(cmds: List<String>, +g: S.Sim) -> S.Sim:
     case "at" <> x <> y <> a <> t:
       run(t, place(g, num(x), num(y), num(a)))
     case n <> k <> t:
-      run(t, P.run.of(P.runs(U32.to_nat(num(n)), True{}, g, num(k), 0)))
+      run(t, P.steps(U32.to_nat(num(n)), True{}, g, num(k), 0))
     case _:
       g
 

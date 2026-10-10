@@ -1377,7 +1377,7 @@ def anim.go(xs: List<&2, U32>, +g: S.Sim, +tex: Bool, +all: List<&2, U32>, +n: U
 def anim.one(+g: S.Sim, a: S.Anim) -> S.Sim:
   match a:
     case S.Anim{+tex, +ids, +base, +speed}:
-      anim.go(ids, g, tex, ids, len(ids), (S.sim.time(g) / speed : U32), 0)
+      anim.go(ids, g, tex, ids, len(ids), ((S.sim.time(g) / speed) + base : U32), 0)
 
 def anims(xs: List<&2, S.Anim>, +g: S.Sim) -> S.Sim:
   match xs:
@@ -3548,8 +3548,16 @@ def owned(n: Nat, +g: S.Sim, +i: U32, +acc: U32) -> U32:
       owned(p, g, (i + 1 : U32), (acc .|. (C.b2u(U32.is_ne(I.own(g, i), 0)) << U32.to_nat(i)) : U32))
 
 
+def armsmask(n: Nat, +g: S.Sim, +i: U32, +acc: U32) -> U32:
+  match n:
+    case 0n:
+      acc
+    case 1n+p:
+      armsmask(p, g, (i + 1 : U32), (acc .|. (C.b2u(U32.is_ne(S.pget(g, (34 + i : U32)), 0)) << U32.to_nat(i)) : U32))
+
 def st.start(+g: S.Sim) -> S.Sim:
-  S.sim.hcount.set(S.sim.stweap.set(S.sim.stold.set(S.sim.stface.set(g, 0), 4294967295), owned(9n, g, 0, 0)), 0)
+  +g1 = S.sim.hcount.set(S.sim.stweap.set(S.sim.stold.set(S.sim.stface.set(g, 0), 4294967295), owned(9n, g, 0, 0)), 0)
+  S.sim.ui.set(g1, T.set(U32, T.set(U32, S.sim.ui(g1), 97, 0), 98, armsmask(6n, g1, 0, 0)))
 
 
 def st.pain(+g: S.Sim) -> S.Sim:
@@ -3628,8 +3636,17 @@ def st.ticker(+g: S.Sim) -> S.Sim:
   C.when(U32.is_ne(w, 0), S.sim.wipe.set(g3, (w - 1 : U32)), +h => C.when(U32.is_eq(w, 1), h, +k => S.sim.mrnd.set(k, ((S.sim.mrnd(k) + 64) .&. 255 : U32))))
 
 
+def hu.ui(+g: S.Sim, +i: U32) -> U32:
+  T.get(U32, S.sim.ui(g), i, 0)
+
+def hu.set(+g: S.Sim, +i: U32, +v: U32) -> S.Sim:
+  S.sim.ui.set(g, T.set(U32, S.sim.ui(g), i, v))
+
 def hu.ticker(+g: S.Sim) -> S.Sim:
   +c = S.sim.hcount(g)
-  +g1 = S.sim.hcount.set(g, Bool.pick(U32, U32.is_ne(c, 0), (c - 1 : U32), 0))
+  +g0 = S.sim.hcount.set(g, Bool.pick(U32, U32.is_ne(c, 0), (c - 1 : U32), 0))
+  +g1 = C.when(U32.is_eq(c, 1), g0, +h => hu.set(h, 117, 0))
   +m = S.p.message(g1)
-  C.when(U32.is_ne(m, 0), g1, +h => S.p.message.set(S.sim.hcount.set(S.sim.hmsg.set(h, m), 140), 0))
+  +dont = U32.is_ne(hu.ui(g1, 116), 0)
+  +take = Bool.and(Bool.or(U32.is_eq(hu.ui(g1, 115), 0), dont), Bool.and(U32.is_ne(m, 0), Bool.or(U32.is_eq(hu.ui(g1, 117), 0), dont)))
+  C.when(take, g1, +h => hu.set(hu.set(S.p.message.set(S.sim.hcount.set(S.sim.hmsg.set(h, m), 140), 0), 117, C.b2u(dont)), 116, 0))

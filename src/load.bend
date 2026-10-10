@@ -6,7 +6,7 @@ import ./level.bend as L
 import ./gfx.bend as G
 
 type Texs is Data:
-  Texs{names: List<&2, String>, texs: List<&2, G.Tex>, sky: String, flats: List<&2, String>, flatdata: List<&2, List<&2, U32>>, heights: List<&2, U32>, tanims: List<&2, List<&2, String>>, fanims: List<&2, List<&2, String>>, switches: List<&2, String>}
+  Texs{names: List<&2, String>, texs: List<&2, G.Tex>, sky: String, flats: List<&2, String>, flatdata: List<&2, List<&2, U32>>, heights: List<&2, U32>, tanims: List<&2, List<&2, String>>, fanims: List<&2, List<&2, String>>, switches: List<&2, String>, tbases: List<&2, U32>, fbases: List<&2, U32>}
 
 def has(xs: List<&2, String>, +s: String) -> Bool:
   match xs:
@@ -169,21 +169,26 @@ def upto(xs: List<&2, String>, +b: String) -> List<&2, String>:
 def ends(xs: List<&2, String>, +b: String) -> Bool:
   match xs:
     case +x <> +t:
-      Bool.and(String.eq(x, b), List.is_empty(&2, String, t))
+      Bool.pick(Bool, List.is_empty(&2, String, t), String.eq(x, b), ends(t, b))
     case []:
       False{}
 
-def slice.go(xs: List<&2, String>, found: Bool, +a: String, +b: String) -> List<&2, String>:
-  match xs found:
-    case +x <> +t False{}:
-      slice.go(t, String.eq(x, a), a, b)
-    case ys True{}:
-      ys
-    case [] False{}:
+def slice.hit?(hit: Bool, +x: String, t: List<&2, String>, +a: String) -> List<&2, String>:
+  match hit:
+    case True{}:
+      x <> t
+    case False{}:
+      slice.go(t, a)
+
+def slice.go?(xs: List<&2, String>, +a: String) -> List<&2, String>:
+  match xs:
+    case +x <> t:
+      slice.hit(String.eq(x, a), x, t, a)
+    case []:
       []
 
 def slice(xs: List<&2, String>, +a: String, +b: String) -> List<&2, String>:
-  +r = slice.go(xs, False{}, a, b)
+  +r = slice.go(xs, a)
   upto(r, b)
 
 def range(+order: List<&2, String>, +a: String, +b: String) -> List<&2, String>:
@@ -203,6 +208,22 @@ def ranges(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, Strin
       +r = range(order, a, b)
       +rest = ranges(t, order, have)
       Bool.pick(List<&2, List<&2, String>>, Bool.and(U32.is_gt(U32.from_nat(List.length(&2, String, r)), 1), any(r, have)), r <> rest, rest)
+    case _:
+      []
+
+def pos(xs: List<&2, String>, +s: String, +i: U32) -> U32:
+  match xs:
+    case x <> t:
+      Bool.pick(U32, String.eq(x, s), i, pos(t, s, (i + 1 : U32)))
+    case []:
+      0
+
+def bases(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String>) -> List<&2, U32>:
+  match ps:
+    case +a <> +b <> +t:
+      +r = range(order, a, b)
+      +rest = bases(t, order, have)
+      Bool.pick(List<&2, U32>, Bool.and(U32.is_gt(U32.from_nat(List.length(&2, String, r)), 1), any(r, have)), pos(order, a, 0) <> rest, rest)
     case _:
       []
 
@@ -243,45 +264,48 @@ def heights(+defs: List<&2, G.TexDef>, names: List<&2, String>) -> List<&2, U32>
     case []:
       []
 
-def textures.flats(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, +hs: List<&2, U32>, +tr: List<&2, List<&2, String>>, +fr: List<&2, List<&2, String>>, +sw: List<&2, String>, ts: List<&2, G.Tex>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
+def textures.flats(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, +hs: List<&2, U32>, +tr: List<&2, List<&2, String>>, +fr: List<&2, List<&2, String>>, +sw: List<&2, String>, +tb: List<&2, U32>, +fb: List<&2, U32>, ts: List<&2, G.Tex>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
   (w, fds) = p
-  IO.pure(W.Wad & Texs, (w, Texs{names, ts, sky, fl, fds, hs, tr, fr, sw}))
+  IO.pure(W.Wad & Texs, (w, Texs{names, ts, sky, fl, fds, hs, tr, fr, sw, tb, fb}))
 
-def textures.fin(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, +hs: List<&2, U32>, +tr: List<&2, List<&2, String>>, +fr: List<&2, List<&2, String>>, +sw: List<&2, String>, r: W.Wad & List<&2, G.Tex>) -> IO(W.Wad & Texs):
+def textures.fin(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, +hs: List<&2, U32>, +tr: List<&2, List<&2, String>>, +fr: List<&2, List<&2, String>>, +sw: List<&2, String>, +tb: List<&2, U32>, +fb: List<&2, U32>, r: W.Wad & List<&2, G.Tex>) -> IO(W.Wad & Texs):
   (w, ts) = r
-  IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Texs, W.get(w, fl), p => textures.flats(names, sky, fl, hs, tr, fr, sw, ts, p))
+  IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Texs, W.get(w, fl), p => textures.flats(names, sky, fl, hs, tr, fr, sw, tb, fb, ts, p))
 
-def textures.with(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +com: Bool, w: W.Wad, +pn: T.Vec<String>, +defs: List<&2, G.TexDef>) -> IO(W.Wad & Texs):
+def textures.with(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, w: W.Wad, +pn: T.Vec<String>, +defs: List<&2, G.TexDef>) -> IO(W.Wad & Texs):
   +skip = first(defs)
   +names0 = List.reverse(&2, String, add(skip, needed(U32.to_nat(T.size(L.Side, sides)), sides, 0, skip, []), sky))
   +order = defnames(defs)
   +tr = ranges(tanimdefs(), order, names0)
+  +tb = bases(tanimdefs(), order, names0)
   +sw = pairs(switchdefs(com), order, names0)
   +names = extend(skip, names0, List.append(&2, String, concat(tr), sw))
   +hs = heights(defs, skip <> names)
-  IO.bind(W.Wad & List<&2, G.Tex>, W.Wad & Texs, built(names, w, defs, pn, mk), r => textures.fin(names, sky, fl, hs, tr, fr, sw, r))
+  IO.bind(W.Wad & List<&2, G.Tex>, W.Wad & Texs, built(names, w, defs, pn, mk), r => textures.fin(names, sky, fl, hs, tr, fr, sw, tb, fb, r))
 
-def textures.parts(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +com: Bool, w: W.Wad, bss: List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
+def textures.parts(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, w: W.Wad, bss: List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
   match bss:
     case pn <> t1 <> t2 <> t:
-      textures.with(sides, mk, sky, fl, fr, com, w, T.from_list(String, G.pnames(List.drop(&2, U32, B.words(pn), 2n))), List.append(&2, G.TexDef, G.texdefs(t1), G.texdefs(t2)))
+      textures.with(sides, mk, sky, fl, fr, fb, com, w, T.from_list(String, G.pnames(List.drop(&2, U32, B.words(pn), 2n))), List.append(&2, G.TexDef, G.texdefs(t1), G.texdefs(t2)))
     case _:
       IO.die(W.Wad & Texs, 1, "no PNAMES or TEXTURE1")
 
-def textures.got(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +com: Bool, p: W.Wad & List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
+def textures.got(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, p: W.Wad & List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
   (w, bss) = p
-  textures.parts(sides, mk, sky, fl, fr, com, w, bss)
+  textures.parts(sides, mk, sky, fl, fr, fb, com, w, bss)
 
 def textures.of(+si: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl0: List<&2, String>, +com: Bool, r: W.Wad & List<&2, W.Lump>) -> IO(W.Wad & Texs):
   (w, fls) = r
-  +fr = ranges(fanimdefs(), lumpnames.of(fls), fl0)
+  +lns = lumpnames.of(fls)
+  +fr = ranges(fanimdefs(), lns, fl0)
+  +fb = bases(fanimdefs(), lns, fl0)
   +fl = extend("F_SKY1", fl0, concat(fr))
-  IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Texs, W.get(w, ["PNAMES", "TEXTURE1", "TEXTURE2"]), p => textures.got(si, mk, sky, fl, fr, com, p))
+  IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Texs, W.get(w, ["PNAMES", "TEXTURE1", "TEXTURE2"]), p => textures.got(si, mk, sky, fl, fr, fb, com, p))
 
-def textures(w: W.Wad, +lv: L.Level) -> IO(W.Wad & Texs):
+def textures(w: W.Wad, +lv: L.Level, +skyn: U32) -> IO(W.Wad & Texs):
   match lv:
     case L.Level{n, th, +li, +si, ve, se, ss, no, +sc, rj, bm}:
       +mk = masked(U32.to_nat(T.size(L.Line, li)), li, si, 0, [])
-      +sky = skyname(n)
+      +sky = Bool.pick(String, U32.is_eq(skyn, 0), skyname(n), String.append("SKY", U32.show(skyn)))
       +fl0 = List.reverse(&2, String, flatnames(U32.to_nat(T.size(L.Sector, sc)), sc, 0, []))
       textures.of(si, mk, sky, fl0, String.starts_with(n, "MAP"), W.between(w, "F_START", "F_END"))

@@ -80,4 +80,20 @@ python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 20
   echo "11d7119724f8c49dcf7ca7d1961600f5934f6aeabfcb3322a7e4e76d66c3cb7f  $TMP/frame.bmp" | sha256sum -c --quiet &&
   ok "demo: E1M1 pistol fight frame 330 with weapon and status bar" || bad "demo: E1M1 pistol fight frame 330"
 
+frame() {
+  local name=$1 wad=$2 ep=$3 map=$4 lump=$5 file=$6 sha=$7 segs=$8; shift 8
+  python3 tests/mklmp.py "$TMP/demo.lmp" "$ep" "$map" $segs &&
+    "$TMP/demo" "$WADS/$wad.wad" "$lump" "$TMP/demo.lmp" "$@" >/dev/null &&
+    echo "$sha  $TMP/$file" | sha256sum -c --quiet &&
+    ok "frame: $name" || bad "frame: $name"
+}
+frame "E1M1 menu to the load screen, water flat animated" freedoom1 1 1 E1M1 mn.bmp 4a700fed48470ad701c53a6f837ca1a90444ed87bb6eaa4274b8039d212d8999 "220,30,0,0,0" \
+  keys 10 27 1 11 27 0 20 63233 1 21 63233 0 30 63233 1 31 63233 0 40 13 1 41 13 0 50 63233 1 51 63233 0 60 63233 1 61 63233 0 end 60 "$TMP/mn.bmp"
+frame "E1M1 automap with grid, mark and zoom while turning" freedoom1 1 1 E1M1 am_120.bmp c28d5445b7301efac832e555253f684f16910bfb38c51880c094a316b1a9afd7 "120,40,0,3,0" \
+  keys 5 9 1 6 9 0 50 103 1 51 103 0 60 109 1 61 109 0 70 45 1 76 45 0 end every 40 "$TMP/am"
+frame "E1M1 intermission" freedoom1 1 1 E1M1 wi.bmp 02f3e161aa90a002ef38360f15edc3a2d0f02c31686ed034223851cbb4501ccf "400,0,0,0,0" \
+  exit 40 300 "$TMP/wi.bmp"
+frame "E1M8 finale text" freedoom1 1 8 E1M8 fin_650.bmp 0832b232c7ebfd7285d8d101560dbd782ea911bfd66451f66b077f4f5a34dc2c "250,0,0,0,0 1,0,0,0,2 60,0,0,0,0 1,0,0,0,2 60,0,0,0,0 1,0,0,0,2 400,0,0,0,0" \
+  exit 40 650 "$TMP/fin_650.bmp"
+
 [ "$FAILS" -eq 0 ] && echo "ALL TESTS PASS" || { echo "$FAILS FAILED"; exit 1; }
