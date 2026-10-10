@@ -41,8 +41,8 @@ image() {
 image automap freedoom1 E1M1 ca6f083a70a9de12621b0d5091353234ef2eed3733b23aa128c548d88ae3a85e
 image automap freedoom1 E4M7 28cdab142d2b33cb8ee3999b66dcf9fe0c6e1a564d2fa15feba7ffe21a25d833
 image automap freedoom2 MAP01 b3751262f55ae35c9d7d76d93f7910ef52cf67f39820960c83a85735962c16ba
-image shot freedoom1 E1M1 305eb022edb41763a581722f630573f18156e4a953b58237bec74eb9074cd63a
-image shot freedoom1 E3M3 835aef2ebb4deb5d5710e849eca6877e4c2c19b236de995c5bcf216892d3d827
-image shot freedoom2 MAP01 4a97935d9e7f2e37a363e83aa1905bbf830a0467cd0bed023f22a5257c8570b7
+image shot freedoom1 E1M1 548d94d5041b28af1152ca9e96b10fb6bc094f680d5d413fbdb65efbbb8a435e
+image shot freedoom1 E3M3 fd655f4154e192f5f3bea5863e1c4aa0458255ac1b56fcca798b1641c81dde26
+image shot freedoom2 MAP01 20b68c90058b3f10cdafa413a6cd9c367325fb221582e15ec0c5cb5bcbc0b529
 
 [ "$FAILS" -eq 0 ] && echo "ALL TESTS PASS" || { echo "$FAILS FAILED"; exit 1; }

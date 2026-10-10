@@ -3,9 +3,10 @@ import ./fixed.bend as F
 import ./world.bend as R
 import ./render.bend as V
 import ./boot.bend as B
+import ./draw.bend as D
 
-type Game is Data:
-  Game{scene: B.Scene, view: V.View, keys: U32}
+type Game is Type:
+  Game{scene: B.Scene, view: V.View, keys: U32, rom: Array<U32>}
 
 def code.bit(+c: U32) -> U32:
   Bool.pick(U32, Bool.or(U32.is_eq(c, 63232), U32.is_eq(c, 119)), 1,
@@ -92,24 +93,28 @@ def step(+tb: V.Tabs, +w: R.World, +keys: U32, +v: V.View) -> V.View:
   +t = turned(keys, v)
   step.go(tb, w, keys, t, angle.of(t))
 
-def advance(m: Maybe<U32>, +s: B.Scene, +v: V.View) -> Maybe<Game>:
+def advance(m: Maybe<U32>, +s: B.Scene, +v: V.View, rom: Array<U32>) -> Maybe<Game>:
   match m s:
     case Some{+k} B.Scene{+tb, +w}:
-      Some{Game{s, step(tb, w, k, v), k}}
+      Some{Game{s, step(tb, w, k, v), k, rom}}
     case None{} _:
       None{}
 
 def tick(es: List<Event>, g: Game) -> IO(Maybe<Game>):
   match g:
-    case Game{+s, +v, +k}:
-      IO.pure(Maybe<Game>, advance(events(es, k), s, v))
+    case Game{+s, +v, +k, rom}:
+      IO.pure(Maybe<Game>, advance(events(es, k), s, v, rom))
 
-def frame(+g: Game) -> Array<U32>:
+def frame.out(+s: B.Scene, +v: V.View, +k: U32, r: Array<U32> & Array<U32>) -> Game & Array<U32>:
+  (fb, rom) = r
+  (Game{s, v, k, rom}, fb)
+
+def frame(g: Game) -> Game & Array<U32>:
   match g:
-    case Game{B.Scene{+tb, +w}, +v, k}:
-      V.render(tb, w, v)
+    case Game{B.Scene{+tb, +w}, +v, +k, rom}:
+      frame.out(B.Scene{tb, w}, v, k, D.render(tb, w, v, rom))
 
-def start(+s: B.Scene) -> Game:
+def start(+s: B.Scene, rom: Array<U32>) -> Game:
   match s:
     case B.Scene{tb, +w}:
-      Game{s, B.spawn(w), 0}
+      Game{s, B.spawn(w), 0, rom}

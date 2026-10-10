@@ -11,10 +11,10 @@ type TexDef is Data:
   TexDef{name: String, width: U32, height: U32, patches: List<&2, PRef>}
 
 type Patch is Data:
-  Patch{x: U32, y: U32, width: U32, bytes: T.Vec<U32>}
+  Patch{x: U32, y: U32, width: U32, bytes: T.Vec<U32>, at: U32}
 
 type Tex is Data:
-  Tex{mask: U32, height: U32, cols: T.Vec<T.Vec<U32>>}
+  Tex{mask: U32, height: U32, texels: List<&2, U32>, posts: List<&2, U32>, blob: List<&2, U32>}
 
 type Cover is Data:
   Cover{count: U32, patch: Patch}
@@ -73,24 +73,24 @@ def byte(+bs: T.Vec<U32>, +i: U32) -> U32:
 def u32at(+bs: T.Vec<U32>, +i: U32) -> U32:
   (byte(bs, i) .|. (byte(bs, (i + 1 : U32)) << 8n) .|. (byte(bs, (i + 2 : U32)) << 16n) .|. (byte(bs, (i + 3 : U32)) << 24n) : U32)
 
-def patch.of(x: U32, y: U32, +v: T.Vec<U32>) -> Patch:
-  Patch{x, y, (byte(v, 0) .|. (byte(v, 1) << 8n) : U32), v}
+def patch.of(x: U32, y: U32, +v: T.Vec<U32>, +at: U32) -> Patch:
+  Patch{x, y, (byte(v, 0) .|. (byte(v, 1) << 8n) : U32), v, at}
 
-def patch(r: PRef, bs: List<&2, U32>) -> Patch:
+def patch(r: PRef, bs: List<&2, U32>, +at: U32) -> Patch:
   match r:
     case PRef{x, y, k}:
-      patch.of(x, y, T.from_list(U32, bs))
+      patch.of(x, y, T.from_list(U32, bs), at)
 
-def patches(rs: List<&2, PRef>, bss: List<&2, List<&2, U32>>) -> List<&2, Patch>:
+def patches(rs: List<&2, PRef>, bss: List<&2, List<&2, U32>>, +at: U32) -> List<&2, Patch>:
   match rs bss:
-    case r <> rt bs <> bt:
-      patch(r, bs) <> patches(rt, bt)
+    case r <> rt +bs <> bt:
+      patch(r, bs, at) <> patches(rt, bt, (at + U32.from_nat(List.length(&2, U32, bs)) : U32))
     case _ _:
       []
 
 def covers(+x: U32, +p: Patch) -> Bool:
   match p:
-    case Patch{px, py, w, bs}:
+    case Patch{px, py, w, bs, at}:
       Bool.and(F.le(px, x), F.lt(x, (px + w : U32)))
 
 def cover.add(+hit: Bool, +c: Cover, +p: Patch) -> Cover:
@@ -106,7 +106,7 @@ def cover(ps: List<&2, Patch>, +x: U32, c: Cover) -> Cover:
       c
 
 def empty() -> Patch:
-  Patch{0, 0, 0, T.from_list(U32, [])}
+  Patch{0, 0, 0, T.from_list(U32, []), 0}
 
 def cover.all(n: Nat, +ps: List<&2, Patch>, +x: U32) -> List<&2, Cover>:
   match n:
@@ -160,7 +160,7 @@ def column.at(blk: Array<U32>, +bs: T.Vec<U32>, +off: U32, +base: U32, +oy: U32,
 
 def column(blk: Array<U32>, +p: Patch, +x: U32, +base: U32, +h: U32) -> Array<U32>:
   match p:
-    case Patch{px, py, w, bs}:
+    case Patch{px, py, w, bs, at}:
       column.at(blk, bs, u32at(bs, (8 + 4 * (x - px) : U32)), base, py, h)
 
 def draw.col(single: Bool, blk: Array<U32>, +p: Patch, +x: U32, +cofs: T.Vec<U32>, +h: U32) -> Array<U32>:
@@ -179,7 +179,7 @@ def draw.cols(n: Nat, blk: Array<U32>, +p: Patch, +x: U32, +cofs: T.Vec<U32>, +h
 
 def span(+p: Patch, +tw: U32) -> U32 & U32:
   match p:
-    case Patch{px, py, w, bs}:
+    case Patch{px, py, w, bs, at}:
       (F.max(px, 0), F.min((px + w : U32), tw))
 
 def draw.patch.at(blk: Array<U32>, +p: Patch, r: U32 & U32, +cofs: T.Vec<U32>, +h: U32) -> Array<U32>:
@@ -196,32 +196,29 @@ def composite(ps: List<&2, Patch>, blk: Array<U32>, +tw: U32, +cofs: T.Vec<U32>,
     case []:
       blk
 
-def take128.go(n: Nat, +v: T.Vec<U32>, +at: U32) -> List<&2, U32>:
+def take128.go(n: Nat, +v: T.Vec<U32>, +at: U32, rest: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      rest
     case 1n+p:
-      byte(v, at) <> take128.go(p, v, (at + 1 : U32))
+      byte(v, at) <> take128.go(p, v, (at + 1 : U32), rest)
 
-def take128(+v: T.Vec<U32>, +at: U32) -> T.Vec<U32>:
-  T.from_list(U32, take128.go(128n, v, at))
-
-def source.of(single: Bool, +bs: T.Vec<U32>, +at: U32, +blk: T.Vec<U32>, +co: U32) -> T.Vec<U32>:
+def source.of(single: Bool, +bs: T.Vec<U32>, +at: U32, +blk: T.Vec<U32>, +co: U32, rest: List<&2, U32>) -> List<&2, U32>:
   match single:
     case True{}:
-      take128(bs, (u32at(bs, at) + 3 : U32))
+      take128.go(128n, bs, (u32at(bs, at) + 3 : U32), rest)
     case False{}:
-      take128(blk, co)
+      take128.go(128n, blk, co, rest)
 
-def source(+c: Cover, +x: U32, +co: U32, +blk: T.Vec<U32>) -> T.Vec<U32>:
+def source(+c: Cover, +x: U32, +co: U32, +blk: T.Vec<U32>, rest: List<&2, U32>) -> List<&2, U32>:
   match c:
-    case Cover{n, Patch{px, py, w, bs}}:
-      source.of(U32.is_eq(co, none()), bs, (8 + 4 * (x - px) : U32), blk, co)
+    case Cover{n, Patch{px, py, w, bs, at}}:
+      source.of(U32.is_eq(co, none()), bs, (8 + 4 * (x - px) : U32), blk, co, rest)
 
-def sources(n: Nat, cs: List<&2, Cover>, +x: U32, +cofs: T.Vec<U32>, +blk: T.Vec<U32>) -> List<&2, T.Vec<U32>>:
+def sources(n: Nat, cs: List<&2, Cover>, +x: U32, +cofs: T.Vec<U32>, +blk: T.Vec<U32>) -> List<&2, U32>:
   match n cs:
-    case 1n+p c <> t:
-      source(c, x, T.get(U32, cofs, x, none()), blk) <> sources(p, t, (x + 1 : U32), cofs, blk)
+    case 1n+p +c <> t:
+      source(c, x, T.get(U32, cofs, x, none()), blk, sources(p, t, (x + 1 : U32), cofs, blk))
     case _ _:
       []
 
@@ -235,15 +232,46 @@ def mask.go(n: Nat, +j: U32, +w: U32) -> U32:
 def mask(+w: U32) -> U32:
   (mask.go(16n, 1, w) - 1 : U32)
 
-def tex.build(+w: U32, +h: U32, +cs: List<&2, Cover>, +cofs: T.Vec<U32>, +ps: List<&2, Patch>) -> Tex:
+def post(+c: Cover, +x: U32) -> U32:
+  match c:
+    case Cover{n, Patch{px, py, w, bs, at}}:
+      Bool.pick(U32, U32.is_eq(n, 1), (at + u32at(bs, (8 + 4 * (x - px) : U32)) : U32), none())
+
+def postcols(n: Nat, cs: List<&2, Cover>, +x: U32) -> List<&2, U32>:
+  match n cs:
+    case 1n+p +c <> t:
+      post(c, x) <> postcols(p, t, (x + 1 : U32))
+    case _ _:
+      []
+
+def blob(bss: List<&2, List<&2, U32>>) -> List<&2, U32>:
+  match bss:
+    case bs <> t:
+      List.append(&2, U32, bs, blob(t))
+    case []:
+      []
+
+def extra(masked: Bool, +n: Nat, +cs: List<&2, Cover>, bss: List<&2, List<&2, U32>>) -> List<&2, U32> & List<&2, U32>:
+  match masked:
+    case True{}:
+      (postcols(n, cs, 0), blob(bss))
+    case False{}:
+      ([], [])
+
+def tex.done(+m: U32, +h: U32, ts: List<&2, U32>, r: List<&2, U32> & List<&2, U32>) -> Tex:
+  (ps, bl) = r
+  Tex{m, h, ts, ps, bl}
+
+def tex.build(+w: U32, +h: U32, +cs: List<&2, Cover>, +cofs: T.Vec<U32>, +ps: List<&2, Patch>, masked: Bool, bss: List<&2, List<&2, U32>>) -> Tex:
   +blk = T.from_list(U32, P.own(Array.to_list(~U32, composite(ps, Array.new(U32, 1n+U32.log2(((multi(cs) + 1) * h + 128 : U32)), 0), w, cofs, h))))
-  Tex{mask(w), (h << 16n : U32), T.from_list(T.Vec<U32>, sources(U32.to_nat((mask(w) + 1 : U32)), cs, 0, cofs, blk))}
+  +n = U32.to_nat((mask(w) + 1 : U32))
+  tex.done(mask(w), (h << 16n : U32), sources(n, cs, 0, cofs, blk), extra(masked, n, cs, bss))
 
-def tex.of(+w: U32, +h: U32, +ps: List<&2, Patch>) -> Tex:
+def tex.of(+w: U32, +h: U32, +ps: List<&2, Patch>, masked: Bool, bss: List<&2, List<&2, U32>>) -> Tex:
   +cs = cover.all(U32.to_nat(w), ps, 0)
-  tex.build(w, h, cs, T.from_list(U32, place(cs, h, 0)), ps)
+  tex.build(w, h, cs, T.from_list(U32, place(cs, h, 0)), ps, masked, bss)
 
-def tex(d: TexDef, bss: List<&2, List<&2, U32>>) -> Tex:
+def tex(d: TexDef, +bss: List<&2, List<&2, U32>>, masked: Bool) -> Tex:
   match d:
     case TexDef{n, +w, +h, rs}:
-      tex.of(w, h, patches(rs, bss))
+      tex.of(w, h, patches(rs, bss, 0), masked, bss)

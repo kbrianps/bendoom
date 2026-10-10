@@ -154,3 +154,15 @@ def get(w: Wad, names: List<&2, String>) -> IO(Wad & List<&2, List<&2, U32>>):
   match w:
     case Wad{file, +d}:
       lumps(parts(d, names), Wad{file, d})
+
+def until(ls: List<&2, Lump>, +stop: String) -> List<&2, Lump>:
+  match ls:
+    case +l <> t:
+      Bool.pick(List<&2, Lump>, named(stop, l), [], l <> until(t, stop))
+    case []:
+      []
+
+def between(w: Wad, +a: String, +b: String) -> Wad & List<&2, Lump>:
+  match w:
+    case Wad{file, +d}:
+      (Wad{file, d}, until(List.drop(&2, Lump, from(a, d), 1n), b))

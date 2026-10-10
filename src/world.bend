@@ -3,6 +3,8 @@ import ./tab.bend as T
 import ./level.bend as L
 import ./load.bend as D
 import ./gfx.bend as G
+import ./mem.bend as M
+import ./sprite.bend as P
 
 type RSide is Data:
   RSide{xoff: U32, yoff: U32, top: U32, bottom: U32, mid: U32, sector: U32}
@@ -10,15 +12,25 @@ type RSide is Data:
 type RSeg is Data:
   RSeg{x1: U32, y1: U32, x2: U32, y2: U32, angle: U32, offset: U32, flags: U32, side: U32, back: U32}
 
+type RSector is Data:
+  RSector{floor: U32, ceil: U32, fpic: U32, cpic: U32, light: U32, special: U32, tag: U32}
+
+type RThing is Data:
+  RThing{x: U32, y: U32, z: U32, angle: U32, sprite: U32, frame: U32, flags: U32, sector: U32}
+
 type World is Data:
   World{
     sides: T.Vec<RSide>,
     segs: T.Vec<RSeg>,
     subs: T.Vec<L.Sub>,
     nodes: T.Vec<L.Node>,
-    sectors: T.Vec<L.Sector>,
-    texs: T.Vec<G.Tex>,
-    things: T.Vec<L.Thing>}
+    sectors: T.Vec<RSector>,
+    texs: T.Vec<M.Info>,
+    things: T.Vec<L.Thing>,
+    sky: M.Info,
+    mobjs: T.Vec<RThing>,
+    secthings: T.Vec<List<&2, U32>>,
+    frames: T.Vec<P.SFrame>}
 
 def index(xs: List<&2, String>, +s: String, +i: U32) -> U32:
   match xs:
@@ -75,10 +87,52 @@ def rsegs(n: Nat, +segs: T.Vec<L.Seg>, +vs: T.Vec<L.Vertex>, +ls: T.Vec<L.Line>,
     case 1n+p:
       rseg(vs, ls, sides, T.get(L.Seg, segs, i, L.Seg{0, 0, 0, 0, 0, 0})) <> rsegs(p, segs, vs, ls, sides, (i + 1 : U32))
 
-def build(lv: L.Level, t: D.Texs) -> World:
-  match lv t:
-    case L.Level{n, +th, +li, +si, +ve, +se, +ss, +no, +sc, rj, bm} D.Texs{+names, +ts}:
+def flat(fs: List<&2, String>, bs: List<&2, U32>, +s: String) -> U32:
+  match fs bs:
+    case f <> ft b <> bt:
+      Bool.pick(U32, String.eq(f, s), b, flat(ft, bt, s))
+    case _ _:
+      M.sky()
+
+def rsector(+fs: List<&2, String>, +bs: List<&2, U32>, d: L.Sector) -> RSector:
+  match d:
+    case L.Sector{f, c, fp, cp, li, sp, tg}:
+      RSector{(f << 16n : U32), (c << 16n : U32), flat(fs, bs, fp), flat(fs, bs, cp), li, sp, tg}
+
+def rsectors(n: Nat, +secs: T.Vec<L.Sector>, +fs: List<&2, String>, +bs: List<&2, U32>, +i: U32) -> List<&2, RSector>:
+  match n:
+    case 0n:
+      []
+    case 1n+p:
+      rsector(fs, bs, T.get(L.Sector, secs, i, L.Sector{0, 0, "", "", 0, 0, 0})) <> rsectors(p, secs, fs, bs, (i + 1 : U32))
+
+def build(lv: L.Level, t: D.Texs, ly: M.Layout) -> World:
+  match lv t ly:
+    case L.Level{n, +th, +li, +si, +ve, +se, +ss, +no, +sc, rj, bm} D.Texs{+names, ts, +sky, +fl, fd} M.Layout{+infos, +bases, size}:
+      +tv = T.from_list(M.Info, infos)
       World{
         T.from_list(RSide, rsides(U32.to_nat(T.size(L.Side, si)), si, names, 0)),
         T.from_list(RSeg, rsegs(U32.to_nat(T.size(L.Seg, se)), se, ve, li, si, 0)),
-        ss, no, sc, ts, th}
+        ss, no,
+        T.from_list(RSector, rsectors(U32.to_nat(T.size(L.Sector, sc)), sc, fl, bases, 0)),
+        tv, th,
+        T.get(M.Info, tv, (tex(names, sky) - 1 : U32), M.Info{0, 0, 0, 4294967295}),
+        T.from_list(RThing, []), T.from_list(List<&2, U32>, []), T.from_list(P.SFrame, [])}
+
+def secthings.add(+i: U32, +v: T.Vec<List<&2, U32>>, +t: RThing) -> T.Vec<List<&2, U32>>:
+  match t:
+    case RThing{x, y, z, a, s, f, fl, +sec}:
+      T.set(List<&2, U32>, v, sec, i <> T.get(List<&2, U32>, v, sec, []))
+
+def secthings(ts: List<&2, RThing>, +i: U32, v: T.Vec<List<&2, U32>>) -> T.Vec<List<&2, U32>>:
+  match ts:
+    case +t <> r:
+      secthings(r, (i + 1 : U32), secthings.add(i, v, t))
+    case []:
+      v
+
+def with.things(w: World, +ts: List<&2, RThing>, +fm: T.Vec<P.SFrame>) -> World:
+  match w:
+    case World{si, sg, su, no, +sc, tx, th, sk, mo, st, fr}:
+      World{si, sg, su, no, sc, tx, th, sk, T.from_list(RThing, ts),
+        secthings(ts, 0, T.from_list(List<&2, U32>, List.replicate(List<&2, U32>, U32.to_nat(T.size(RSector, sc)), []))), fm}
