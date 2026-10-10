@@ -1,0 +1,29 @@
+DOOR,FLOOR,CEIL,PLAT,STAIRS,LON,STROBE,LOFF,TELE,EXIT,SEXIT,STOP,CSTOP,RAISE,DONUT,VDOOR,LOCK,TMON=range(1,19)
+def c(a,k=0,amt=0,f=0): return a|(k<<8)|(amt<<16)|(f<<24)
+O=1
+cross={2:c(DOOR,3,0,O),3:c(DOOR,2,0,O),4:c(DOOR,0,0,O),5:c(FLOOR,3,0,O),6:c(CEIL,4,0,O),8:c(STAIRS,0,0,O),10:c(PLAT,1,0,O),
+12:c(LON,0,0,O),13:c(LON,255,0,O),16:c(DOOR,1,0,O),17:c(STROBE,0,0,O),19:c(FLOOR,0,0,O),22:c(PLAT,3,0,O),25:c(CEIL,3,0,O),
+30:c(FLOOR,5,0,O),35:c(LON,35,0,O),36:c(FLOOR,2,0,O),37:c(FLOOR,6,0,O),38:c(FLOOR,1,0,O),39:c(TELE,0,0,O),40:c(RAISE,0,0,O),
+44:c(CEIL,2,0,O),52:c(EXIT),53:c(PLAT,0,0,O),54:c(STOP,0,0,O),56:c(FLOOR,9,0,O),57:c(CSTOP,0,0,O),58:c(FLOOR,7,0,O),
+59:c(FLOOR,8,0,O),104:c(LOFF,0,0,O),108:c(DOOR,5,0,O),109:c(DOOR,6,0,O),100:c(STAIRS,1,0,O),110:c(DOOR,7,0,O),
+119:c(FLOOR,4,0,O),121:c(PLAT,4,0,O),124:c(SEXIT),125:c(TMON,0,0,O),130:c(FLOOR,10,0,O),141:c(CEIL,5,0,O),
+72:c(CEIL,2),73:c(CEIL,3),74:c(CSTOP),75:c(DOOR,2),76:c(DOOR,1),77:c(CEIL,4),79:c(LON,35),80:c(LON,0),81:c(LON,255),
+82:c(FLOOR,1),83:c(FLOOR,0),84:c(FLOOR,6),86:c(DOOR,3),87:c(PLAT,0),88:c(PLAT,1),89:c(STOP),90:c(DOOR,0),91:c(FLOOR,3),
+92:c(FLOOR,7),93:c(FLOOR,8),94:c(FLOOR,9),95:c(PLAT,3),96:c(FLOOR,5),97:c(TELE),98:c(FLOOR,2),105:c(DOOR,5),106:c(DOOR,6),
+107:c(DOOR,7),120:c(PLAT,4),126:c(TMON),128:c(FLOOR,4),129:c(FLOOR,10)}
+A=1;W=2;N=4
+use={}
+for s in (1,26,27,28,31,32,33,34,117,118): use[s]=c(VDOOR,0,0,N)
+use.update({7:c(STAIRS,0),9:c(DONUT),11:c(EXIT,0,0,W),14:c(PLAT,2,32),15:c(PLAT,2,24),18:c(FLOOR,4),20:c(PLAT,3),21:c(PLAT,1),
+23:c(FLOOR,1),29:c(DOOR,0),41:c(CEIL,0),71:c(FLOOR,2),49:c(CEIL,3),50:c(DOOR,2),51:c(SEXIT,0,0,W),55:c(FLOOR,9),101:c(FLOOR,3),
+102:c(FLOOR,0),103:c(DOOR,3),111:c(DOOR,5),112:c(DOOR,6),113:c(DOOR,7),122:c(PLAT,4),127:c(STAIRS,1),131:c(FLOOR,10),
+133:c(LOCK,6),135:c(LOCK,6),137:c(LOCK,6),140:c(FLOOR,12),
+42:c(DOOR,2,0,A),43:c(CEIL,0,0,A),45:c(FLOOR,0,0,A),60:c(FLOOR,1,0,A),61:c(DOOR,3,0,A),62:c(PLAT,1,1,A),63:c(DOOR,0,0,A),
+64:c(FLOOR,3,0,A),66:c(PLAT,2,24,A),67:c(PLAT,2,32,A),65:c(FLOOR,9,0,A),68:c(PLAT,3,0,A),69:c(FLOOR,4,0,A),70:c(FLOOR,2,0,A),
+114:c(DOOR,5,0,A),115:c(DOOR,6,0,A),116:c(DOOR,7,0,A),123:c(PLAT,4,0,A),132:c(FLOOR,10,0,A),99:c(LOCK,6,0,A),134:c(LOCK,6,0,A),
+136:c(LOCK,6,0,A),138:c(LON,255,0,A|W),139:c(LON,35,0,A|W),
+24:c(FLOOR,3,0,1<<3),46:c(DOOR,3,0,A|(1<<3)),47:c(PLAT,3,0,1<<3)})
+def lst(name,d):
+    xs=[str(d.get(i,0)) for i in range(142)]
+    return "def %s() -> List<&2, U32>:\n  [%s]\n" % (name, ", ".join(xs))
+print(lst("crosstab",cross)); print(lst("usetab",use))

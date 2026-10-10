@@ -24,6 +24,7 @@ WADS="$CACHE/$FREEDOOM"
 $BEND wadinfo.bend -o "$TMP/wadinfo" >/dev/null 2>&1 || { echo "build wadinfo failed"; exit 1; }
 $BEND automap.bend -o "$TMP/automap" >/dev/null 2>&1 || { echo "build automap failed"; exit 1; }
 $BEND shot.bend -o "$TMP/shot" >/dev/null 2>&1 || { echo "build shot failed"; exit 1; }
+$BEND walk.bend -o "$TMP/walk" >/dev/null 2>&1 || { echo "build walk failed"; exit 1; }
 
 for wad in freedoom1 freedoom2; do
   python3 tests/wadinfo.py "$WADS/$wad.wad" > "$TMP/$wad.want"
@@ -44,5 +45,17 @@ image automap freedoom2 MAP01 b3751262f55ae35c9d7d76d93f7910ef52cf67f39820960c83
 image shot freedoom1 E1M1 548d94d5041b28af1152ca9e96b10fb6bc094f680d5d413fbdb65efbbb8a435e
 image shot freedoom1 E3M3 fd655f4154e192f5f3bea5863e1c4aa0458255ac1b56fcca798b1641c81dde26
 image shot freedoom2 MAP01 20b68c90058b3f10cdafa413a6cd9c367325fb221582e15ec0c5cb5bcbc0b529
+
+walk() {
+  local name=$1 want=$2 sha=$3; shift 3
+  got=$("$TMP/walk" "$WADS/freedoom1.wad" E1M1 "$TMP/walk.bmp" "$@") &&
+    [ "$got" = "$want" ] &&
+    echo "$sha  $TMP/walk.bmp" | sha256sum -c --quiet &&
+    ok "walk: $name" || bad "walk: $name ($got)"
+}
+walk "ride the lift down" "779 299 4294967168 0" 766035b16e49f0b7ffe963d2e9d78efae5b33e36ac65cba9b94fe9b3f3bbb4d7 200 1
+walk "open a door" "600 712 4294967168 0" bef75a60590d1420ce8f3be2ddf428ab3fb513359d09eaf8ead7bae352b5f498 at 600 712 180 1 0 2 128 40 0
+"$TMP/walk" "$WADS/freedoom1.wad" E1M1 "$TMP/exit.bmp" at -370 1296 180 1 0 2 128 10 0 | grep -q " 1$" &&
+  ok "walk: exit switch" || bad "walk: exit switch"
 
 [ "$FAILS" -eq 0 ] && echo "ALL TESTS PASS" || { echo "$FAILS FAILED"; exit 1; }

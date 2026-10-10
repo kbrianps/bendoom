@@ -1,5 +1,6 @@
 import Base
 import ./src/screen.bend as S
+import ./src/state.bend as M
 import ./src/boot.bend as B
 import ./src/play.bend as P
 
@@ -17,16 +18,19 @@ def opened(g: P.Game, r: Result<&1, &1, U32 & String, Window>) -> IO(Unit):
     case Done{win}:
       App.loop(~P.Game, ~App{s => look(s), P.tick}, U32.to_nat(4294967295), win, g)
 
-def play(p: B.Scene & Array<U32>) -> IO(Unit):
+def timed(+path: String, p: M.Sim & Array<U32>, now: Nat) -> IO(Unit):
   (s, rom) = p
-  IO.bind(Result<&1, &1, U32 & String, Window>, Unit, Window.open("Doom", 640, 400), r => opened(P.start(s, rom), r))
+  IO.bind(Result<&1, &1, U32 & String, Window>, Unit, Window.open("Doom", 640, 400), r => opened(P.start(s, rom, path, U32.from_nat(now)), r))
+
+def play(+path: String, p: M.Sim & Array<U32>) -> IO(Unit):
+  IO.bind(Nat, Unit, IO.now(), now => timed(path, p, now))
 
 def args(xs: List<String>) -> IO(Unit):
   match xs:
-    case prog <> path <> name <> t:
-      IO.bind(B.Scene & Array<U32>, Unit, B.boot(path, name), s => play(s))
-    case prog <> path <> t:
-      IO.bind(B.Scene & Array<U32>, Unit, B.boot(path, "E1M1"), s => play(s))
+    case prog <> +path <> name <> t:
+      IO.bind(M.Sim & Array<U32>, Unit, B.new(path, name), s => play(path, s))
+    case prog <> +path <> t:
+      IO.bind(M.Sim & Array<U32>, Unit, B.new(path, "E1M1"), s => play(path, s))
     case _:
       IO.die(Unit, 2, "usage: doom FILE.wad [MAP]")
 

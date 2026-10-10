@@ -11,7 +11,7 @@ The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): ever
 | 1 | WAD and maps: any IWAD's directory, every map lump, the palette, the automap as an image | done |
 | 2 | Walls: BSP traversal, composite textures, light and colormaps, a window | done |
 | 3 | Floors, ceilings, sky, sprites and masked textures | done |
-| 4 | Player and world: movement, collision, doors, lifts, line and sector specials | |
+| 4 | Player and world: movement, collision, doors, lifts, line and sector specials | done |
 | 5 | Every monster, with the original states and AI | |
 | 6 | Weapons, items, ammo, HUD and status bar | |
 | 7 | Menus, in-game automap, skills, intermission, finales, every episode and Doom II | |
@@ -22,12 +22,19 @@ The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): ever
     bend doom.bend -o doom
     ./doom doom.wad E1M1
 
-`doom` opens a 640x400 window at the map's first player start. The arrow keys or W and S walk and turn, A and D or comma and period strafe, Shift runs and Escape quits. Walls, floors, ceilings, the sky, masked textures and the things placed on the map at medium skill are drawn as Doom draws them; things stand still until stage 5, and there is no collision until stage 4.
+`doom` opens a 640x400 window at the map's first player start and runs the game at Doom's 35 tics a second. The arrow keys or W and S walk and turn, A and D or comma and period strafe, Shift runs, Space or E uses, 1 to 7 pick a weapon and Escape quits.
+
+The simulation is a port of id's: movement with momentum, friction, view bob and step-ups; collision against walls, things and the blockmap; doors, locked doors, lifts, floors, ceilings, crushers, stairs, donuts and light effects; walk, use and shoot line specials, switches and their timed return, teleports, animated flats and textures, scrolling walls, damaging and secret sectors; item pickups; and the exit, which loads the next map, or a death, which restarts the current one. Monsters stand still until stage 5 and weapons do not fire until stage 6. Until stage 7, finishing an episode's last map (E?M8, MAP30) goes on to the next episode's first map.
 
     bend shot.bend -o shot
     ./shot doom.wad E1M1 e1m1.bmp
 
 `shot` renders the same view from the player start into a 320x200 BMP.
+
+    bend walk.bend -o walk
+    ./walk doom.wad E1M1 out.bmp 200 1 at 600 712 180 2 128
+
+`walk` plays a script without a window and saves the last frame. Each pair is a number of tics and the keys held through them as a bit mask: 1 forward, 2 back, 4 and 8 turn left and right, 16 and 32 strafe left and right, 64 run, 128 use, and 512, 1024 and so on up to 32768 pick weapons 1 to 7. `at X Y ANGLE` places the player. It prints the player's position, floor height and whether the level was exited.
 
     bend automap.bend -o automap
     ./automap doom.wad E1M1 e1m1.bmp
@@ -41,7 +48,7 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 
 ## Tests
 
-`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps and three rendered views against their known images. `BEND=path/to/bend ./test.sh` picks the compiler.
+`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps and three rendered views against their known images, and plays three short walks through E1M1: riding a lift down, opening a door and pressing the exit switch. `BEND=path/to/bend ./test.sh` picks the compiler.
 
 ## Layout
 
@@ -60,9 +67,22 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 | `src/sprite.bend` | map things filtered by skill, sprite frames and rotations installed as `R_InstallSpriteLump` does |
 | `src/info.bend` | sprite names, states and mobj info from `info.c` |
 | `src/screen.bend` | the 320x200 frame as a 512x512 Morton-ordered array, which maps onto a window image directly |
-| `src/boot.bend`, `src/play.bend` | loading a map and its textures, the player start, input and movement |
+| `src/state.bend` | the simulation's records and their accessors: lines, the move state, the level, the world with its mobjs, sectors, sides and the player |
+| `src/sim.bend` | thinker lists, mobj ids, `P_Random`, and the helpers the rest builds on |
+| `src/geo.bend` | `p_maputl.c`: point sides, line openings, sector and blockmap links, blockmap iteration and path traversal |
+| `src/mobj.bend` | `p_mobj.c`: spawning, removing and state changes, map things and the player spawn |
+| `src/map.bend`, `src/move.bend` | `p_map.c` and the mobj thinker: position checks, sliding, teleport moves, sector height changes and crushing, XY and Z movement, use lines |
+| `src/hit.bend` | `p_inter.c` damage and death |
+| `src/items.bend` | `P_TouchSpecialThing`: health, armor, ammo, weapons, keys and powers |
+| `src/spec.bend` | `p_spec.c`, `p_doors.c`, `p_plats.c`, `p_floor.c`, `p_ceilng.c`, `p_lights.c`, `p_switch.c` and `p_telept.c`: every line and sector special |
+| `src/user.bend` | `p_user.c`: the player's movement, view height and bob, death and powers |
+| `src/tick.bend` | `P_Ticker`: the player, every thinker, then specials |
+| `src/setup.bend` | `p_setup.c`: the level's lines, blockmap, sector boxes, animations and switches, and its thinkers at the start |
+| `src/boot.bend`, `src/play.bend` | loading a map and its textures, the input to tic commands, the 35 Hz loop and level changes |
 | `src/automap.bend`, `src/bmp.bend`, `src/sys.bend` | the automap drawn into an array, BMP output, writing files |
 | `tools/gen_tables.py` | generates `src/tables.bend` from id Software's `tables.c` and `m_random.c` |
+| `tools/gen_state.py` | generates `src/state.bend` |
+| `tools/gen_tabs.py` | generates the walk-over and use tables of `src/spec.bend` from the special numbers in `p_spec.c` and `p_switch.c` |
 | `tools/gen_info.py` | generates `src/info.bend` from id Software's `info.c`, `info.h`, `sounds.h` and `p_mobj.h` |
 
 ## Limits

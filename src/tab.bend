@@ -82,3 +82,14 @@ def set(-A: Data, v: Vec<A>, +i: U32, x: A) -> Vec<A>:
   match v:
     case Vec{n, t}:
       Vec{n, set.go(A, t, odd(i), i, x)}
+
+def zeros(-A: Data, d: Nat, +z: A) -> Tab<A>:
+  match d:
+    case 0n:
+      TLeaf{z}
+    case 1n+p:
+      +t = zeros(A, p, z)
+      TNode{t, t}
+
+def new(-A: Data, +n: U32, +z: A) -> Vec<A>:
+  Vec{n, zeros(A, depth(n), z)}

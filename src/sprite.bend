@@ -165,3 +165,60 @@ def sprites(+all: List<&2, W.Lump>, +ss: List<&2, Spawn>, +base: U32) -> Sprites
   +cs = codes(ss, [])
   +ls = keep(all, names, cs)
   Sprites{ls, T.from_list(SFrame, table(4416n, ls, names, cs, 0, base))}
+
+def addc(+acc: List<&2, U32>, +c: U32) -> List<&2, U32>:
+  Bool.pick(List<&2, U32>, has(acc, c), acc, c <> acc)
+
+def chain(n: Nat, stop: Bool, +st: T.Vec<U32>, +s: U32, +acc: List<&2, U32>) -> List<&2, U32>:
+  match n stop:
+    case 1n+p False{}:
+      +nx = state(st, s, 4)
+      chain(p, U32.is_eq(nx, 0), st, nx, addc(acc, (state(st, s, 0) * 32 + (state(st, s, 1) .&. 31) : U32)))
+    case _ _:
+      acc
+
+def chain.from(+st: T.Vec<U32>, +s: U32, +acc: List<&2, U32>) -> List<&2, U32>:
+  chain(64n, U32.is_eq(s, 0), st, s, acc)
+
+def typecodes(fs: List<&2, U32>, +mi: T.Vec<U32>, +st: T.Vec<U32>, +k: U32, +acc: List<&2, U32>) -> List<&2, U32>:
+  match fs:
+    case +f <> t:
+      typecodes(t, mi, st, k, chain.from(st, info(mi, k, f), acc))
+    case []:
+      acc
+
+def reach.one(skip: Bool, +mi: T.Vec<U32>, +st: T.Vec<U32>, +k: U32, +acc: List<&2, U32>) -> List<&2, U32>:
+  match skip:
+    case True{}:
+      acc
+    case False{}:
+      typecodes([1, 3, 7, 10, 11, 12, 13, 22], mi, st, k, acc)
+
+def reach(ks: List<&2, U32>, +mi: T.Vec<U32>, +st: T.Vec<U32>, +seen: List<&2, U32>, +acc: List<&2, U32>) -> List<&2, U32>:
+  match ks:
+    case +k <> t:
+      +skip = Bool.or(U32.is_eq(k, 65535), has(seen, k))
+      reach(t, mi, st, Bool.pick(List<&2, U32>, skip, seen, k <> seen), reach.one(skip, mi, st, k, acc))
+    case []:
+      acc
+
+def thing.kind(+mi: T.Vec<U32>, +t: L.Thing) -> U32:
+  match t:
+    case L.Thing{x, y, a, +ty, opt}:
+      kind(U32.to_nat(I.ntypes()), mi, ty, 0)
+
+def thingkinds(n: Nat, +mi: T.Vec<U32>, +ths: T.Vec<L.Thing>, +i: U32) -> List<&2, U32>:
+  match n:
+    case 0n:
+      []
+    case 1n+p:
+      thing.kind(mi, T.get(L.Thing, ths, i, L.Thing{0, 0, 0, 0, 0})) <> thingkinds(p, mi, ths, (i + 1 : U32))
+
+def needed(+mi: T.Vec<U32>, +st: T.Vec<U32>, +ths: T.Vec<L.Thing>) -> List<&2, U32>:
+  +ks = List.append(&2, U32, [0, 37, 38, 39, 40, 63, 73, 77], thingkinds(U32.to_nat(T.size(L.Thing, ths)), mi, ths, 0))
+  chain.from(st, 895, reach(ks, mi, st, [], []))
+
+def sprites.of(+all: List<&2, W.Lump>, +cs: List<&2, U32>, +base: U32) -> Sprites:
+  +names = T.from_list(String, I.sprnames())
+  +ls = keep(all, names, cs)
+  Sprites{ls, T.from_list(SFrame, table(4416n, ls, names, cs, 0, base))}

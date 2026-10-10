@@ -273,42 +273,28 @@ def merge(+rs: List<&2, Range>, +f: U32, +l: U32) -> List<&2, Range>:
   merge.go(rs, left(rs, f), right(rs, l), f, l)
 
 def nodes(+w: R.World) -> T.Vec<L.Node>:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      no
+  R.nodes(w)
 
 def seg(+w: R.World, +i: U32) -> R.RSeg:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      T.get(R.RSeg, sg, i, R.RSeg{0, 0, 0, 0, 0, 0, 0, 0, 65535})
+  R.seg(w, i)
 
 def rside(+w: R.World, +i: U32) -> R.RSide:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      T.get(R.RSide, si, i, R.RSide{0, 0, 0, 0, 0, 0})
+  R.side(w, i)
 
 def sector(+w: R.World, +i: U32) -> R.RSector:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      T.get(R.RSector, sc, i, R.RSector{0, 0, 0, 0, 0, 0, 0})
+  R.sector(w, i)
 
 def sub(+w: R.World, +i: U32) -> L.Sub:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      T.get(L.Sub, su, i, L.Sub{0, 0})
+  R.sub(w, i)
 
 def node(+w: R.World, +i: U32) -> L.Node:
-  T.get(L.Node, nodes(w), i, L.Node{0, 0, 0, 0, L.Box{0, 0, 0, 0}, L.Box{0, 0, 0, 0}, 0, 0})
+  R.node(w, i)
 
 def tex(+w: R.World, +id: U32) -> M.Info:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      T.get(M.Info, tx, (id - 1 : U32), M.Info{0, 0, 0, 4294967295})
+  R.info(w, id)
 
 def skyinfo(+w: R.World) -> M.Info:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      sk
+  R.sky(w)
 
 def info.height(+t: M.Info) -> U32:
   match t:
@@ -581,7 +567,7 @@ def store.begin(fr: Frame, +si: U32, +start: U32, +stop: U32, +s1: U32, +s2: U32
 
 def store.sec(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +vz: U32, +va: U32, +ex: U32, +x1: U32, +y1: U32, +x2: U32, +y2: U32, +an: U32, +of: U32, +fl: U32, +bk: U32, +xoff: U32, +yoff: U32, +top: U32, +bot: U32, +mid: U32, +a1: U32, +start: U32, +stop: U32, +fs: R.RSector, +bs: R.RSector) -> Frame:
   match fs bs:
-    case R.RSector{ff, fc, fp, fq, fli, fsp, ftg} R.RSector{bf, bc, bp, bq, bli, bsp, btg}:
+    case R.RSector{ff, fc, fp, fq, fli, fsp, ftg, _, _} R.RSector{bf, bc, bp, bq, bli, bsp, btg, _, _}:
       +normal = (an + ang90() : U32)
       +oa0 = F.abs((normal - a1 : U32))
       +oa = Bool.pick(U32, U32.is_gt(oa0, ang90()), ang90(), oa0)
@@ -673,7 +659,7 @@ def clip(solid: Bool, fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +v: View, +sg
 
 def kind.of(+fs: R.RSector, +bs: R.RSector, +sd: R.RSide) -> U32:
   match fs bs sd:
-    case R.RSector{ff, fc, fp, fq, fli, fsp, ftg} R.RSector{bf, bc, bp, bq, bli, bsp, btg} R.RSide{xo, yo, t, b, m, s}:
+    case R.RSector{ff, fc, fp, fq, fli, fsp, ftg, _, _} R.RSector{bf, bc, bp, bq, bli, bsp, btg, _, _} R.RSide{xo, yo, t, b, m, s}:
       Bool.pick(U32, Bool.or(F.le(bc, ff), F.ge(bf, fc)), 1,
         Bool.pick(U32, Bool.or(Bool.not(U32.is_eq(bc, fc)), Bool.not(U32.is_eq(bf, ff))), 2,
           Bool.pick(U32, Bool.and(Bool.and(U32.is_eq(bq, fq), U32.is_eq(bp, fp)), Bool.and(U32.is_eq(bli, fli), U32.is_eq(m, 0))), 0, 2)))
@@ -714,24 +700,18 @@ def lines(n: Nat, fr: Frame, +tb: Tabs, +w: R.World, +v: View, +fs: R.RSector, +
 
 def subsector.planes(fr: Frame, +v: View, +fs: R.RSector) -> Frame:
   match v fs:
-    case View{vx, vy, +vz, va, ex} R.RSector{+f, +c, +fp, +cp, +li, sp, tg}:
+    case View{vx, vy, +vz, va, ex} R.RSector{+f, +c, +fp, +cp, +li, sp, tg, _, _}:
       fr1 = findp(F.lt(f, vz), fr, M.curfloor(), f, fp, li)
       findp(Bool.or(F.gt(c, vz), U32.is_eq(cp, M.sky())), fr1, M.curceil(), c, cp, li)
 
 def mobj(+w: R.World, +i: U32) -> R.RThing:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      T.get(R.RThing, mo, i, R.RThing{0, 0, 0, 0, 0, 0, 0, 0})
+  R.thing(w, i)
 
 def secthings(+w: R.World, +i: U32) -> List<&2, U32>:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      T.get(List<&2, U32>, sth, i, [])
+  R.secthings(w, i)
 
 def sframe(+w: R.World, +c: U32) -> P.SFrame:
-  match w:
-    case R.World{si, sg, su, no, sc, tx, th, sk, mo, sth, frm}:
-      T.get(P.SFrame, frm, c, P.SFrame{False{}, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+  R.sframe(w, c)
 
 def pick8(+r: U32, +a: U32, +b: U32, +c: U32, +d: U32, +e: U32, +f: U32, +g: U32, +h: U32) -> U32:
   Bool.pick(U32, U32.is_lt(r, 4),
@@ -764,7 +744,7 @@ def vis.put(go: Bool, ram: Array<U32>, +x1: U32, +x2: U32, +scale: U32, +gx: U32
 
 def project.at(ram: Array<U32>, +tb: Tabs, +vz: U32, +light: U32, +t: R.RThing, +tx: U32, +xscale: U32, +ok: Bool, +patch: U32, +flip: Bool, +width: U32, +left: U32, +top: U32) -> Array<U32>:
   match t:
-    case R.RThing{x, y, z, an, spr, frm, fl, sec}:
+    case R.RThing{x, y, z, an, spr, frm, fl}:
       +tx1 = (tx - (left << 16n) : U32)
       +x1 = F.sar((10485760 + F.mul(tx1, xscale) : U32), 16n)
       +x2 = (F.sar((10485760 + F.mul((tx1 + (width << 16n) : U32), xscale) : U32), 16n) - 1 : U32)
@@ -789,7 +769,7 @@ def project.hdr(fr: Frame, +tb: Tabs, +vz: U32, +light: U32, +t: R.RThing, +tx: 
 
 def project(fr: Frame, +tb: Tabs, +w: R.World, +v: View, +light: U32, +t: R.RThing) -> Frame:
   match v t:
-    case View{vx, vy, vz, va, ex} R.RThing{x, y, z, an, spr, frm, fl, sec}:
+    case View{vx, vy, vz, va, ex} R.RThing{x, y, z, an, spr, frm, fl}:
       +vs = sine(tb, (va >> 19n : U32))
       +vc = sine(tb, ((va >> 19n) + 2048 : U32))
       +trx = (x - vx : U32)
@@ -825,17 +805,17 @@ def addsprites(fr: Frame, +tb: Tabs, +w: R.World, +v: View, +sec: U32, +light: U
 
 def sec.ceil(+s: R.RSector) -> U32:
   match s:
-    case R.RSector{f, c, fp, cp, li, sp, tg}:
+    case R.RSector{f, c, fp, cp, li, sp, tg, _, _}:
       c
 
 def sec.floor(+s: R.RSector) -> U32:
   match s:
-    case R.RSector{f, c, fp, cp, li, sp, tg}:
+    case R.RSector{f, c, fp, cp, li, sp, tg, _, _}:
       f
 
 def sec.light(+s: R.RSector) -> U32:
   match s:
-    case R.RSector{f, c, fp, cp, li, sp, tg}:
+    case R.RSector{f, c, fp, cp, li, sp, tg, _, _}:
       li
 
 def subsector.of(fr: Frame, +tb: Tabs, +w: R.World, +v: View, +s: L.Sub) -> Frame:
@@ -1008,7 +988,7 @@ def drawplane.pick(+sky: Bool, fr: Frame, +tb: Tabs, +w: R.World, +v: View, +p: 
     case True{} View{vx, vy, vz, va, ex}:
       skycols(count(mn, mx), fr, tb, skyinfo(w), va, p, mn)
     case False{} _:
-      flatplane(fr, tb, v, p, h, pic, light, mn, mx)
+      flatplane(fr, tb, v, p, h, R.flatbase(w, pic), light, mn, mx)
 
 def drawplane(fr: Frame, +tb: Tabs, +w: R.World, +v: View, +p: U32) -> Frame:
   match fr:
@@ -1064,7 +1044,7 @@ def locate(n: Nat, +w: R.World, +x: U32, +y: U32, +num: U32) -> U32:
 
 def sector.floor(+s: R.RSector) -> U32:
   match s:
-    case R.RSector{f, c, fp, cp, li, sp, tg}:
+    case R.RSector{f, c, fp, cp, li, sp, tg, _, _}:
       f
 
 def sub.first(+s: L.Sub) -> U32:
