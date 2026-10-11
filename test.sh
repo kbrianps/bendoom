@@ -116,5 +116,11 @@ frame "E1M1 intermission" freedoom1 1 1 E1M1 wi.bmp 02f3e161aa90a002ef38360f15ed
   exit 40 300 "$TMP/wi.bmp"
 frame "E1M8 finale text" freedoom1 1 8 E1M8 fin_650.bmp 0832b232c7ebfd7285d8d101560dbd782ea911bfd66451f66b077f4f5a34dc2c "250,0,0,0,0 1,0,0,0,2 60,0,0,0,0 1,0,0,0,2 60,0,0,0,0 1,0,0,0,2 400,0,0,0,0" \
   exit 40 650 "$TMP/fin_650.bmp"
+frame "E1M1 invulnerability inverts the whole view" freedoom1 1 1 E1M1 inv.bmp 14946278df246296621663f77405a18263662f7ef4292be578fe32d65ebe1692 "60,25,0,0,0" \
+  keys 5 105 1 6 105 0 7 100 1 8 100 0 9 98 1 10 98 0 11 101 1 12 101 0 13 104 1 14 104 0 15 111 1 16 111 0 17 108 1 18 108 0 19 100 1 20 100 0 21 118 1 22 118 0 end 30 "$TMP/inv.bmp"
+frame "E1M1 light amplification lights the whole view" freedoom1 1 1 E1M1 amp.bmp b7bf4fcad6a0f1bfdaff0089cd8446fe724a563e74d44fb45a12c055a088749f "60,25,0,0,0" \
+  keys 5 105 1 6 105 0 7 100 1 8 100 0 9 98 1 10 98 0 11 101 1 12 101 0 13 104 1 14 104 0 15 111 1 16 111 0 17 108 1 18 108 0 19 100 1 20 100 0 21 108 1 22 108 0 end 60 "$TMP/amp.bmp"
+frame "E1M2 invisible weapon, fuzz carried from E1M1" freedoom1 1 1 E1M1 fz_166.bmp ce764d595fe54ceaa2e3dc8b51f78f81d294f0e6a073cccda579caffd7325f17 "60,25,0,0,0 5,0,0,0,1 25,0,0,0,0 5,0,0,0,1 25,0,0,0,0 5,0,0,0,1 25,0,0,0,0 5,0,0,0,1 25,0,0,0,0 50,25,0,4,0" \
+  exit 40 keys 5 105 1 6 105 0 7 100 1 8 100 0 9 98 1 10 98 0 11 101 1 12 101 0 13 104 1 14 104 0 15 111 1 16 111 0 17 108 1 18 108 0 19 100 1 20 100 0 21 105 1 22 105 0 136 105 1 137 105 0 138 100 1 139 100 0 140 98 1 141 98 0 142 101 1 143 101 0 144 104 1 145 104 0 146 111 1 147 111 0 148 108 1 149 108 0 150 100 1 151 100 0 152 105 1 153 105 0 end every 166 "$TMP/fz"
 
 [ "$FAILS" -eq 0 ] && echo "ALL TESTS PASS" || { echo "$FAILS FAILED"; exit 1; }

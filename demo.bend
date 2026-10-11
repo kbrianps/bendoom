@@ -144,7 +144,8 @@ def play?(+g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: S
 
 def play.reloaded?(+old: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
-  play(Q.adopt(old, g), rom, path, gt, at, out, ex, ks, all)
+  +g1 = Q.adopt(old, g)
+  play(g1, Q.fuzz.put(g1, rom), path, gt, at, out, ex, ks, all)
 
 def play.boot?(+g: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32) -> IO(Unit):
   IO.bind(S.Sim & Array<U32>, Unit, B.boot(path, Q.target(g), Q.player(g), Q.carry(g)),
@@ -152,20 +153,20 @@ def play.boot?(+g: S.Sim, +path: String, +gt: U32, +at: U32, +out: String, +ex: 
 
 def play.restored?(+path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
-  play(g, rom, path, gt, at, out, ex, ks, all)
+  play(g, Q.fuzz.put(g, rom), path, gt, at, out, ex, ks, all)
 
 def play.load?(c4: Bool, c5: Bool, c6: Bool, c7: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32) -> IO(Unit):
   match c4 c5 c6 c7:
     case True{} _ _ _:
-      IO.bind(List<&2, U32>, Unit, B.demolump(path, Q.demo.lump(g)), +bs => play.boot(Q.demo.loaded(g, bs), path, gt, at, out, ex, ks, all))
+      IO.bind(List<&2, U32>, Unit, B.demolump(path, Q.demo.lump(g)), +bs => play.boot(Q.demo.loaded(Q.fuzz.keep(g, rom), bs), path, gt, at, out, ex, ks, all))
     case False{} True{} _ _:
       IO.bind(S.Sim, Unit, Dk.strings(g), +g1 => play(g1, rom, path, gt, at, out, ex, ks, all))
     case False{} False{} True{} _:
-      IO.bind(S.Sim & Array<U32>, Unit, Dk.load(g, path), p => play.restored(path, gt, at, out, ex, ks, all, p))
+      IO.bind(S.Sim & Array<U32>, Unit, Dk.load(Q.fuzz.keep(g, rom), path), p => play.restored(path, gt, at, out, ex, ks, all, p))
     case False{} False{} False{} True{}:
       IO.bind(S.Sim, Unit, Dk.write(g), +g1 => play(g1, rom, path, gt, at, out, ex, ks, all))
     case _ _ _ _:
-      play.boot(g, path, gt, at, out, ex, ks, all)
+      play.boot(Q.fuzz.keep(g, rom), path, gt, at, out, ex, ks, all)
 
 def play.go?(quit: Bool, load: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +all: U32) -> IO(Unit):
   match quit load:

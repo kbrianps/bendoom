@@ -13,7 +13,7 @@ type Tabs is Data:
   Tabs{sine: T.Vec<U32>, tangent: T.Vec<U32>, tanto: T.Vec<U32>, v2x: T.Vec<U32>, x2a: T.Vec<U32>, clip: U32}
 
 type View is Data:
-  View{x: U32, y: U32, z: U32, angle: U32, extra: U32}
+  View{x: U32, y: U32, z: U32, angle: U32, extra: U32, fixed: U32}
 
 type Range is Data:
   Range{first: U32, last: U32}
@@ -173,7 +173,7 @@ def side.of(+x: U32, +y: U32, +nx: U32, +ny: U32, +ndx: U32, +ndy: U32) -> Bool:
 
 def side(+v: View, +n: L.Node) -> Bool:
   match v n:
-    case View{x, y, z, a, e} L.Node{nx, ny, ndx, ndy, rb, lb, r, l}:
+    case View{x, y, z, a, e, fx} L.Node{nx, ny, ndx, ndy, rb, lb, r, l}:
       side.of(x, y, (nx << 16n : U32), (ny << 16n : U32), (ndx << 16n : U32), (ndy << 16n : U32))
 
 def cut(+clip: U32, +a1: U32, +a2: U32, +span: U32) -> Cut:
@@ -213,14 +213,14 @@ def checkcoord() -> T.Vec<U32>:
 
 def bbox.at(+tb: Tabs, +v: View, +rs: List<&2, Range>, +b: L.Box, +pos: U32) -> Bool:
   match v:
-    case View{x, y, z, a, e}:
+    case View{x, y, z, a, e, fx}:
       bbox.angles(tb, rs,
         (angle(tb, (coord(b, T.get(U32, checkcoord(), (pos * 4 : U32), 0)) - x : U32), (coord(b, T.get(U32, checkcoord(), (pos * 4 + 1 : U32), 0)) - y : U32)) - a : U32),
         (angle(tb, (coord(b, T.get(U32, checkcoord(), (pos * 4 + 2 : U32), 0)) - x : U32), (coord(b, T.get(U32, checkcoord(), (pos * 4 + 3 : U32), 0)) - y : U32)) - a : U32))
 
 def bbox.pos(+v: View, +b: L.Box) -> U32:
   match v b:
-    case View{x, y, z, a, e} L.Box{t, bo, le, r}:
+    case View{x, y, z, a, e, fx} L.Box{t, bo, le, r}:
       (Bool.pick(U32, F.ge(y, (t << 16n : U32)), 0, Bool.pick(U32, F.gt(y, (bo << 16n : U32)), 1, 2)) * 4
         + Bool.pick(U32, F.le(x, (le << 16n : U32)), 0, Bool.pick(U32, F.lt(x, (r << 16n : U32)), 1, 2)) : U32)
 
@@ -318,7 +318,10 @@ def seg.front(+w: R.World, +s: R.RSeg) -> U32:
 
 def lightmap(+light: U32, +scale: U32) -> U32:
   +lv = (((15 - light) * 4 : U32) - U32.min((scale >> 12n : U32), 47) / 2 : U32)
-  Bool.pick(U32, F.lt(lv, 0), 0, Bool.pick(U32, F.gt(lv, 31), 31, lv))
+  Bool.pick(U32, U32.is_ge(light, 256), (light - 256 : U32), Bool.pick(U32, F.lt(lv, 0), 0, Bool.pick(U32, F.gt(lv, 31), 31, lv)))
+
+def lit(+fx: U32, +ln: U32) -> U32:
+  Bool.pick(U32, U32.is_ne(fx, 0), (fx + 256 : U32), Bool.pick(U32, F.lt(ln, 0), 0, Bool.pick(U32, F.ge(ln, 16), 15, ln)))
 
 def paint(n: Nat, fr: Frame, +x: U32, +y: U32, +frac: U32, +step: U32, +col: U32, +cm: U32) -> Frame:
   match n fr:
@@ -565,7 +568,7 @@ def store.begin(fr: Frame, +si: U32, +start: U32, +stop: U32, +s1: U32, +s2: U32
     case Frame{fb, rom, ram, sd}:
       Frame{fb, rom, dsbegin(ram, si, start, stop, s1, s2, step, sil, bsil, tsil, tclip, bclip, masked), sd}
 
-def store.sec(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +vz: U32, +va: U32, +ex: U32, +x1: U32, +y1: U32, +x2: U32, +y2: U32, +an: U32, +of: U32, +fl: U32, +bk: U32, +xoff: U32, +yoff: U32, +top: U32, +bot: U32, +mid: U32, +a1: U32, +start: U32, +stop: U32, +fs: R.RSector, +bs: R.RSector) -> Frame:
+def store.sec(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +vz: U32, +va: U32, +ex: U32, +fx: U32, +x1: U32, +y1: U32, +x2: U32, +y2: U32, +an: U32, +of: U32, +fl: U32, +bk: U32, +xoff: U32, +yoff: U32, +top: U32, +bot: U32, +mid: U32, +a1: U32, +start: U32, +stop: U32, +fs: R.RSector, +bs: R.RSector) -> Frame:
   match fs bs:
     case R.RSector{ff, fc, fp, fq, fli, fsp, ftg, _, _} R.RSector{bf, bc, bp, bq, bli, bsp, btg, _, _}:
       +normal = (an + ang90() : U32)
@@ -607,7 +610,7 @@ def store.sec(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +
       +center = (ang90() + va - normal : U32)
       +ln0 = ((fli >> 4n) + ex : U32)
       +ln = Bool.pick(U32, U32.is_eq(y1, y2), (ln0 - 1 : U32), Bool.pick(U32, U32.is_eq(x1, x2), (ln0 + 1 : U32), ln0))
-      +light = Bool.pick(U32, F.lt(ln, 0), 0, Bool.pick(U32, F.ge(ln, 16), 15, ln))
+      +light = lit(fx, ln)
       +markf = Bool.and(markf0, F.lt(ff, vz))
       +markc = Bool.and(markc0, Bool.or(F.gt(fc, vz), fsky))
       +wt = F.sar(wtop, 4n)
@@ -635,15 +638,15 @@ def store.sec(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +
         Cols{start, s1, ((M.cy() << 12n) - F.mul(wt, s1) : U32), ((M.cy() << 12n) - F.mul(wb, s1) : U32), ((M.cy() << 12n) - F.mul(wh, s1) : U32), ((M.cy() << 12n) - F.mul(wl, s1) : U32)},
         U32.to_nat((stop - start + 1 : U32)), start, stop)
 
-def store.side(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +vz: U32, +va: U32, +ex: U32, +x1: U32, +y1: U32, +x2: U32, +y2: U32, +an: U32, +of: U32, +fl: U32, +bk: U32, +sd: R.RSide, +a1: U32, +start: U32, +stop: U32) -> Frame:
+def store.side(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +vz: U32, +va: U32, +ex: U32, +fx: U32, +x1: U32, +y1: U32, +x2: U32, +y2: U32, +an: U32, +of: U32, +fl: U32, +bk: U32, +sd: R.RSide, +a1: U32, +start: U32, +stop: U32) -> Frame:
   match sd:
     case R.RSide{xo, yo, t, b, m, sec}:
-      store.sec(fr, si, tb, w, vx, vy, vz, va, ex, x1, y1, x2, y2, an, of, fl, bk, xo, yo, t, b, m, a1, start, stop, sector(w, sec), sector(w, bk))
+      store.sec(fr, si, tb, w, vx, vy, vz, va, ex, fx, x1, y1, x2, y2, an, of, fl, bk, xo, yo, t, b, m, a1, start, stop, sector(w, sec), sector(w, bk))
 
 def store(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +v: View, +sg: R.RSeg, +a1: U32, +start: U32, +stop: U32) -> Frame:
   match v sg:
-    case View{vx, vy, vz, va, ex} R.RSeg{x1, y1, x2, y2, an, of, fl, sd, bk}:
-      store.side(fr, si, tb, w, vx, vy, vz, va, ex, x1, y1, x2, y2, an, of, fl, bk, rside(w, sd), a1, start, stop)
+    case View{vx, vy, vz, va, ex, fx} R.RSeg{x1, y1, x2, y2, an, of, fl, sd, bk}:
+      store.side(fr, si, tb, w, vx, vy, vz, va, ex, fx, x1, y1, x2, y2, an, of, fl, bk, rside(w, sd), a1, start, stop)
 
 def stores(gs: List<&2, Range>, fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +v: View, +sg: R.RSeg, +a1: U32) -> Frame:
   match gs:
@@ -686,7 +689,7 @@ def addline.cut(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +v: View, +fs: R.RS
 
 def addline(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +v: View, +fs: R.RSector, +sg: R.RSeg) -> Frame:
   match v sg:
-    case View{vx, vy, vz, va, ex} R.RSeg{x1, y1, x2, y2, an, of, fl, sd, bk}:
+    case View{vx, vy, vz, va, ex, fx} R.RSeg{x1, y1, x2, y2, an, of, fl, sd, bk}:
       +a1 = angle(tb, (x1 - vx : U32), (y1 - vy : U32))
       +a2 = angle(tb, (x2 - vx : U32), (y2 - vy : U32))
       addline.cut(fr, si, tb, w, v, fs, sg, a1, U32.is_lt((a1 - a2 : U32), ang180()), cut(clipangle(tb), (a1 - va : U32), (a2 - va : U32), (a1 - a2 : U32)))
@@ -700,7 +703,7 @@ def lines(n: Nat, fr: Frame, +tb: Tabs, +w: R.World, +v: View, +fs: R.RSector, +
 
 def subsector.planes(fr: Frame, +v: View, +fs: R.RSector) -> Frame:
   match v fs:
-    case View{vx, vy, +vz, va, ex} R.RSector{+f, +c, +fp, +cp, +li, sp, tg, _, _}:
+    case View{vx, vy, +vz, va, ex, fx} R.RSector{+f, +c, +fp, +cp, +li, sp, tg, _, _}:
       fr1 = findp(F.lt(f, vz), fr, M.curfloor(), f, fp, li)
       findp(Bool.or(F.gt(c, vz), U32.is_eq(cp, M.sky())), fr1, M.curceil(), c, cp, li)
 
@@ -753,7 +756,7 @@ def project.at(ram: Array<U32>, +tb: Tabs, +vz: U32, +light: U32, +t: R.RThing, 
       +step = Bool.pick(U32, flip, F.neg(iscale), iscale)
       +start = (Bool.pick(U32, flip, ((width << 16n) - 1 : U32), 0) + Bool.pick(U32, F.gt(vx1, x1), (step * (vx1 - x1) : U32), 0) : U32)
       +gzt = (z + (top << 16n) : U32)
-      +cm = Bool.pick(U32, Bool.not(U32.is_eq((fl .&. 262144 : U32), 0)), M.none(), Bool.pick(U32, Bool.not(U32.is_eq((frm .&. 32768 : U32), 0)), 0, (lightmap(light, xscale) * 256 : U32)))
+      +cm = Bool.pick(U32, Bool.not(U32.is_eq((fl .&. 262144 : U32), 0)), M.none(), Bool.pick(U32, Bool.and(U32.is_lt(light, 256), Bool.not(U32.is_eq((frm .&. 32768 : U32), 0))), 0, (lightmap(light, xscale) * 256 : U32)))
       +tr = ((fl >> 26n) .&. 3 : U32)
       +cmt = Bool.pick(U32, U32.is_eq(cm, M.none()), cm, (cm .|. (tr << 28n) : U32))
       vis.put(Bool.and(ok, Bool.and(Bool.not(F.gt(x1, 320)), Bool.not(F.lt(x2, 0)))), ram, vx1, F.min(x2, 319), xscale, x, y, z, gzt, (gzt - vz : U32), start, step, patch, cmt, fl)
@@ -771,7 +774,7 @@ def project.hdr(fr: Frame, +tb: Tabs, +vz: U32, +light: U32, +t: R.RThing, +tx: 
 
 def project(fr: Frame, +tb: Tabs, +w: R.World, +v: View, +light: U32, +t: R.RThing) -> Frame:
   match v t:
-    case View{vx, vy, vz, va, ex} R.RThing{x, y, z, an, spr, frm, fl}:
+    case View{vx, vy, vz, va, ex, fx} R.RThing{x, y, z, an, spr, frm, fl}:
       +vs = sine(tb, (va >> 19n : U32))
       +vc = sine(tb, ((va >> 19n) + 2048 : U32))
       +trx = (x - vx : U32)
@@ -793,9 +796,9 @@ def sprites.list(ts: List<&2, U32>, fr: Frame, +tb: Tabs, +w: R.World, +v: View,
 
 def sprites.if(go: Bool, fr: Frame, +tb: Tabs, +w: R.World, +v: View, +sec: U32, +light: U32) -> Frame:
   match go fr v:
-    case True{} Frame{fb, rom, ram, sd} View{vx, vy, vz, va, ex}:
+    case True{} Frame{fb, rom, ram, sd} View{vx, vy, vz, va, ex, fx}:
       +ll = ((light >> 4n) + ex : U32)
-      sprites.list(secthings(w, sec), Frame{fb, rom, M.wr(ram, (M.secseen() + sec : U32), 1), sd}, tb, w, v, Bool.pick(U32, F.lt(ll, 0), 0, Bool.pick(U32, F.gt(ll, 15), 15, ll)))
+      sprites.list(secthings(w, sec), Frame{fb, rom, M.wr(ram, (M.secseen() + sec : U32), 1), sd}, tb, w, v, lit(fx, ll))
     case _ f _:
       f
 
@@ -902,7 +905,9 @@ def mapplane(fr: Frame, +tb: Tabs, +cx: Ctx, +y: U32, +x1: U32, +x2: U32) -> Fra
           +dist = F.mul(ph, ys)
           +len = F.mul(dist, ds)
           +an = ((va + x2a(tb, x1)) >> 19n : U32)
-          M.let(Frame, M.rd(rom2, (zl + U32.min((dist >> 20n : U32), 127) : U32)), rom3 => +cm =>
+          +fixed = U32.is_ge(zl, 2147483648)
+          M.let(Frame, M.rd(rom2, (Bool.pick(U32, fixed, M.zlight(), zl) + U32.min((dist >> 20n : U32), 127) : U32)), rom3 => +cm0 =>
+            +cm = Bool.pick(U32, fixed, ((zl - 2147483648 : U32) * 256 : U32), cm0)
             spanpaint(count(x1, x2), Frame{fb, rom3, ram, sd}, x1, y,
               (vx + F.mul(sine(tb, (an + 2048 : U32)), len) : U32),
               ((0 - vy : U32) - F.mul(sine(tb, an), len) : U32),
@@ -984,16 +989,17 @@ def flatcols(n: Nat, fr: Frame, +tb: Tabs, +cx: Ctx, +p: U32, +x: U32) -> Frame:
 
 def flatplane(fr: Frame, +tb: Tabs, +v: View, +p: U32, +h: U32, +pic: U32, +light: U32, +mn: U32, +mx: U32) -> Frame:
   match fr v:
-    case Frame{fb, rom, ram, sd} View{vx, vy, vz, va, ex}:
+    case Frame{fb, rom, ram, sd} View{vx, vy, vz, va, ex, fx}:
       +ll0 = ((light >> 4n) + ex : U32)
       +ll = Bool.pick(U32, F.lt(ll0, 0), 0, Bool.pick(U32, F.gt(ll0, 15), 15, ll0))
+      +zl = Bool.pick(U32, U32.is_ne(fx, 0), (fx + 2147483648 : U32), (M.zlight() + ll * 128 : U32))
       +ba = ((va - ang90()) >> 19n : U32)
       r1 = M.wr(M.wr(ram, M.top(p, (mx + 1 : U32)), 255), M.top(p, (mn - 1 : U32)), 255)
-      flatcols(count(mn, (mx + 1 : U32)), Frame{fb, rom, r1, sd}, tb, Ctx{vx, vy, va, F.div(sine(tb, (ba + 2048 : U32)), 10485760), F.neg(F.div(sine(tb, ba), 10485760)), F.abs((h - vz : U32)), (M.zlight() + ll * 128 : U32), pic}, p, mn)
+      flatcols(count(mn, (mx + 1 : U32)), Frame{fb, rom, r1, sd}, tb, Ctx{vx, vy, va, F.div(sine(tb, (ba + 2048 : U32)), 10485760), F.neg(F.div(sine(tb, ba), 10485760)), F.abs((h - vz : U32)), zl, pic}, p, mn)
 
 def drawplane.pick(+sky: Bool, fr: Frame, +tb: Tabs, +w: R.World, +v: View, +p: U32, +h: U32, +pic: U32, +light: U32, +mn: U32, +mx: U32) -> Frame:
   match sky v:
-    case True{} View{vx, vy, vz, va, ex}:
+    case True{} View{vx, vy, vz, va, ex, fx}:
       skycols(count(mn, mx), fr, tb, skyinfo(w), va, p, mn)
     case False{} _:
       flatplane(fr, tb, v, p, h, R.flatbase(w, pic), light, mn, mx)
@@ -1048,7 +1054,7 @@ def locate(n: Nat, +w: R.World, +x: U32, +y: U32, +num: U32) -> U32:
     case 0n:
       num
     case 1n+p:
-      Bool.pick(U32, U32.is_eq((num .&. 32768 : U32), 0), locate(p, w, x, y, locate.child(side(View{x, y, 0, 0, 0}, node(w, num)), node(w, num))), num)
+      Bool.pick(U32, U32.is_eq((num .&. 32768 : U32), 0), locate(p, w, x, y, locate.child(side(View{x, y, 0, 0, 0, 0}, node(w, num)), node(w, num))), num)
 
 def sector.floor(+s: R.RSector) -> U32:
   match s:

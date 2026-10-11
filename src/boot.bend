@@ -16,7 +16,7 @@ import ./hudtext.bend as H
 
 def view(+g: S.Sim) -> V.View:
   +m = S.p.mo(g)
-  V.View{S.m.x(g, m), S.m.y(g, m), S.p.viewz(g), S.m.angle(g, m), S.p.extralight(g)}
+  V.View{S.m.x(g, m), S.m.y(g, m), S.p.viewz(g), S.m.angle(g, m), S.p.extralight(g), S.p.fixedcm(g)}
 
 def blobs(bss: List<&2, List<&2, U32>>) -> List<&2, U32>:
   match bss:

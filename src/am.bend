@@ -7,6 +7,7 @@ import ./hud.bend as U
 import ./render.bend as V
 import ./screen.bend as P
 import ./mem.bend as M
+import ./items.bend as I
 
 type Fl is Data:
   Fl{ok: Bool, ax: U32, ay: U32, bx: U32, by: U32}
@@ -204,7 +205,26 @@ def noclip(+g: S.Sim) -> S.Sim:
   +c = (S.p.cheats(g) .^. 1 : U32)
   S.p.message.set(S.p.cheats.set(g, c), Bool.pick(U32, C.has(c, 1), 67, 68))
 
-def st.cheats(+g: S.Sim, +ch: U32) -> S.Sim:
+def behold.toggle(+g: S.Sim, +i: U32) -> S.Sim:
+  C.br(U32.is_eq(I.pw(g, i), 0), g, +h => I.givepower(h, i), +h => I.pw.set(h, i, Bool.pick(U32, U32.is_eq(i, 1), 0, 1)))
+
+def behold.one(+g: S.Sim, +i: U32, +ch: U32) -> S.Sim:
+  +c = Maybe.default(&2, U32, List.get(&2, U32, [118, 115, 105, 114, 97, 108], U32.to_nat(i)), 0)
+  +g1 = cht(g, (230 + i : U32), [105, 100, 98, 101, 104, 111, 108, 100, c], ch)
+  C.when(fired(g1), g1, +h => S.p.message.set(behold.toggle(h, i), 71))
+
+def behold.all(n: Nat, +g: S.Sim, +i: U32, +ch: U32) -> S.Sim:
+  match n:
+    case 0n:
+      g
+    case 1n+p:
+      behold.all(p, behold.one(g, i, ch), (i + 1 : U32), ch)
+
+def behold(+g: S.Sim, +ch: U32) -> S.Sim:
+  +g1 = cht(behold.all(6n, g, 0, ch), 236, [105, 100, 98, 101, 104, 111, 108, 100], ch)
+  C.when(fired(g1), g1, +h => S.p.message.set(h, 70))
+
+def st.chain(+g: S.Sim, +ch: U32) -> S.Sim:
   +g1 = cht(g, 191, [105, 100, 100, 113, 100], ch)
   C.br(fired(g1), g1, +h => god(h), +h =>
     +h1 = cht(h, 192, [105, 100, 102, 97], ch)
@@ -213,6 +233,9 @@ def st.cheats(+g: S.Sim, +ch: U32) -> S.Sim:
       C.br(fired(k1), k1, +q => S.p.message.set(S.p.cards.set(arsenal(q), 63), 66), +q =>
         +q1 = Bool.pick(S.Sim, U.com(q), cht(q, 194, [105, 100, 99, 108, 105, 112], ch), cht(q, 194, [105, 100, 115, 112, 105, 115, 112, 111, 112, 100], ch))
         C.when(fired(q1), q1, +z => noclip(z)))))
+
+def st.cheats(+g: S.Sim, +ch: U32) -> S.Sim:
+  behold(st.chain(g, ch), ch)
 
 def respond(+g: S.Sim, +key: U32, +ch: U32, +down: Bool) -> S.Sim:
   +g1 = C.when(Bool.and(Bool.and(down, Bool.not(C.net(g))), U32.is_ne(S.mp.skill(g), 4)), g, +h => st.cheats(h, ch))

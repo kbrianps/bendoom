@@ -118,7 +118,8 @@ def runs?(n: Nat, more: Bool, +g: S.Sim, +keys: U32, +h: U32, +on: Bool, m: N.Mi
 
 def reload(+old: S.Sim, +path: String, +keys: U32, +t0: U32, +tics: U32, au: Au, p: S.Sim & Array<U32>) -> IO(Maybe<Game>):
   (+g, rom) = p
-  IO.pure(Maybe<Game>, Some{Game{Q.adopt(old, g), rom, path, keys, t0, tics, 0, au}})
+  +g1 = Q.adopt(old, g)
+  IO.pure(Maybe<Game>, Some{Game{g1, Q.fuzz.put(g1, rom), path, keys, t0, tics, 0, au}})
 
 def boot.now(+g: S.Sim, +path: String, +keys: U32, +t0: U32, +tics: U32, au: Au) -> IO(Maybe<Game>):
   IO.bind(S.Sim & Array<U32>, Maybe<Game>, B.boot(path, Q.target(g), Q.player(g), Q.carry(g)), p => reload(g, path, keys, t0, tics, au, p))
@@ -131,20 +132,20 @@ def kept(+g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics:
 
 def restored(+path: String, +keys: U32, +t0: U32, +tics: U32, au: Au, p: S.Sim & Array<U32>) -> IO(Maybe<Game>):
   (+g, rom) = p
-  IO.pure(Maybe<Game>, Some{Game{g, rom, path, keys, t0, tics, 0, au}})
+  IO.pure(Maybe<Game>, Some{Game{g, Q.fuzz.put(g, rom), path, keys, t0, tics, 0, au}})
 
 def settle.load(c4: Bool, c5: Bool, c6: Bool, c7: Bool, +g: S.Sim, rom: Array<U32>, +path: String, +keys: U32, +t0: U32, +tics: U32, +h: U32, au: Au) -> IO(Maybe<Game>):
   match c4 c5 c6 c7:
     case True{} _ _ _:
-      IO.bind(List<&2, U32>, Maybe<Game>, B.demolump(path, Q.demo.lump(g)), +bs => demo.boot(g, path, keys, t0, tics, au, bs))
+      IO.bind(List<&2, U32>, Maybe<Game>, B.demolump(path, Q.demo.lump(g)), +bs => demo.boot(Q.fuzz.keep(g, rom), path, keys, t0, tics, au, bs))
     case False{} True{} _ _:
       IO.bind(S.Sim, Maybe<Game>, Dk.strings(g), +g1 => kept(g1, rom, path, keys, t0, tics, h, au))
     case False{} False{} True{} _:
-      IO.bind(S.Sim & Array<U32>, Maybe<Game>, Dk.load(g, path), p => restored(path, keys, t0, tics, au, p))
+      IO.bind(S.Sim & Array<U32>, Maybe<Game>, Dk.load(Q.fuzz.keep(g, rom), path), p => restored(path, keys, t0, tics, au, p))
     case False{} False{} False{} True{}:
       IO.bind(S.Sim, Maybe<Game>, Dk.write(g), +g1 => kept(g1, rom, path, keys, t0, tics, h, au))
     case _ _ _ _:
-      boot.now(g, path, keys, t0, tics, au)
+      boot.now(Q.fuzz.keep(g, rom), path, keys, t0, tics, au)
 
 def closed(u: Unit) -> IO(Maybe<Game>):
   IO.pure(Maybe<Game>, None{})

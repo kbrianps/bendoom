@@ -564,6 +564,12 @@ def adopt(+old: S.Sim, +g: S.Sim) -> S.Sim:
   +g2 = S.sim.cp.set(S.sim.saves.set(S.sim.dpos.set(S.sim.demo.set(g1, S.sim.demo(old)), S.sim.dpos(old)), S.sim.saves(old)), U.ui(old, 169))
   C.when(ng, g2, +h => U.ui.set(U.ui.set(h, 118, Bool.pick(U32, U32.is_eq(U.ui(h, 127), 0), 1, 0)), 140, 0))
 
+def fuzz.keep(+g: S.Sim, rom: Array<U32>) -> S.Sim:
+  M.let(S.Sim, M.rd(rom, M.fuzzpos()), r => +v => U.ui.set(g, 237, v))
+
+def fuzz.put(+g: S.Sim, rom: Array<U32>) -> Array<U32>:
+  M.wr(rom, M.fuzzpos(), U.ui(g, 237))
+
 def boot.title(+g: S.Sim) -> S.Sim:
   Mn.title(page(g, 0, 247))
 

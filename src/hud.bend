@@ -399,7 +399,7 @@ def psps(+g: S.Sim) -> List<&2, D.PSp>:
 
 def view(+g: S.Sim) -> V.View:
   +m = S.p.mo(g)
-  V.View{S.m.x(g, m), S.m.y(g, m), S.p.viewz(g), S.m.angle(g, m), S.p.extralight(g)}
+  V.View{S.m.x(g, m), S.m.y(g, m), S.p.viewz(g), S.m.angle(g, m), S.p.extralight(g), S.p.fixedcm(g)}
 
 def scene(+g: S.Sim, rom: Array<U32>) -> V.Frame:
   D.render.with(S.mp.tb(g), S.sim.w(g), view(g), psps(g), rom)

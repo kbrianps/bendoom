@@ -77,8 +77,8 @@ msgs += [text(n) for n in ["MSGOFF", "MSGON", "AMSTR_FOLLOWON", "AMSTR_FOLLOWOFF
 msgs += ["%s %d" % (text("AMSTR_MARKEDSPOT"), i) for i in range(10)]
 msgs += [text(n) for n in ["AMSTR_MARKSCLEARED", "DETAILHI", "DETAILLO", "STSTR_DQDON", "STSTR_DQDOFF", "STSTR_FAADDED",
                            "STSTR_KFAADDED", "STSTR_NCON", "STSTR_NCOFF"]]
-msgs += [text("GGSAVED")]
-assert len(msgs) == 70, len(msgs)
+msgs += [text("GGSAVED"), text("STSTR_BEHOLD"), text("STSTR_BEHOLDX")]
+assert len(msgs) == 72, len(msgs)
 
 names = ["STBAR", "STARMS"]
 names += ["STTNUM%d" % i for i in range(10)] + ["STTPRCNT", "STTMINUS"]

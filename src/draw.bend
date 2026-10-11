@@ -107,14 +107,14 @@ def seg.rowoff(+d: R.RSide) -> U32:
 
 def seg.range(fr: V.Frame, +w: R.World, +v: V.View, +r1: U32, +r2: U32, +x1: U32, +s1: U32, +step: U32, +tclip: U32, +bclip: U32, +mc: U32, +sg: R.RSeg) -> V.Frame:
   match v sg:
-    case V.View{vx, vy, vz, va, ex} R.RSeg{x1s, y1s, x2s, y2s, an, of, +fl, sd, +bk}:
+    case V.View{vx, vy, vz, va, ex, fx} R.RSeg{x1s, y1s, x2s, y2s, an, of, +fl, sd, +bk}:
       +side = V.rside(w, sd)
       +fs = V.sector(w, V.side.sector(side))
       +bs = V.sector(w, bk)
       +t = V.tex(w, seg.mid(side))
       +ln0 = ((V.sec.light(fs) >> 4n) + ex : U32)
       +ln = Bool.pick(U32, U32.is_eq(y1s, y2s), (ln0 - 1 : U32), Bool.pick(U32, U32.is_eq(x1s, x2s), (ln0 + 1 : U32), ln0))
-      +light = Bool.pick(U32, F.lt(ln, 0), 0, Bool.pick(U32, F.ge(ln, 16), 15, ln))
+      +light = V.lit(fx, ln)
       +mid = (Bool.pick(U32, U32.is_eq((fl .&. 16 : U32), 0), (F.min(V.sec.ceil(fs), V.sec.ceil(bs)) - vz : U32), (F.max(V.sec.floor(fs), V.sec.floor(bs)) + V.info.height(t) - vz : U32)) + seg.rowoff(side) : U32)
       seg.loop(V.count(r1, r2), fr, t, r1, mc, (s1 + (r1 - x1) * step : U32), step, mid, light, bclip, tclip)
 
