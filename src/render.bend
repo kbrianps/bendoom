@@ -10,7 +10,7 @@ import ./mem.bend as M
 import ./sprite.bend as P
 
 type Tabs is Data:
-  Tabs{sine: T.Vec<U32>, tangent: T.Vec<U32>, tanto: T.Vec<U32>, v2x: T.Vec<U32>, x2a: T.Vec<U32>, clip: U32}
+  Tabs{sine: T.Vec<U32>, tangent: T.Vec<U32>, tanto: T.Vec<U32>, v2x: T.Vec<U32>, x2a: T.Vec<U32>, clip: U32, win: U32}
 
 type View is Data:
   View{x: U32, y: U32, z: U32, angle: U32, extra: U32, fixed: U32}
@@ -50,47 +50,91 @@ def ang180() -> U32:
 def ang270() -> U32:
   3221225472
 
+def blocks(+wn: U32) -> U32:
+  (wn >> 1n : U32)
+
+def svw(+wn: U32) -> U32:
+  Bool.pick(U32, U32.is_ge(blocks(wn), 11), 320, (blocks(wn) * 32 : U32))
+
+def vh(+wn: U32) -> U32:
+  Bool.pick(U32, U32.is_ge(blocks(wn), 11), 200, ((blocks(wn) * 168 / 10) .&. 4294967288 : U32))
+
+def low(+wn: U32) -> Bool:
+  U32.is_ne((wn .&. 1 : U32), 0)
+
+def dshift(+wn: U32, +v: U32) -> U32:
+  Bool.pick(U32, low(wn), (v >> 1n : U32), v)
+
+def dup(+wn: U32, +v: U32) -> U32:
+  Bool.pick(U32, low(wn), (v << 1n : U32), v)
+
+def vw(+wn: U32) -> U32:
+  dshift(wn, svw(wn))
+
+def cy(+wn: U32) -> U32:
+  (vh(wn) / 2 : U32)
+
+def cxf(+wn: U32) -> U32:
+  ((vw(wn) / 2) << 16n : U32)
+
+def pscale(+wn: U32) -> U32:
+  (vw(wn) * 65536 / 320 : U32)
+
+def pis(+wn: U32) -> U32:
+  (20971520 / vw(wn) : U32)
+
+def wx(+wn: U32) -> U32:
+  ((320 - svw(wn)) / 2 : U32)
+
+def wy(+wn: U32) -> U32:
+  Bool.pick(U32, U32.is_eq(svw(wn), 320), 0, ((168 - vh(wn)) / 2 : U32))
+
 def sine(+tb: Tabs, +i: U32) -> U32:
   match tb:
-    case Tabs{s, t, a, v, x, c}:
+    case Tabs{s, t, a, v, x, c, wn}:
       T.get(U32, s, i, 0)
 
 def tangent(+tb: Tabs, +i: U32) -> U32:
   match tb:
-    case Tabs{s, t, a, v, x, c}:
+    case Tabs{s, t, a, v, x, c, wn}:
       T.get(U32, t, i, 0)
 
 def tanto(+tb: Tabs, +i: U32) -> U32:
   match tb:
-    case Tabs{s, t, a, v, x, c}:
+    case Tabs{s, t, a, v, x, c, wn}:
       T.get(U32, a, i, 0)
 
 def v2x(+tb: Tabs, +i: U32) -> U32:
   match tb:
-    case Tabs{s, t, a, v, x, c}:
+    case Tabs{s, t, a, v, x, c, wn}:
       T.get(U32, v, i, 0)
 
 def x2a(+tb: Tabs, +i: U32) -> U32:
   match tb:
-    case Tabs{s, t, a, v, x, c}:
+    case Tabs{s, t, a, v, x, c, wn}:
       T.get(U32, x, i, 0)
 
 def clipangle(+tb: Tabs) -> U32:
   match tb:
-    case Tabs{s, t, a, v, x, c}:
+    case Tabs{s, t, a, v, x, c, wn}:
       c
 
-def raw(+t: U32, +focal: U32) -> U32:
-  Bool.pick(U32, F.gt(t, 131072), 4294967295,
-    Bool.pick(U32, F.lt(t, 4294836224), 321,
-      F.max(F.min(F.sar((10485760 - F.mul(t, focal) + 65535 : U32), 16n), 321), 4294967295)))
+def win(+tb: Tabs) -> U32:
+  match tb:
+    case Tabs{s, t, a, v, x, c, wn}:
+      wn
 
-def raws(+n: Nat, +tan: T.Vec<U32>, +i: U32, +focal: U32) -> List<&2, U32>:
+def raw(+t: U32, +focal: U32, +cx: U32, +w: U32) -> U32:
+  Bool.pick(U32, F.gt(t, 131072), 4294967295,
+    Bool.pick(U32, F.lt(t, 4294836224), (w + 1 : U32),
+      F.max(F.min(F.sar((cx - F.mul(t, focal) + 65535 : U32), 16n), (w + 1 : U32)), 4294967295)))
+
+def raws(+n: Nat, +tan: T.Vec<U32>, +i: U32, +focal: U32, +cx: U32, +w: U32) -> List<&2, U32>:
   match n:
     case 0n:
       []
     case 1n+p:
-      raw(T.get(U32, tan, i, 0), focal) <> raws(p, tan, (i + 1 : U32), focal)
+      raw(T.get(U32, tan, i, 0), focal, cx, w) <> raws(p, tan, (i + 1 : U32), focal, cx, w)
 
 def above(+xs: List<&2, U32>, +x: U32) -> U32:
   match xs:
@@ -106,20 +150,27 @@ def x2as(+n: Nat, +rs: List<&2, U32>, +x: U32) -> List<&2, U32>:
     case 1n+p:
       ((above(rs, x) << 19n) - ang90() : U32) <> x2as(p, rs, (x + 1 : U32))
 
-def v2xs(+rs: List<&2, U32>) -> List<&2, U32>:
+def v2xs(+rs: List<&2, U32>, +w: U32) -> List<&2, U32>:
   match rs:
     case +r <> t:
-      Bool.pick(U32, U32.is_eq(r, 4294967295), 0, Bool.pick(U32, U32.is_eq(r, 321), 320, r)) <> v2xs(t)
+      Bool.pick(U32, U32.is_eq(r, 4294967295), 0, Bool.pick(U32, U32.is_eq(r, (w + 1 : U32)), w, r)) <> v2xs(t, w)
     case []:
       []
 
-def tabs.of(+sine: T.Vec<U32>, +tan: T.Vec<U32>, +rs: List<&2, U32>) -> Tabs:
-  +x2 = T.from_list(U32, x2as(321n, rs, 0))
-  Tabs{sine, tan, X.tantoangle(), T.from_list(U32, v2xs(rs)), x2, T.get(U32, x2, 0, 0)}
+def tabs.rs(+sine: T.Vec<U32>, +tan: T.Vec<U32>, +ta: T.Vec<U32>, +wn: U32, +rs: List<&2, U32>) -> Tabs:
+  +x2 = T.from_list(U32, x2as(U32.to_nat((vw(wn) + 1 : U32)), rs, 0))
+  Tabs{sine, tan, ta, T.from_list(U32, v2xs(rs, vw(wn))), x2, T.get(U32, x2, 0, 0), wn}
+
+def tabs.of(+sine: T.Vec<U32>, +tan: T.Vec<U32>, +ta: T.Vec<U32>, +wn: U32) -> Tabs:
+  tabs.rs(sine, tan, ta, wn, raws(4096n, tan, 0, F.div(cxf(wn), T.get(U32, tan, 3072, 0)), cxf(wn), vw(wn)))
 
 def tabs() -> Tabs:
-  +tan = X.finetangent()
-  tabs.of(X.finesine(), tan, raws(4096n, tan, 0, F.div(10485760, T.get(U32, tan, 3072, 0))))
+  tabs.of(X.finesine(), X.finetangent(), X.tantoangle(), 20)
+
+def tabs.sized(+tb: Tabs, +wn: U32) -> Tabs:
+  match tb:
+    case Tabs{s, t, a, v, x, c, w0}:
+      tabs.of(s, t, a, wn)
 
 def slope(+num: U32, +den: U32) -> U32:
   Bool.pick(U32, U32.is_lt(den, 512), 2048, U32.min(((num << 3n) / U32.max((den >> 8n : U32), 1) : U32), 2048))
@@ -161,7 +212,7 @@ def scale.of(+num: U32, +den: U32) -> U32:
   scale.if(F.gt(den, F.sar(num, 16n)), num, den)
 
 def scale(+tb: Tabs, +vis: U32, +va: U32, +normal: U32, +dist: U32) -> U32:
-  scale.of(F.mul(10485760, sine(tb, ((ang90() + vis - normal) >> 19n : U32))), F.mul(dist, sine(tb, ((ang90() + vis - va) >> 19n : U32))))
+  scale.of(F.mul(dup(win(tb), cxf(win(tb))), sine(tb, ((ang90() + vis - normal) >> 19n : U32))), F.mul(dist, sine(tb, ((ang90() + vis - va) >> 19n : U32))))
 
 def side.of(+x: U32, +y: U32, +nx: U32, +ny: U32, +ndx: U32, +ndy: U32) -> Bool:
   +dx = (x - nx : U32)
@@ -316,8 +367,8 @@ def seg.front(+w: R.World, +s: R.RSeg) -> U32:
     case R.RSeg{x1, y1, x2, y2, an, of, fl, sd, bk}:
       side.sector(rside(w, sd))
 
-def lightmap(+light: U32, +scale: U32) -> U32:
-  +lv = (((15 - light) * 4 : U32) - U32.min((scale >> 12n : U32), 47) / 2 : U32)
+def lightmap(+lw: U32, +light: U32, +scale: U32) -> U32:
+  +lv = (((15 - light) * 4 : U32) - (U32.min((scale >> 12n : U32), 47) * 320 / lw) / 2 : U32)
   Bool.pick(U32, U32.is_ge(light, 256), (light - 256 : U32), Bool.pick(U32, F.lt(lv, 0), 0, Bool.pick(U32, F.gt(lv, 31), 31, lv)))
 
 def lit(+fx: U32, +ln: U32) -> U32:
@@ -335,10 +386,10 @@ def paint(n: Nat, fr: Frame, +x: U32, +y: U32, +frac: U32, +step: U32, +col: U32
 def count(+yl: U32, +yh: U32) -> Nat:
   Bool.pick(Nat, F.lt(yh, yl), 0n, U32.to_nat((yh - yl + 1 : U32)))
 
-def column(go: Bool, fr: Frame, +t: M.Info, +tc: U32, +x: U32, +yl: U32, +yh: U32, +mid: U32, +step: U32, +cm: U32) -> Frame:
+def column(go: Bool, fr: Frame, +t: M.Info, +tc: U32, +x: U32, +yl: U32, +yh: U32, +mid: U32, +step: U32, +cm: U32, +cy: U32) -> Frame:
   match go:
     case True{}:
-      paint(count(yl, yh), fr, x, yl, (mid + (yl - M.cy()) * step : U32), step, colbase(t, tc), cm)
+      paint(count(yl, yh), fr, x, yl, (mid + (yl - cy) * step : U32), step, colbase(t, tc), cm)
     case False{}:
       fr
 
@@ -368,17 +419,17 @@ def wcol.a(fb: Array<U32>, rom: Array<U32>, ram: Array<U32>, sd: List<&2, Range>
           ram3 = mark(Bool.and(markc, F.le((c0 + 1 : U32), cbot)), ram2, cp, x, (c0 + 1 : U32), cbot)
           ram4 = mark(Bool.and(markf, F.le(ftop, (f0 - 1 : U32))), ram3, fp, x, ftop, (f0 - 1 : U32))
           +tc = F.sar((offset - F.mul(tangent(tb, ((center + x2a(tb, x)) >> 19n : U32)), dist) : U32), 16n)
-          +cm = (lightmap(light, scale) * 256 : U32)
+          +cm = (lightmap(svw(win(tb)), light, scale) * 256 : U32)
           +isc = (4294967295 / scale : U32)
           +tm = F.min(F.sar(high, 12n), (f0 - 1 : U32))
-          +c1 = Bool.pick(U32, hm, M.vh(), Bool.pick(U32, Bool.not(ht), Bool.pick(U32, markc, (yl - 1 : U32), c0), Bool.pick(U32, F.ge(tm, yl), tm, (yl - 1 : U32))))
+          +c1 = Bool.pick(U32, hm, vh(win(tb)), Bool.pick(U32, Bool.not(ht), Bool.pick(U32, markc, (yl - 1 : U32), c0), Bool.pick(U32, F.ge(tm, yl), tm, (yl - 1 : U32))))
           +bm = F.max(F.sar((low + 4095 : U32), 12n), (c1 + 1 : U32))
           +f1 = Bool.pick(U32, hm, 4294967295, Bool.pick(U32, Bool.not(hb), Bool.pick(U32, markf, (yh + 1 : U32), f0), Bool.pick(U32, F.le(bm, yh), bm, (yh + 1 : U32))))
           ram5 = M.wr(M.wr(ram4, (M.ceilclip() + x : U32), c1), (M.floorclip() + x : U32), f1)
           ram6 = maskcol(mk, ram5, (mtc + x : U32), tc)
-          fr1 = column(Bool.and(Bool.not(hm), Bool.and(ht, F.ge(tm, yl))), Frame{fb, rom, ram6, sd}, tt, tc, x, yl, tm, tmid, isc, cm)
-          fr2 = column(Bool.and(Bool.not(hm), Bool.and(hb, F.le(bm, yh))), fr1, bt, tc, x, bm, yh, bmid, isc, cm)
-          column(hm, fr2, mt, tc, x, yl, yh, mmid, isc, cm)))
+          fr1 = column(Bool.and(Bool.not(hm), Bool.and(ht, F.ge(tm, yl))), Frame{fb, rom, ram6, sd}, tt, tc, x, yl, tm, tmid, isc, cm, cy(win(tb)))
+          fr2 = column(Bool.and(Bool.not(hm), Bool.and(hb, F.le(bm, yh))), fr1, bt, tc, x, bm, yh, bmid, isc, cm, cy(win(tb)))
+          column(hm, fr2, mt, tc, x, yl, yh, mmid, isc, cm, cy(win(tb)))))
 
 def wcol(fr: Frame, +tb: Tabs, +wl: Wall, +cl: Cols) -> Frame:
   match fr:
@@ -635,7 +686,7 @@ def store.sec(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +
           F.neg(F.mul(sstep, wt)), F.neg(F.mul(sstep, wb)),
           Bool.pick(U32, ht, F.neg(F.mul(sstep, wh)), 0),
           Bool.pick(U32, hb, F.neg(F.mul(sstep, wl)), 0), masked, 0},
-        Cols{start, s1, ((M.cy() << 12n) - F.mul(wt, s1) : U32), ((M.cy() << 12n) - F.mul(wb, s1) : U32), ((M.cy() << 12n) - F.mul(wh, s1) : U32), ((M.cy() << 12n) - F.mul(wl, s1) : U32)},
+        Cols{start, s1, ((cy(win(tb)) << 12n) - F.mul(wt, s1) : U32), ((cy(win(tb)) << 12n) - F.mul(wb, s1) : U32), ((cy(win(tb)) << 12n) - F.mul(wh, s1) : U32), ((cy(win(tb)) << 12n) - F.mul(wl, s1) : U32)},
         U32.to_nat((stop - start + 1 : U32)), start, stop)
 
 def store.side(fr: Frame, +si: U32, +tb: Tabs, +w: R.World, +vx: U32, +vy: U32, +vz: U32, +va: U32, +ex: U32, +fx: U32, +x1: U32, +y1: U32, +x2: U32, +y2: U32, +an: U32, +of: U32, +fl: U32, +bk: U32, +sd: R.RSide, +a1: U32, +start: U32, +stop: U32) -> Frame:
@@ -749,17 +800,18 @@ def project.at(ram: Array<U32>, +tb: Tabs, +vz: U32, +light: U32, +t: R.RThing, 
   match t:
     case R.RThing{x, y, z, an, spr, frm, fl}:
       +tx1 = (tx - (left << 16n) : U32)
-      +x1 = F.sar((10485760 + F.mul(tx1, xscale) : U32), 16n)
-      +x2 = (F.sar((10485760 + F.mul((tx1 + (width << 16n) : U32), xscale) : U32), 16n) - 1 : U32)
+      +wn = win(tb)
+      +x1 = F.sar((cxf(wn) + F.mul(tx1, xscale) : U32), 16n)
+      +x2 = (F.sar((cxf(wn) + F.mul((tx1 + (width << 16n) : U32), xscale) : U32), 16n) - 1 : U32)
       +vx1 = F.max(x1, 0)
       +iscale = F.div(65536, xscale)
       +step = Bool.pick(U32, flip, F.neg(iscale), iscale)
       +start = (Bool.pick(U32, flip, ((width << 16n) - 1 : U32), 0) + Bool.pick(U32, F.gt(vx1, x1), (step * (vx1 - x1) : U32), 0) : U32)
       +gzt = (z + (top << 16n) : U32)
-      +cm = Bool.pick(U32, Bool.not(U32.is_eq((fl .&. 262144 : U32), 0)), M.none(), Bool.pick(U32, Bool.and(U32.is_lt(light, 256), Bool.not(U32.is_eq((frm .&. 32768 : U32), 0))), 0, (lightmap(light, xscale) * 256 : U32)))
+      +cm = Bool.pick(U32, Bool.not(U32.is_eq((fl .&. 262144 : U32), 0)), M.none(), Bool.pick(U32, Bool.and(U32.is_lt(light, 256), Bool.not(U32.is_eq((frm .&. 32768 : U32), 0))), 0, (lightmap(svw(wn), light, dup(wn, xscale)) * 256 : U32)))
       +tr = ((fl >> 26n) .&. 3 : U32)
       +cmt = Bool.pick(U32, U32.is_eq(cm, M.none()), cm, (cm .|. (tr << 28n) : U32))
-      vis.put(Bool.and(ok, Bool.and(Bool.not(F.gt(x1, 320)), Bool.not(F.lt(x2, 0)))), ram, vx1, F.min(x2, 319), xscale, x, y, z, gzt, (gzt - vz : U32), start, step, patch, cmt, fl)
+      vis.put(Bool.and(ok, Bool.and(Bool.not(F.gt(x1, vw(wn))), Bool.not(F.lt(x2, 0)))), ram, vx1, F.min(x2, (vw(wn) - 1 : U32)), dup(wn, xscale), x, y, z, gzt, (gzt - vz : U32), start, step, patch, cmt, fl)
 
 def project.hdr(fr: Frame, +tb: Tabs, +vz: U32, +light: U32, +t: R.RThing, +tx: U32, +xscale: U32, +ok: Bool, +patch: U32, +flip: Bool) -> Frame:
   match fr:
@@ -782,7 +834,7 @@ def project(fr: Frame, +tb: Tabs, +w: R.World, +v: View, +light: U32, +t: R.RThi
       +tz = (F.mul(trx, vc) + F.mul(try, vs) : U32)
       +tx = F.neg((F.mul(try, vc) - F.mul(trx, vs) : U32))
       +ok = Bool.and(F.ge(tz, 262144), Bool.not(F.gt(F.abs(tx), (tz << 2n : U32))))
-      +xscale = F.div(10485760, F.max(tz, 262144))
+      +xscale = F.div(cxf(win(tb)), F.max(tz, 262144))
       +sf = sframe(w, (spr * 32 + (frm .&. 31) : U32))
       +rot = ((angle(tb, trx, try) - an + 2415919104) >> 29n : U32)
       project.hdr(fr, tb, vz, light, t, tx, xscale, ok, sf.lump(sf, rot), sf.flip(sf, rot))
@@ -859,21 +911,14 @@ def frame(st: St) -> Frame:
     case St{fr, items}:
       fr
 
-def skypaint(n: Nat, fr: Frame, +x: U32, +y: U32, +col: U32) -> Frame:
-  match n fr:
-    case 1n+p Frame{fb, rom, ram, sd}:
-      M.let(Frame, M.rd(rom, (col + ((y + 100 - M.cy()) .&. 127) : U32)), rom1 => +t =>
-        M.let(Frame, M.rd(rom1, (M.cmap() + t : U32)), rom2 => +c =>
-          skypaint(p, Frame{S.put(fb, x, y, c), rom2, ram, sd}, x, (y + 1 : U32), col)))
-    case _ f:
-      f
-
 def skycol(fr: Frame, +tb: Tabs, +sk: M.Info, +va: U32, +p: U32, +x: U32) -> Frame:
   match fr:
     case Frame{fb, rom, ram, sd}:
       M.let(Frame, M.rd(ram, M.top(p, x)), r1 => +t =>
         M.let(Frame, M.rd(r1, M.bot(p, x)), r2 => +b =>
-          skypaint(count(t, b), Frame{fb, rom, r2, sd}, x, t, colbase(sk, ((va + x2a(tb, x)) >> 22n : U32)))))
+          +wn = win(tb)
+          +isc = dshift(wn, pis(wn))
+          paint(count(t, b), Frame{fb, rom, r2, sd}, x, t, (6553600 + (t - cy(wn)) * isc : U32), isc, colbase(sk, ((va + x2a(tb, x)) >> 22n : U32)), M.cmap())))
 
 def skycols(n: Nat, fr: Frame, +tb: Tabs, +sk: M.Info, +va: U32, +p: U32, +x: U32) -> Frame:
   match n:
@@ -995,7 +1040,7 @@ def flatplane(fr: Frame, +tb: Tabs, +v: View, +p: U32, +h: U32, +pic: U32, +ligh
       +zl = Bool.pick(U32, U32.is_ne(fx, 0), (fx + 2147483648 : U32), (M.zlight() + ll * 128 : U32))
       +ba = ((va - ang90()) >> 19n : U32)
       r1 = M.wr(M.wr(ram, M.top(p, (mx + 1 : U32)), 255), M.top(p, (mn - 1 : U32)), 255)
-      flatcols(count(mn, (mx + 1 : U32)), Frame{fb, rom, r1, sd}, tb, Ctx{vx, vy, va, F.div(sine(tb, (ba + 2048 : U32)), 10485760), F.neg(F.div(sine(tb, ba), 10485760)), F.abs((h - vz : U32)), zl, pic}, p, mn)
+      flatcols(count(mn, (mx + 1 : U32)), Frame{fb, rom, r1, sd}, tb, Ctx{vx, vy, va, F.div(sine(tb, (ba + 2048 : U32)), cxf(win(tb))), F.neg(F.div(sine(tb, ba), cxf(win(tb)))), F.abs((h - vz : U32)), zl, pic}, p, mn)
 
 def drawplane.pick(+sky: Bool, fr: Frame, +tb: Tabs, +w: R.World, +v: View, +p: U32, +h: U32, +pic: U32, +light: U32, +mn: U32, +mx: U32) -> Frame:
   match sky v:
@@ -1034,15 +1079,40 @@ def setn(n: Nat, ram: Array<U32>, +i: U32, +v: U32) -> Array<U32>:
     case 1n+p:
       setn(p, M.wr(ram, i, v), (i + 1 : U32), v)
 
-def fresh() -> Array<U32>:
+def fresh(+wn: U32) -> Array<U32>:
   r1 = setn(320n, Array.new(U32, M.ramdepth(), 0), M.ceilclip(), 4294967295)
-  r2 = setn(320n, r1, M.floorclip(), M.vh())
+  r2 = setn(320n, r1, M.floorclip(), vh(wn))
   r3 = setn(320n, r2, M.negone(), 4294967295)
-  r4 = setn(320n, r3, M.screenh(), M.vh())
-  M.wr(r4, M.lastopening(), M.openings())
+  r4 = setn(320n, r3, M.screenh(), vh(wn))
+  M.wr(M.wr(r4, M.lastopening(), M.openings()), M.geo(), wn)
+
+def yslopes(n: Nat, +wn: U32, +i: U32) -> List<&2, U32>:
+  match n:
+    case 0n:
+      []
+    case 1n+p:
+      F.div(((svw(wn) / 2) << 16n : U32), F.abs((((i - cy(wn)) << 16n) + 32768 : U32))) <> yslopes(p, wn, (i + 1 : U32))
+
+def distscales(n: Nat, +tb: Tabs, +i: U32) -> List<&2, U32>:
+  match n:
+    case 0n:
+      []
+    case 1n+p:
+      F.div(65536, F.abs(sine(tb, ((x2a(tb, i) >> 19n) + 2048 : U32)))) <> distscales(p, tb, (i + 1 : U32))
+
+def prep.go(same: Bool, rom: Array<U32>, +tb: Tabs) -> Array<U32>:
+  match same:
+    case True{}:
+      rom
+    case False{}:
+      +wn = win(tb)
+      M.wr(M.fill(distscales(U32.to_nat(vw(wn)), tb, 0), M.fill(yslopes(U32.to_nat(vh(wn)), wn, 0), rom, M.yslope()), M.distscale()), M.geokey(), wn)
+
+def prep(+tb: Tabs, rom: Array<U32>) -> Array<U32>:
+  M.let(Array<U32>, M.rd(rom, M.geokey()), r => +k => prep.go(U32.is_eq(k, win(tb)), r, tb))
 
 def scene(+tb: Tabs, +w: R.World, +v: View, rom: Array<U32>) -> Frame:
-  planes(frame(walk(U32.to_nat(65536), St{Frame{S.blank(), rom, fresh(), [Range{2147483649, 4294967295}, Range{320, 2147483647}]}, [Visit{(T.size(L.Node, nodes(w)) - 1 : U32)}]}, tb, w, v)), tb, w, v)
+  planes(frame(walk(U32.to_nat(65536), St{Frame{S.blank(), prep(tb, rom), fresh(win(tb)), [Range{2147483649, 4294967295}, Range{vw(win(tb)), 2147483647}]}, [Visit{(T.size(L.Node, nodes(w)) - 1 : U32)}]}, tb, w, v)), tb, w, v)
 
 def locate.child(+back: Bool, +n: L.Node) -> U32:
   match n:

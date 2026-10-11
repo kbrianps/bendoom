@@ -32,25 +32,30 @@ def tpaint(n: Nat, fr: V.Frame, +x: U32, +y: U32, +frac: U32, +step: U32, +col: 
     case _ f:
       f
 
-def mcol.tr(plain: Bool, fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
+def mcol.tr(plain: Bool, fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32, +cy: U32) -> V.Frame:
   match plain:
     case True{}:
-      V.paint(V.count(yl, yh), fr, x, yl, (mid + (yl - M.cy()) * iscale : U32), iscale, src, cm)
+      V.paint(V.count(yl, yh), fr, x, yl, (mid + (yl - cy) * iscale : U32), iscale, src, cm)
     case False{}:
-      tpaint(V.count(yl, yh), fr, x, yl, (mid + (yl - M.cy()) * iscale : U32), iscale, src, (cm .&. 268435455 : U32), (128 - 32 * ((cm >> 28n) .&. 3) : U32))
+      tpaint(V.count(yl, yh), fr, x, yl, (mid + (yl - cy) * iscale : U32), iscale, src, (cm .&. 268435455 : U32), (128 - 32 * ((cm >> 28n) .&. 3) : U32))
 
-def mcol.pick(fz: Bool, fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
+def mcol.pick(fz: Bool, fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32, +cy: U32) -> V.Frame:
   match fz:
     case True{}:
       fuzzpaint(V.count(yl, yh), fr, x, yl)
     case False{}:
-      mcol.tr(U32.is_eq((cm >> 28n : U32), 0), fr, x, src, yl, yh, mid, iscale, cm)
+      mcol.tr(U32.is_eq((cm >> 28n : U32), 0), fr, x, src, yl, yh, mid, iscale, cm, cy)
 
-def mcol(fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
+def mcol.go(fr: V.Frame, +wn: U32, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
   +fz = U32.is_eq(cm, M.none())
   +fyl = Bool.pick(U32, Bool.and(fz, U32.is_eq(yl, 0)), 1, yl)
-  +fyh = Bool.pick(U32, Bool.and(fz, U32.is_eq(yh, (M.vh() - 1 : U32))), (M.vh() - 2 : U32), yh)
-  mcol.pick(fz, fr, x, src, fyl, fyh, mid, iscale, cm)
+  +fyh = Bool.pick(U32, Bool.and(fz, U32.is_eq(yh, (V.vh(wn) - 1 : U32))), (V.vh(wn) - 2 : U32), yh)
+  mcol.pick(fz, fr, x, src, fyl, fyh, mid, iscale, cm, V.cy(wn))
+
+def mcol(fr: V.Frame, +x: U32, +src: U32, +yl: U32, +yh: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
+  match fr:
+    case V.Frame{fb, rom, ram, sd}:
+      M.let(V.Frame, M.rd(ram, M.geo()), r1 => +wn => mcol.go(V.Frame{fb, rom, r1, sd}, wn, x, src, yl, yh, mid, iscale, cm))
 
 def posts(n: Nat, go: Bool, fr: V.Frame, +x: U32, +col: U32, +td: U32, +top: U32, +scale: U32, +mid: U32, +iscale: U32, +cm: U32, +fc: U32, +cc: U32) -> V.Frame:
   match n go fr:
@@ -83,10 +88,11 @@ def seg.col(go: Bool, fr: V.Frame, +x: U32, +post: U32, +top: U32, +scale: U32, 
 def seg.x(fr: V.Frame, +t: M.Info, +x: U32, +mc: U32, +scale: U32, +mid: U32, +light: U32, +fclip: U32, +cclip: U32) -> V.Frame:
   match fr t:
     case V.Frame{fb, rom, ram, sd} M.Info{m, h, b, ps}:
-      M.let(V.Frame, M.rd(ram, (mc + x : U32)), a1 => +tc =>
+      M.let(V.Frame, M.rd(ram, (mc + x : U32)), a0 => +tc =>
+        M.let(V.Frame, M.rd(a0, M.geo()), a1 => +wn =>
         M.let(V.Frame, M.rd(rom, (ps + (tc .&. m) : U32)), r1 => +post =>
           +go = Bool.and(Bool.not(U32.is_eq(tc, 32767)), Bool.and(Bool.not(U32.is_eq(ps, M.none())), Bool.not(U32.is_eq(post, M.none()))))
-          seg.col(go, V.Frame{fb, r1, M.wr(a1, (mc + x : U32), 32767), sd}, x, post, ((M.cy() << 16n) - F.mul(mid, scale) : U32), scale, mid, (V.lightmap(light, scale) * 256 : U32), fclip, cclip)))
+          seg.col(go, V.Frame{fb, r1, M.wr(a1, (mc + x : U32), 32767), sd}, x, post, ((V.cy(wn) << 16n) - F.mul(mid, scale) : U32), scale, mid, (V.lightmap(V.svw(wn), light, scale) * 256 : U32), fclip, cclip))))
 
 def seg.loop(n: Nat, fr: V.Frame, +t: M.Info, +x: U32, +mc: U32, +scale: U32, +step: U32, +mid: U32, +light: U32, +fclip: U32, +cclip: U32) -> V.Frame:
   match n:
@@ -207,15 +213,15 @@ def setn(n: Nat, ram: Array<U32>, +i: U32, +v: U32) -> Array<U32>:
     case 1n+p:
       setn(p, M.wr(ram, i, v), (i + 1 : U32), v)
 
-def defaults(n: Nat, ram: Array<U32>, +i: U32) -> Array<U32>:
+def defaults(n: Nat, ram: Array<U32>, +i: U32, +vh: U32) -> Array<U32>:
   match n:
     case 0n:
       ram
     case 1n+p:
       M.let(Array<U32>, M.rd(ram, (M.clipbot() + i : U32)), r1 => +cb =>
         M.let(Array<U32>, M.rd(r1, (M.cliptop() + i : U32)), r2 => +ct =>
-          r3 = M.wr(r2, (M.clipbot() + i : U32), Bool.pick(U32, U32.is_eq(cb, 4294967294), M.vh(), cb))
-          defaults(p, M.wr(r3, (M.cliptop() + i : U32), Bool.pick(U32, U32.is_eq(ct, 4294967294), 4294967295, ct)), (i + 1 : U32))))
+          r3 = M.wr(r2, (M.clipbot() + i : U32), Bool.pick(U32, U32.is_eq(cb, 4294967294), vh, cb))
+          defaults(p, M.wr(r3, (M.cliptop() + i : U32), Bool.pick(U32, U32.is_eq(ct, 4294967294), 4294967295, ct)), (i + 1 : U32), vh)))
 
 def vis.col(fr: V.Frame, +x: U32, +frac: U32, +patch: U32, +top: U32, +scale: U32, +mid: U32, +iscale: U32, +cm: U32) -> V.Frame:
   match fr:
@@ -238,7 +244,8 @@ def vis.cols(n: Nat, fr: V.Frame, +x: U32, +frac: U32, +step: U32, +patch: U32, 
 def vis.draw(fr: V.Frame, +x1: U32, +x2: U32, +scale: U32, +mid: U32, +start: U32, +step: U32, +patch: U32, +cm: U32) -> V.Frame:
   match fr:
     case V.Frame{fb, rom, ram, sd}:
-      vis.cols(V.count(x1, x2), V.Frame{fb, rom, defaults(V.count(x1, x2), ram, x1), sd}, x1, start, step, patch, ((M.cy() << 16n) - F.mul(mid, scale) : U32), scale, mid, F.abs(step), cm)
+      M.let(V.Frame, M.rd(ram, M.geo()), r1 => +wn =>
+        vis.cols(V.count(x1, x2), V.Frame{fb, rom, defaults(V.count(x1, x2), r1, x1, V.vh(wn)), sd}, x1, start, step, patch, ((V.cy(wn) << 16n) - F.mul(mid, scale) : U32), scale, mid, V.dshift(wn, F.abs(step)), cm))
 
 def sprite.go(fr: V.Frame, +w: R.World, +v: V.View, +x1: U32, +x2: U32, +scale: U32, +gx: U32, +gy: U32, +gz: U32, +gzt: U32, +mid: U32, +start: U32, +step: U32, +patch: U32, +cm: U32) -> V.Frame:
   match fr:
@@ -347,6 +354,43 @@ def topal.rows(n: Nat, r: Array<U32> & Array<U32>, +y: U32, +pb: U32) -> Array<U
       (fb, rom) = r
       topal.rows(p, topal.row(320n, fb, rom, 0, y, pb), (y + 1 : U32), pb)
 
+def blit.pair(low: Bool, fb: Array<U32>, +x: U32, +y: U32, c: U32) -> Array<U32>:
+  match low:
+    case True{}:
+      S.put(fb, x, y, c)
+    case False{}:
+      fb
+
+def blit.row(n: Nat, fb: Array<U32>, +x: U32, +y: U32, +wn: U32) -> Array<U32>:
+  match n:
+    case 0n:
+      fb
+    case 1n+p:
+      M.let(Array<U32>, M.rd(fb, S.at(x, y)), f1 => +c =>
+        +dx = (V.wx(wn) + V.dup(wn, x) : U32)
+        +dy = (V.wy(wn) + y : U32)
+        blit.row(p, blit.pair(V.low(wn), S.put(f1, dx, dy, c), (dx + 1 : U32), dy, c), (x - 1 : U32), y, wn))
+
+def blit.rows(n: Nat, fb: Array<U32>, +y: U32, +wn: U32) -> Array<U32>:
+  match n:
+    case 0n:
+      fb
+    case 1n+p:
+      blit.rows(p, blit.row(U32.to_nat(V.vw(wn)), fb, (V.vw(wn) - 1 : U32), y, wn), (y - 1 : U32), wn)
+
+def window.go(same: Bool, fr: V.Frame, +wn: U32) -> V.Frame:
+  match same fr:
+    case True{} f:
+      f
+    case False{} V.Frame{fb, rom, ram, sd}:
+      V.Frame{blit.rows(U32.to_nat(V.vh(wn)), fb, (V.vh(wn) - 1 : U32), wn), rom, ram, sd}
+
+def window(fr: V.Frame) -> V.Frame & U32:
+  match fr:
+    case V.Frame{fb, rom, ram, sd}:
+      M.let(V.Frame & U32, M.rd(ram, M.geo()), r1 => +wn =>
+        (window.go(Bool.and(U32.is_eq(V.svw(wn), 320), Bool.not(V.low(wn))), V.Frame{fb, rom, r1, sd}, wn), wn))
+
 def out.at(fr: V.Frame, +pb: U32) -> Array<U32> & Array<U32>:
   match fr:
     case V.Frame{fb, rom, ram, sd}:
@@ -355,28 +399,34 @@ def out.at(fr: V.Frame, +pb: U32) -> Array<U32> & Array<U32>:
 def out(fr: V.Frame) -> Array<U32> & Array<U32>:
   out.at(fr, M.pal())
 
-def psp.draw(go: Bool, fr: V.Frame, +x1: U32, +x2: U32, +mid: U32, +start: U32, +step: U32, +patch: U32, +cm: U32) -> V.Frame:
+def psp.draw(go: Bool, fr: V.Frame, +x1: U32, +x2: U32, +scale: U32, +mid: U32, +start: U32, +step: U32, +patch: U32, +cm: U32) -> V.Frame:
   match go:
     case True{}:
-      vis.draw(fr, x1, x2, 65536, mid, start, step, patch, cm)
+      vis.draw(fr, x1, x2, scale, mid, start, step, patch, cm)
     case False{}:
       fr
+
+def psp.go(fr: V.Frame, +wn: U32, +sx: U32, +sy: U32, +patch: U32, +flip: Bool, +width: U32, +left: U32, +top: U32, +cm: U32) -> V.Frame:
+  match fr:
+    case V.Frame{fb, rom, ram, sd}:
+      +ps = V.pscale(wn)
+      +tx = (sx - 10485760 - (left << 16n) : U32)
+      +x1 = F.sar((V.cxf(wn) + F.mul(tx, ps) : U32), 16n)
+      +x2 = (F.sar((V.cxf(wn) + F.mul((tx + (width << 16n) : U32), ps) : U32), 16n) - 1 : U32)
+      +vx1 = F.max(x1, 0)
+      +vx2 = F.min(x2, (V.vw(wn) - 1 : U32))
+      +step = Bool.pick(U32, flip, (0 - V.pis(wn) : U32), V.pis(wn))
+      +start = (Bool.pick(U32, flip, ((width << 16n) - 1 : U32), 0) + Bool.pick(U32, F.gt(vx1, x1), (step * (vx1 - x1) : U32), 0) : U32)
+      +mid = (6553600 + 32768 - (sy - (top << 16n)) : U32)
+      +go = Bool.and(Bool.not(F.gt(x1, V.vw(wn))), Bool.not(F.lt(x2, 0)))
+      +n = Bool.pick(Nat, go, V.count(vx1, vx2), 0n)
+      r1 = setn(n, setn(n, ram, (M.clipbot() + vx1 : U32), 4294967294), (M.cliptop() + vx1 : U32), 4294967294)
+      psp.draw(go, V.Frame{fb, rom, r1, sd}, vx1, vx2, V.dup(wn, ps), mid, start, step, patch, cm)
 
 def psp.at(fr: V.Frame, +sx: U32, +sy: U32, +patch: U32, +flip: Bool, +width: U32, +left: U32, +top: U32, +cm: U32) -> V.Frame:
   match fr:
     case V.Frame{fb, rom, ram, sd}:
-      +tx = (sx - 10485760 - (left << 16n) : U32)
-      +x1 = F.sar((10485760 + tx : U32), 16n)
-      +x2 = (F.sar((10485760 + tx + (width << 16n) : U32), 16n) - 1 : U32)
-      +vx1 = F.max(x1, 0)
-      +vx2 = F.min(x2, 319)
-      +step = Bool.pick(U32, flip, 4294901760, 65536)
-      +start = (Bool.pick(U32, flip, ((width << 16n) - 1 : U32), 0) + Bool.pick(U32, F.gt(vx1, x1), (step * (vx1 - x1) : U32), 0) : U32)
-      +mid = (6553600 + 32768 - (sy - (top << 16n)) : U32)
-      +go = Bool.and(Bool.not(F.gt(x1, 320)), Bool.not(F.lt(x2, 0)))
-      +n = Bool.pick(Nat, go, V.count(vx1, vx2), 0n)
-      r1 = setn(n, setn(n, ram, (M.clipbot() + vx1 : U32), 4294967294), (M.cliptop() + vx1 : U32), 4294967294)
-      psp.draw(go, V.Frame{fb, rom, r1, sd}, vx1, vx2, mid, start, step, patch, cm)
+      M.let(V.Frame, M.rd(ram, M.geo()), r1 => +wn => psp.go(V.Frame{fb, rom, r1, sd}, wn, sx, sy, patch, flip, width, left, top, cm))
 
 def psp.hdr(fr: V.Frame, +sx: U32, +sy: U32, +patch: U32, +flip: Bool, +cm: U32) -> V.Frame:
   match fr:

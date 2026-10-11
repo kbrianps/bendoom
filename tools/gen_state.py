@@ -104,6 +104,8 @@ for f, t in tm:
     out.append("def tm.%s.set(+g: Sim, %sv: %s) -> Sim:\n  sim.tm.set(g, tmr.%s.set(sim.tm(g), v))\n" % (f, p, t, f))
 for f, t in mp:
     out.append("def mp.%s(+g: Sim) -> %s:\n  mpr.%s(sim.mp(g))\n" % (f, t, f))
+writer("mpr", "Lvl", mp, [f for f, t in mp].index("tb"))
+out.append("def mp.tb.set(+g: Sim, v: V.Tabs) -> Sim:\n  sim.mp.set(g, mpr.tb.set(sim.mp(g), v))\n")
 
 out.append("""def mget(+g: Sim, +m: U32, +f: U32) -> U32:
   R.mo(sim.w(g), m, f)

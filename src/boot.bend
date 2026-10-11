@@ -114,7 +114,8 @@ def ui.names(+name: String, +mode: U32) -> List<&2, String>:
   +ep = U.episode(name)
   +map = U.mapnum(name)
   List.append(&2, String, H.hudnames(), List.append(&2, String, H.uifixed(), List.append(&2, String, ui.ep(com, ep),
-    List.append(&2, String, fin.names(com, U32.is_eq((mode .&. 15 : U32), 2), ep, map), H.uimenu()))))
+    List.append(&2, String, fin.names(com, U32.is_eq((mode .&. 15 : U32), 2), ep, map), List.append(&2, String, H.uimenu(),
+      [Bool.pick(String, com, "GRNROCK", "FLOOR7_2"), "BRDR_T", "BRDR_B", "BRDR_L", "BRDR_R", "BRDR_TL", "BRDR_TR", "BRDR_BL", "BRDR_BR"])))))
 
 def loaded.go(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +pl: T.Vec<U32>, +cv: T.Vec<U32>, r: W.Wad & U32) -> IO(S.Sim & Array<U32>):
   (w, +mode) = r

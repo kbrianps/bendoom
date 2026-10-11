@@ -1868,6 +1868,14 @@ def mp.hud(+g: Sim) -> T.Vec<U32>:
 def mp.nil(+g: Sim) -> List<&2,Lvl>:
   mpr.nil(sim.mp(g))
 
+def mpr.tb.set(r: Lvl, v: V.Tabs) -> Lvl:
+  match r:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+      Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, v, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}
+
+def mp.tb.set(+g: Sim, v: V.Tabs) -> Sim:
+  sim.mp.set(g, mpr.tb.set(sim.mp(g), v))
+
 def mget(+g: Sim, +m: U32, +f: U32) -> U32:
   R.mo(sim.w(g), m, f)
 

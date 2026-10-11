@@ -577,7 +577,7 @@ def boot.warp(+g: S.Sim) -> S.Sim:
   U.ui.set(g, 118, 1)
 
 def blank(rom: Array<U32>) -> V.Frame:
-  V.Frame{P.blank(), rom, V.fresh(), []}
+  V.Frame{P.blank(), rom, V.fresh(20), []}
 
 def ph(fr: V.Frame, +g: S.Sim, +i: U32) -> V.Frame & U32:
   U.hword(fr, g, i, 2)
@@ -849,7 +849,7 @@ def mapped.start(fr: V.Frame, +g: S.Sim) -> V.Frame & S.Sim:
 
 def view.out(r: V.Frame & S.Sim) -> S.Sim & (Array<U32> & Array<U32>):
   (fr, +g) = r
-  (g, D.out.at(Mn.draw(U.draw(fr, g), g), U.pal(g)))
+  (g, D.out.at(Mn.draw(U.draw.view(fr, g), g), U.pal(g)))
 
 def render.go(view: Bool, +g: S.Sim, rom: Array<U32>) -> S.Sim & (Array<U32> & Array<U32>):
   match view:
@@ -858,8 +858,41 @@ def render.go(view: Bool, +g: S.Sim, rom: Array<U32>) -> S.Sim & (Array<U32> & A
     case False{}:
       (g, D.out.at(Mn.draw(other(blank(rom), g), g), Bool.pick(U32, U32.is_eq(S.sim.gs(g), 0), U.pal(g), U.palbase(g))))
 
+def resize(+g: S.Sim) -> S.Sim:
+  C.when(U32.is_ne(V.win(S.mp.tb(g)), U.win(g)), g, +h => S.mp.tb.set(h, V.tabs.sized(S.mp.tb(h), U.win(h))))
+
+def framed(+g: S.Sim) -> Bool:
+  Bool.and(Bool.and(U32.is_eq(S.sim.gs(g), 0), U32.is_eq(U.ui(g, 140), 0)), U32.is_ne(V.svw(U.win(g)), 320))
+
+def sbar(+g: S.Sim) -> Bool:
+  Bool.and(U32.is_eq(S.sim.gs(g), 0), Bool.or(U32.is_lt(U.ui(g, 112), 8), U32.is_ne(U.ui(g, 140), 0)))
+
+def inhelp(+g: S.Sim) -> Bool:
+  Bool.and(Bool.and(U32.is_eq(U.ui(g, 105), 0), U32.is_ne(U.ui(g, 100), 0)), Bool.or(U32.is_eq(U.ui(g, 101), 4), U32.is_eq(U.ui(g, 101), 5)))
+
+def sbredo(+g: S.Sim) -> S.Sim:
+  +wide = Bool.and(U32.is_lt(U.ui(g, 112), 8), U32.is_ne(U.ui(g, 242), 0))
+  +helped = Bool.and(U32.is_ne(U.ui(g, 244), 0), Bool.not(inhelp(g)))
+  +back = Bool.and(Bool.and(sbar(g), U32.is_ne(U.ui(g, 243), 0)), Bool.or(wide, helped))
+  C.when(back, g, +h => U.ui.set(h, 97, 1))
+
+def borders(+g: S.Sim, +sized: Bool) -> S.Sim:
+  +c0 = Bool.pick(U32, sized, 3, U.ui(g, 238))
+  +redo = Bool.or(Bool.or(U32.is_ne(U.ui(g, 100), 0), U32.is_ne(U.ui(g, 239), 0)), Bool.or(U32.is_eq(U.ui(g, 240), 0), U32.is_ne(U.ui(g, 241), 0)))
+  U.ui.set(g, 238, Bool.pick(U32, Bool.and(framed(g), redo), 3, c0))
+
+def drawn(r: S.Sim & (Array<U32> & Array<U32>)) -> S.Sim & (Array<U32> & Array<U32>):
+  (+g, p) = r
+  +c = U.ui(g, 238)
+  +g1 = U.ui.set(g, 238, Bool.pick(U32, Bool.and(framed(g), U32.is_ne(c, 0)), (c - 1 : U32), c))
+  +va = Bool.and(U32.is_eq(S.sim.gs(g1), 0), U32.is_eq(U.ui(g1, 140), 0))
+  +g2 = U.ui.set(U.ui.set(U.ui.set(g1, 243, (U.ui(g1, 243) .|. C.b2u(sbar(g1)) : U32)), 242, Bool.pick(U32, U32.is_eq(S.sim.gs(g1), 0), C.b2u(U32.is_ge(U.ui(g1, 112), 8)), U.ui(g1, 242))), 244, C.b2u(inhelp(g1)))
+  (U.ui.set(U.ui.set(U.ui.set(g2, 239, U.ui(g1, 100)), 240, C.b2u(va)), 241, S.sim.gs(g1)), p)
+
 def render(+g: S.Sim, rom: Array<U32>) -> S.Sim & (Array<U32> & Array<U32>):
-  render.go(Bool.and(U32.is_eq(S.sim.gs(g), 0), U32.is_eq(U.ui(g, 140), 0)), g, rom)
+  +sized = U32.is_ne(V.win(S.mp.tb(g)), U.win(g))
+  +g1 = borders(sbredo(resize(g)), sized)
+  drawn(render.go(Bool.and(U32.is_eq(S.sim.gs(g1), 0), U32.is_eq(U.ui(g1, 140), 0)), g1, rom))
 
 def image.out(r: S.Sim & (Array<U32> & Array<U32>)) -> Array<U32> & Array<U32>:
   (g, p) = r

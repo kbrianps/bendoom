@@ -149,5 +149,11 @@ def fuzz() -> U32:
 def fuzzpos() -> U32:
   11830
 
+def geokey() -> U32:
+  11300
+
+def geo() -> U32:
+  646
+
 def none() -> U32:
   4294967295

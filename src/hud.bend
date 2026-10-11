@@ -379,6 +379,71 @@ def palette(+g: S.Sim) -> U32:
 def draw(fr: V.Frame, +g: S.Sim) -> V.Frame:
   message(statusbar(fr, g), g)
 
+def win(+g: S.Sim) -> U32:
+  ((ui(g, 112) + 3) * 2 + (ui(g, 110) .&. 1) : U32)
+
+def flat.row(n: Nat, fr: V.Frame, +a: U32, +x: U32, +y: U32) -> V.Frame:
+  match n fr:
+    case 1n+p V.Frame{fb, rom, ram, sd}:
+      M.let(V.Frame, M.rd(rom, (a + ((y .&. 63) << 6n) + (x .&. 63) : U32)), r1 => +c =>
+        flat.row(p, V.Frame{P.put(fb, x, y, c), r1, ram, sd}, a, (x + 1 : U32), y))
+    case _ f:
+      f
+
+def border.row(fr: V.Frame, +a: U32, +y: U32, +wn: U32) -> V.Frame:
+  +inside = Bool.and(U32.is_ge(y, V.wy(wn)), U32.is_lt(y, (V.wy(wn) + V.vh(wn) : U32)))
+  +right = (V.wx(wn) + V.svw(wn) : U32)
+  fsel(inside, fr, f => flat.row(U32.to_nat((320 - right : U32)), flat.row(U32.to_nat(V.wx(wn)), f, a, 0, y), a, right, y), f => flat.row(320n, f, a, 0, y))
+
+def border.rows(n: Nat, fr: V.Frame, +a: U32, +y: U32, +wn: U32) -> V.Frame:
+  match n:
+    case 0n:
+      fr
+    case 1n+p:
+      border.rows(p, border.row(fr, a, y, wn), a, (y + 1 : U32), wn)
+
+def border.across(n: Nat, fr: V.Frame, +g: S.Sim, +x: U32, +y: U32, +i: U32) -> V.Frame:
+  match n:
+    case 0n:
+      fr
+    case 1n+p:
+      border.across(p, patch(fr, g, x, y, i), g, (x + 8 : U32), y, i)
+
+def border.down(n: Nat, fr: V.Frame, +g: S.Sim, +x: U32, +y: U32, +i: U32) -> V.Frame:
+  match n:
+    case 0n:
+      fr
+    case 1n+p:
+      border.down(p, patch(fr, g, x, y, i), g, x, (y + 8 : U32), i)
+
+def border.edges(fr: V.Frame, +g: S.Sim, +wn: U32) -> V.Frame:
+  +x = V.wx(wn)
+  +y = V.wy(wn)
+  +w = V.svw(wn)
+  +h = V.vh(wn)
+  f1 = border.across(U32.to_nat((w / 8 : U32)), fr, g, x, (y - 8 : U32), 316)
+  f2 = border.across(U32.to_nat((w / 8 : U32)), f1, g, x, (y + h : U32), 317)
+  f3 = border.down(U32.to_nat(((h + 7) / 8 : U32)), f2, g, (x - 8 : U32), y, 318)
+  f4 = border.down(U32.to_nat(((h + 7) / 8 : U32)), f3, g, (x + w : U32), y, 319)
+  patch(patch(patch(patch(f4, g, (x - 8 : U32), (y - 8 : U32), 320), g, (x + w : U32), (y - 8 : U32), 321), g, (x - 8 : U32), (y + h : U32), 322), g, (x + w : U32), (y + h : U32), 323)
+
+def border(fr: V.Frame, +g: S.Sim, +wn: U32) -> V.Frame:
+  fwhen(U32.is_ne(V.svw(wn), 320), fr, f => border.edges(border.rows(168n, f, addr(g, 315), 0, wn), g, wn))
+
+def draw.late(late: Bool, fr: V.Frame, +g: S.Sim, +wn: U32) -> V.Frame:
+  match late:
+    case True{}:
+      border(message(fr, g), g, wn)
+    case False{}:
+      message(border(fr, g, wn), g)
+
+def draw.framed(r: V.Frame & U32, +g: S.Sim) -> V.Frame:
+  (fr, +wn) = r
+  draw.late(U32.is_ne(ui(g, 238), 0), fwhen(U32.is_lt(V.blocks(wn), 11), fr, f => statusbar(f, g)), g, wn)
+
+def draw.view(fr: V.Frame, +g: S.Sim) -> V.Frame:
+  draw.framed(D.window(fr), g)
+
 def psp.cm(+g: S.Sim, +frm: U32) -> U32:
   +iv = S.p.pw2(g)
   +fx = S.p.fixedcm(g)
@@ -386,7 +451,7 @@ def psp.cm(+g: S.Sim, +frm: U32) -> U32:
   +ll = Bool.pick(U32, F.lt(ll0, 0), 0, Bool.pick(U32, F.gt(ll0, 15), 15, ll0))
   Bool.pick(U32, Bool.or(F.gt(iv, 128), U32.is_ne((iv .&. 8 : U32), 0)), M.none(),
     Bool.pick(U32, U32.is_ne(fx, 0), (fx * 256 : U32),
-      Bool.pick(U32, U32.is_ne((frm .&. 32768 : U32), 0), 0, (V.lightmap(ll, 192512) * 256 : U32))))
+      Bool.pick(U32, U32.is_ne((frm .&. 32768 : U32), 0), 0, (V.lightmap(V.svw(V.win(S.mp.tb(g))), ll, 192512) * 256 : U32))))
 
 def psp.of(+g: S.Sim, +pos: U32, +rest: List<&2, D.PSp>) -> List<&2, D.PSp>:
   +b = (53 + pos * 4 : U32)
@@ -408,4 +473,4 @@ def pal(+g: S.Sim) -> U32:
   (palbase(g) + 256 * palette(g) : U32)
 
 def render(+g: S.Sim, rom: Array<U32>) -> Array<U32> & Array<U32>:
-  D.out.at(draw(scene(g, rom), g), pal(g))
+  D.out.at(draw.view(scene(g, rom), g), pal(g))

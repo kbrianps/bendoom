@@ -3683,7 +3683,7 @@ def armsmask(n: Nat, +g: S.Sim, +i: U32, +acc: U32) -> U32:
 
 def st.start(+g: S.Sim) -> S.Sim:
   +g1 = S.sim.hcount.set(S.sim.stweap.set(S.sim.stold.set(S.sim.stface.set(g, 0), 4294967295), owned(9n, g, 0, 0)), 0)
-  S.sim.ui.set(g1, T.set(U32, T.set(U32, S.sim.ui(g1), 97, 0), 98, armsmask(6n, g1, 0, 0)))
+  S.sim.ui.set(g1, T.set(U32, T.set(U32, T.set(U32, S.sim.ui(g1), 97, 0), 243, 0), 98, armsmask(6n, g1, 0, 0)))
 
 
 def st.pain(+g: S.Sim) -> S.Sim:
