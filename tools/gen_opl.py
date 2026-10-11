@@ -32,6 +32,26 @@ for wf in range(4):
             v = 0x1000 if p & 0x100 else logsin[p & 0xFF]
         wave.append(v)
 
+wave2 = []
+for wf in range(4, 8):
+    for p in range(1024):
+        c6 = 0x8000 if p & 0x200 else 0
+        if c6:
+            c5 = 0x1000
+        elif p & 0x80:
+            c5 = logsin[((p ^ 0xFF) << 1) & 0xFF]
+        else:
+            c5 = logsin[(p << 1) & 0xFF]
+        if wf == 4:
+            v = (0x8000 if (p & 0x300) == 0x100 else 0) | c5
+        elif wf == 5:
+            v = c5
+        elif wf == 6:
+            v = c6
+        else:
+            v = c6 | ((((p & 0x1FF) ^ 0x1FF) if c6 else p) << 3)
+        wave2.append(v)
+
 ratio = 49716 / 11025
 incstep = [[0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 1, 0], [1, 1, 1, 0]]
 dec = []
@@ -65,7 +85,7 @@ for r in range(64):
     att.append(min(65536, round((1 - math.exp(ratio * rate)) * 65536)))
 
 out = ["import Base", ""]
-for name, xs in [("wave", wave), ("expo", expo), ("freq", freq), ("vmt", vmt), ("dec", dec), ("att", att)]:
+for name, xs in [("wave", wave), ("wave2", wave2), ("expo", expo), ("freq", freq), ("vmt", vmt), ("dec", dec), ("att", att)]:
     parts = [xs[i:i + 256] for i in range(0, len(xs), 256)]
     for i, part in enumerate(parts):
         out.append("def %s.c%d() -> List<&2, U32>:" % (name, i))

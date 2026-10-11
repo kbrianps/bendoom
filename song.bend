@@ -38,15 +38,15 @@ def loop.out?(n: Nat, f: File, r: M.Mu & List<&2, U32>) -> IO(Unit):
   (m, xs) = r
   IO.bind(File, Unit, put(f, bytes(xs)), f1 => loop(n, f1, m))
 
-def go.with(+id: U32, +tics: U32, +out: String, r: M.Mu & Bool) -> IO(Unit):
-  (m, +gm) = r
+def go.with(+id: U32, +tics: U32, +out: String, r: M.Mu & U32) -> IO(Unit):
+  (m, +k) = r
   do IO<Unit>:
     f : File <- IO.try(File, File.open(out, "w"))
-    f1 : File <- put(f, Bool.pick(List<&2, U32>, gm, header(2, 22050), header(1, 11025)))
+    f1 : File <- put(f, header(Bool.pick(U32, U32.is_eq(k, 0), 1, 2), Bool.pick(U32, U32.is_eq(k, 2), 22050, 11025)))
     loop(U32.to_nat(tics), f1, M.start(m, id, 1))
 
 def go(m: M.Mu, +id: U32, +tics: U32, +out: String) -> IO(Unit):
-  go.with(id, tics, out, M.gm(m))
+  go.with(id, tics, out, M.form(m))
 
 def pick(known: Bool, m: M.Mu, +id: U32, +tics: U32, +out: String) -> IO(Unit):
   match known:

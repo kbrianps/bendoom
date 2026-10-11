@@ -114,6 +114,16 @@ gmsong "D_INTER, looping" freedoom1 D_INTER 80 045c8c42b80528de3d691737d95c87ab1
 python3 tests/mkmus.py "$WADS/freedoom1.wad" D_E1M1 "$TMP/mus.wad" &&
   gmsong "D_E1M1 as a MUS lump" freedoom1 D_E1M1 20 5c0f8328571aba3e79457ef9990989ba65914758680ed8532acc868d0afa40a5 -file "$TMP/mus.wad" || bad "build the MUS PWAD"
 
+opl3() {
+  local what=$1 wad=$2 lump=$3 secs=$4 sha=$5; shift 5
+  DMXOPTION=-opl3 "$TMP/song" "$WADS/$wad.wad" "$@" "$lump" "$secs" "$TMP/opl3.wav" &&
+    echo "$sha  $TMP/opl3.wav" | sha256sum -c --quiet &&
+    ok "OPL3: $secs seconds of $what in stereo" || bad "OPL3: $what"
+}
+opl3 "D_E1M1" freedoom1 D_E1M1 10 01f41b953f7654381635365daa3c8e8cc1ac5b231c83931e9bfac5f4e0ed9a1c
+opl3 "D_RUNNIN" freedoom2 D_RUNNIN 10 72ad98e1df22a94300a14a703aaa57830198c347c884efdb732a9219d094ec39
+opl3 "D_E1M1 as a MUS lump, panned" freedoom1 D_E1M1 20 4736963a364ee883008be3386cda10987ea8e3a2d115ad90811b623f6e300c83 -file "$TMP/mus.wad"
+
 python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3 &&
   "$TMP/demo" "$WADS/freedoom1.wad" E1M1 "$TMP/demo.lmp" 330 "$TMP/frame.bmp" >/dev/null &&
   echo "11d7119724f8c49dcf7ca7d1961600f5934f6aeabfcb3322a7e4e76d66c3cb7f  $TMP/frame.bmp" | sha256sum -c --quiet &&

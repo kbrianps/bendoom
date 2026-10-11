@@ -22,13 +22,13 @@ type V is Data:
   V{ins: U32, iv: U32, ch: U32, mk: U32, note: U32, freq: U32, nvol: U32, carv: U32, modv: U32, a0: U32, b0: U32, c0: U32, m: Op, c: Op, sm: St, sc: St, pr: U32}
 
 type Cn is Data:
-  Cn{ins: U32, vol: U32, base: U32, bend: U32}
+  Cn{ins: U32, vol: U32, base: U32, bend: U32, pan: U32}
 
 type Dr is Data:
   Dr{vs: List<&2, V>, fr: List<&2, U32>, al: List<&2, U32>, cs: List<&2, Cn>, cur: U32, st: U32}
 
 type Lk is Data:
-  Lk{gm: T.Vec<U32>, fq: T.Vec<U32>, vm: T.Vec<U32>, ps: G.Bank}
+  Lk{gm: T.Vec<U32>, fq: T.Vec<U32>, vm: T.Vec<U32>, ps: G.Bank, o3: U32}
 
 type E is Data:
   E{t: U32, e: U32}
@@ -78,7 +78,7 @@ def pre.go(+fnum: U32, +block: U32, +o: Op, +kr: U32, +mtv: U32) -> P:
       +kl = (kr * 4 - (8 - block) * 32 : U32)
       +klv = Bool.pick(U32, neg(kl), 0, (kl >> U32.to_nat(ksshift((r40 >> 6n : U32))) : U32))
       +sl = (r80 >> 4n : U32)
-      P{rix((r60 >> 4n : U32), ks), rix((r60 .&. 15 : U32), ks), rix((r80 .&. 15 : U32), ks), Bool.pick(U32, U32.is_eq(sl, 15), 31, sl), ((r20 >> 5n) .&. 1 : U32), ((r40 .&. 63) * 4 + klv : U32), (r20 >> 7n : U32), ((r20 >> 6n) .&. 1 : U32), scale(pinc(fnum, block, mtv)), mtv, fnum, block, ((re0 .&. 3) * 1024 : U32)}
+      P{rix((r60 >> 4n : U32), ks), rix((r60 .&. 15 : U32), ks), rix((r80 .&. 15 : U32), ks), Bool.pick(U32, U32.is_eq(sl, 15), 31, sl), ((r20 >> 5n) .&. 1 : U32), ((r40 .&. 63) * 4 + klv : U32), (r20 >> 7n : U32), ((r20 >> 6n) .&. 1 : U32), scale(pinc(fnum, block, mtv)), mtv, fnum, block, (re0 * 1024 + Bool.pick(U32, U32.is_ge(re0, 4), 416, 0) : U32)}
 
 def pre(tb: Array<U32>, +fnum: U32, +block: U32, +o: Op) -> Array<U32> & P:
   match o:
@@ -175,6 +175,37 @@ def vcar?(r: Array<U32> & St, +x: U32, t: List<&2, U32>, kt: List<&2, U32>, +pm:
   +x1 = (x + sx(st.out(sc1)) + Bool.pick(U32, U32.is_eq(con, 1), sx(mo), 0) : U32)
   vcons(x1, vrun(t, tb, kt, pm, pc, key, fb, con, sm1, sc1, npr))
 
+def vcons2(+x: U32, +y: U32, r: (List<&2, U32> & Array<U32>) & ((St & St) & U32)) -> (List<&2, U32> & Array<U32>) & ((St & St) & U32):
+  (p, s) = r
+  (l, tb) = p
+  ((x <> y <> l, tb), s)
+
+def vrun2?(acc: List<&2, U32>, tb: Array<U32>, ck: List<&2, U32>, +pm: P, +pc: P, +key: U32, +fb: U32, +con: U32, +ca: U32, +cb: U32, +sm: St, +sc: St, +pr: U32) -> (List<&2, U32> & Array<U32>) & ((St & St) & U32):
+  match acc ck:
+    case +x <> +y <> t +k <> kt:
+      vpick2(Bool.and(U32.is_eq(key, 0), Bool.and(st.idle(sm), st.idle(sc))), x, y, t, tb, k, kt, pm, pc, key, fb, con, ca, cb, sm, sc, pr)
+    case a _:
+      ((a, tb), ((sm, sc), pr))
+
+def vpick2?(idle: Bool, +x: U32, +y: U32, t: List<&2, U32>, tb: Array<U32>, +k: U32, kt: List<&2, U32>, +pm: P, +pc: P, +key: U32, +fb: U32, +con: U32, +ca: U32, +cb: U32, +sm: St, +sc: St, +pr: U32) -> (List<&2, U32> & Array<U32>) & ((St & St) & U32):
+  match idle:
+    case True{}:
+      ((x <> y <> t, tb), ((sm, sc), pr))
+    case False{}:
+      +mo0 = st.out(sm)
+      +fbm = Bool.pick(U32, U32.is_eq(fb, 0), 0, F.sar((sx(pr) + sx(mo0) : U32), U32.to_nat((9 - fb : U32))))
+      vmod2(step(tb, pm, sm, key, fbm, k), x, y, t, k, kt, pm, pc, key, fb, con, ca, cb, sc, mo0)
+
+def vmod2?(r: Array<U32> & St, +x: U32, +y: U32, t: List<&2, U32>, +k: U32, kt: List<&2, U32>, +pm: P, +pc: P, +key: U32, +fb: U32, +con: U32, +ca: U32, +cb: U32, +sc: St, +npr: U32) -> (List<&2, U32> & Array<U32>) & ((St & St) & U32):
+  (tb, +sm1) = r
+  +mo = st.out(sm1)
+  vcar2(step(tb, pc, sc, key, Bool.pick(U32, U32.is_eq(con, 1), 0, sx(mo)), k), x, y, t, kt, pm, pc, key, fb, con, ca, cb, sm1, mo, npr)
+
+def vcar2?(r: Array<U32> & St, +x: U32, +y: U32, t: List<&2, U32>, kt: List<&2, U32>, +pm: P, +pc: P, +key: U32, +fb: U32, +con: U32, +ca: U32, +cb: U32, +sm1: St, +mo: U32, +npr: U32) -> (List<&2, U32> & Array<U32>) & ((St & St) & U32):
+  (tb, +sc1) = r
+  +o = (sx(st.out(sc1)) + Bool.pick(U32, U32.is_eq(con, 1), sx(mo), 0) : U32)
+  vcons2((x + o * ca : U32), (y + o * cb : U32), vrun2(t, tb, kt, pm, pc, key, fb, con, ca, cb, sm1, sc1, npr))
+
 def clocks(n: Nat, +clk: U32, +cfr: U32) -> List<&2, U32>:
   match n:
     case 0n:
@@ -220,65 +251,77 @@ def v.ran(+v: V, r: (List<&2, U32> & Array<U32>) & ((St & St) & U32)) -> (List<&
   (p, q) = r
   v.ran2(v, p, q)
 
-def v.run2(+v: V, acc: List<&2, U32>, ck: List<&2, U32>, +pm: P, r: Array<U32> & P) -> (List<&2, U32> & Array<U32>) & V:
+def vgo(st2: Bool, acc: List<&2, U32>, tb: Array<U32>, ck: List<&2, U32>, +pm: P, +pc: P, +key: U32, +c0: U32, +sm: St, +sc: St, +pr: U32) -> (List<&2, U32> & Array<U32>) & ((St & St) & U32):
+  match st2:
+    case True{}:
+      vrun2(acc, tb, ck, pm, pc, key, ((c0 >> 1n) .&. 7 : U32), (c0 .&. 1 : U32), ((c0 >> 4n) .&. 1 : U32), ((c0 >> 5n) .&. 1 : U32), sm, sc, pr)
+    case False{}:
+      vrun(acc, tb, ck, pm, pc, key, ((c0 >> 1n) .&. 7 : U32), (c0 .&. 1 : U32), sm, sc, pr)
+
+def v.run2(+v: V, +o3: U32, acc: List<&2, U32>, ck: List<&2, U32>, +pm: P, r: Array<U32> & P) -> (List<&2, U32> & Array<U32>) & V:
   match v:
     case V{+ins, +iv, +ch, +mk, +note, +freq, +nvol, +carv, +modv, +a0, +b0, +c0, +m, +c, +sm, +sc, +pr}:
       (tb, +pc) = r
-      v.ran(V{ins, iv, ch, mk, note, freq, nvol, carv, modv, a0, b0, c0, m, c, sm, sc, pr}, vrun(acc, tb, ck, pm, pc, ((b0 >> 5n) .&. 1 : U32), ((c0 >> 1n) .&. 7 : U32), (c0 .&. 1 : U32), sm, sc, pr))
+      v.ran(V{ins, iv, ch, mk, note, freq, nvol, carv, modv, a0, b0, c0, m, c, sm, sc, pr}, vgo(U32.is_eq(o3, 1), acc, tb, ck, pm, pc, ((b0 >> 5n) .&. 1 : U32), c0, sm, sc, pr))
 
-def v.run1(+v: V, acc: List<&2, U32>, ck: List<&2, U32>, r: Array<U32> & P) -> (List<&2, U32> & Array<U32>) & V:
+def v.run1(+v: V, +o3: U32, acc: List<&2, U32>, ck: List<&2, U32>, r: Array<U32> & P) -> (List<&2, U32> & Array<U32>) & V:
   match v:
     case V{+ins, +iv, +ch, +mk, +note, +freq, +nvol, +carv, +modv, +a0, +b0, +c0, +m, +c, +sm, +sc, +pr}:
       (tb, +pm) = r
-      v.run2(V{ins, iv, ch, mk, note, freq, nvol, carv, modv, a0, b0, c0, m, c, sm, sc, pr}, acc, ck, pm, pre(tb, (a0 .|. ((b0 .&. 3) << 8n) : U32), ((b0 >> 2n) .&. 7 : U32), c))
+      v.run2(V{ins, iv, ch, mk, note, freq, nvol, carv, modv, a0, b0, c0, m, c, sm, sc, pr}, o3, acc, ck, pm, pre(tb, (a0 .|. ((b0 .&. 3) << 8n) : U32), ((b0 >> 2n) .&. 7 : U32), c))
 
-def v.run(+v: V, acc: List<&2, U32>, tb: Array<U32>, ck: List<&2, U32>) -> (List<&2, U32> & Array<U32>) & V:
+def v.run(+v: V, +o3: U32, acc: List<&2, U32>, tb: Array<U32>, ck: List<&2, U32>) -> (List<&2, U32> & Array<U32>) & V:
   match v:
     case V{+ins, +iv, +ch, +mk, +note, +freq, +nvol, +carv, +modv, +a0, +b0, +c0, +m, +c, +sm, +sc, +pr}:
-      v.run1(V{ins, iv, ch, mk, note, freq, nvol, carv, modv, a0, b0, c0, m, c, sm, sc, pr}, acc, ck, pre(tb, (a0 .|. ((b0 .&. 3) << 8n) : U32), ((b0 >> 2n) .&. 7 : U32), m))
+      v.run1(V{ins, iv, ch, mk, note, freq, nvol, carv, modv, a0, b0, c0, m, c, sm, sc, pr}, o3, acc, ck, pre(tb, (a0 .|. ((b0 .&. 3) << 8n) : U32), ((b0 >> 2n) .&. 7 : U32), m))
 
 def seg.cons(+v: V, r: (List<&2, U32> & Array<U32>) & List<&2, V>) -> (List<&2, U32> & Array<U32>) & List<&2, V>:
   (p, vs) = r
   (p, v <> vs)
 
-def seg?(vs: List<&2, V>, acc: List<&2, U32>, tb: Array<U32>, +ck: List<&2, U32>) -> (List<&2, U32> & Array<U32>) & List<&2, V>:
+def seg?(vs: List<&2, V>, +o3: U32, acc: List<&2, U32>, tb: Array<U32>, +ck: List<&2, U32>) -> (List<&2, U32> & Array<U32>) & List<&2, V>:
   match vs:
     case +v <> t:
-      seg.pick(v.idle(v), v, t, acc, tb, ck)
+      seg.pick(v.idle(v), v, t, o3, acc, tb, ck)
     case []:
       ((acc, tb), [])
 
-def seg.pick?(idle: Bool, +v: V, t: List<&2, V>, acc: List<&2, U32>, tb: Array<U32>, +ck: List<&2, U32>) -> (List<&2, U32> & Array<U32>) & List<&2, V>:
+def seg.pick?(idle: Bool, +v: V, t: List<&2, V>, +o3: U32, acc: List<&2, U32>, tb: Array<U32>, +ck: List<&2, U32>) -> (List<&2, U32> & Array<U32>) & List<&2, V>:
   match idle:
     case True{}:
-      seg.cons(v, seg(t, acc, tb, ck))
+      seg.cons(v, seg(t, o3, acc, tb, ck))
     case False{}:
-      seg.next(v.run(v, acc, tb, ck), ck, t)
+      seg.next(v.run(v, o3, acc, tb, ck), o3, ck, t)
 
-def seg.next?(r: (List<&2, U32> & Array<U32>) & V, +ck: List<&2, U32>, t: List<&2, V>) -> (List<&2, U32> & Array<U32>) & List<&2, V>:
+def seg.next?(r: (List<&2, U32> & Array<U32>) & V, +o3: U32, +ck: List<&2, U32>, t: List<&2, V>) -> (List<&2, U32> & Array<U32>) & List<&2, V>:
   (p, +v) = r
   (acc, tb) = p
-  seg.cons(v, seg(t, acc, tb, ck))
+  seg.cons(v, seg(t, o3, acc, tb, ck))
 
 def gb(+lk: Lk, +ins: U32, +off: U32) -> U32:
   match lk:
-    case Lk{+gm, fq, vm, ps}:
+    case Lk{+gm, fq, vm, ps, o3}:
       T.get(U32, gm, (8 + ins * 36 + off : U32), 0)
 
 def vmt(+lk: Lk, +i: U32) -> U32:
   match lk:
-    case Lk{gm, fq, +vm, ps}:
+    case Lk{gm, fq, +vm, ps, o3}:
       T.get(U32, vm, i, 0)
 
 def fqc(+lk: Lk, +i: U32) -> U32:
   match lk:
-    case Lk{gm, +fq, vm, ps}:
+    case Lk{gm, +fq, vm, ps, o3}:
       T.get(U32, fq, i, 0)
 
 def lps(+lk: Lk) -> G.Bank:
   match lk:
-    case Lk{gm, fq, vm, +ps}:
+    case Lk{gm, fq, vm, +ps, o3}:
       ps
+
+def o3(+lk: Lk) -> U32:
+  match lk:
+    case Lk{gm, fq, vm, ps, +o3}:
+      o3
 
 def isgm(+lk: Lk) -> Bool:
   Bool.not(Y.empty(lps(lk)))
@@ -319,7 +362,7 @@ def cget(+cs: List<&2, Cn>, +i: U32) -> Cn:
     case +c <> t:
       Bool.pick(Cn, U32.is_eq(i, 0), c, cget(t, (i - 1 : U32)))
     case []:
-      Cn{0, 0, 100, 0}
+      Cn{0, 0, 100, 0, 48}
 
 def cset(+cs: List<&2, Cn>, +i: U32, +n: Cn) -> List<&2, Cn>:
   match cs:
@@ -330,23 +373,28 @@ def cset(+cs: List<&2, Cn>, +i: U32, +n: Cn) -> List<&2, Cn>:
 
 def cn.ins(+c: Cn) -> U32:
   match c:
-    case Cn{+ins, vol, base, bend}:
+    case Cn{+ins, vol, base, bend, pan}:
       ins
 
 def cn.vol(+c: Cn) -> U32:
   match c:
-    case Cn{ins, +vol, base, bend}:
+    case Cn{ins, +vol, base, bend, pan}:
       vol
 
 def cn.base(+c: Cn) -> U32:
   match c:
-    case Cn{ins, vol, +base, bend}:
+    case Cn{ins, vol, +base, bend, pan}:
       base
 
 def cn.bend(+c: Cn) -> U32:
   match c:
-    case Cn{ins, vol, base, +bend}:
+    case Cn{ins, vol, base, +bend, pan}:
       bend
+
+def cn.pan(+c: Cn) -> U32:
+  match c:
+    case Cn{ins, vol, base, bend, +pan}:
+      pan
 
 def v.ch(+v: V) -> U32:
   match v:
@@ -374,31 +422,31 @@ def op.lv(+o: Op, +l: U32) -> Op:
       Op{r20, l, r60, r80, re0}
 
 def gop(+lk: Lk, +ins: U32, +b: U32, +lv: U32) -> Op:
-  Op{gb(lk, ins, b), lv, gb(lk, ins, (b + 1 : U32)), gb(lk, ins, (b + 2 : U32)), gb(lk, ins, (b + 3 : U32))}
+  Op{gb(lk, ins, b), lv, gb(lk, ins, (b + 1 : U32)), gb(lk, ins, (b + 2 : U32)), (gb(lk, ins, (b + 3 : U32)) .&. Bool.pick(U32, U32.is_eq(o3(lk), 1), 7, 3) : U32)}
 
-def instr.load(+lk: Lk, +v: V, +ins: U32, +iv: U32) -> V:
+def instr.load(+lk: Lk, +v: V, +ins: U32, +iv: U32, +pan: U32) -> V:
   match v:
     case V{oi, ov, +ch, +mk, +note, +freq, +nvol, carv, modv, +a0, +b0, c0, m, c, +sm, +sc, +pr}:
       +b = (4 + iv * 16 : U32)
       +fbk = gb(lk, ins, (b + 6 : U32))
       +cl = (gb(lk, ins, (b + 11 : U32)) .|. 63 : U32)
       +ml = (gb(lk, ins, (b + 4 : U32)) .|. Bool.pick(U32, U32.is_eq((fbk .&. 1 : U32), 0), gb(lk, ins, (b + 5 : U32)), 63) : U32)
-      V{ins, iv, ch, mk, note, freq, nvol, cl, ml, a0, b0, (fbk .|. 48 : U32), gop(lk, ins, b, ml), gop(lk, ins, (b + 7 : U32), cl), sm, sc, pr}
+      V{ins, iv, ch, mk, note, freq, nvol, cl, ml, a0, b0, (fbk .|. pan : U32), gop(lk, ins, b, ml), gop(lk, ins, (b + 7 : U32), cl), sm, sc, pr}
 
 def instr.same(+v: V, +ins: U32, +iv: U32) -> Bool:
   match v:
     case V{+oi, +ov, ch, mk, note, freq, nvol, carv, modv, a0, b0, c0, m, c, sm, sc, pr}:
       Bool.and(U32.is_eq(oi, ins), U32.is_eq(ov, iv))
 
-def instr.go(same: Bool, +lk: Lk, +v: V, +ins: U32, +iv: U32) -> V:
+def instr.go(same: Bool, +lk: Lk, +v: V, +ins: U32, +iv: U32, +pan: U32) -> V:
   match same:
     case True{}:
       v
     case False{}:
-      instr.load(lk, v, ins, iv)
+      instr.load(lk, v, ins, iv, pan)
 
-def instr(+lk: Lk, +v: V, +ins: U32, +iv: U32) -> V:
-  instr.go(instr.same(v, ins, iv), lk, v, ins, iv)
+def instr(+lk: Lk, +v: V, +ins: U32, +iv: U32, +pan: U32) -> V:
+  instr.go(instr.same(v, ins, iv), lk, v, ins, iv, pan)
 
 def volume(+lk: Lk, +v: V, +vol: U32, +chvol: U32) -> V:
   match v:
@@ -522,7 +570,7 @@ def voice.take(fr: List<&2, U32>, +lk: Lk, +vs: List<&2, V>, +al: List<&2, U32>,
     case +id <> rest:
       +cn = cget(cs, ch)
       +nt = Bool.pick(U32, U32.is_eq((gb(lk, ins, 0) .&. 1 : U32), 1), gb(lk, ins, 3), note)
-      +v = freq.set(lk, note.set0(volume(lk, instr(lk, note.set(vget(vs, id), ch, mk, nt), ins, iv), vol, cn.vol(cn))), cn.bend(cn))
+      +v = freq.set(lk, note.set0(volume(lk, instr(lk, note.set(vget(vs, id), ch, mk, nt), ins, iv, cn.pan(cn)), vol, cn.vol(cn))), cn.bend(cn))
       Dr{vset(vs, id, v), rest, List.append(&2, U32, al, [id]), cs, cur, st}
     case []:
       Dr{vs, [], al, cs, cur, st}
@@ -575,13 +623,13 @@ def chvol(+lk: Lk, +d: Dr, +ch: U32, +b: U32, +clip: Bool) -> Dr:
     case Dr{+vs, +fr, +al, +cs, +cur, +st}:
       +c = cget(cs, ch)
       +v = U32.min(U32.min(b, cur), Bool.pick(U32, clip, st, 4294967295))
-      Dr{vols(vs, lk, ch, v), fr, al, cset(cs, ch, Cn{cn.ins(c), v, b, cn.bend(c)}), cur, st}
+      Dr{vols(vs, lk, ch, v), fr, al, cset(cs, ch, Cn{cn.ins(c), v, b, cn.bend(c), cn.pan(c)}), cur, st}
 
 def prog(+d: Dr, +ch: U32, +a: U32) -> Dr:
   match d:
     case Dr{+vs, +fr, +al, +cs, +cur, +st}:
       +c = cget(cs, ch)
-      Dr{vs, fr, al, cset(cs, ch, Cn{a, cn.vol(c), cn.base(c), cn.bend(c)}), cur, st}
+      Dr{vs, fr, al, cset(cs, ch, Cn{a, cn.vol(c), cn.base(c), cn.bend(c), cn.pan(c)}), cur, st}
 
 def bends(ids: List<&2, U32>, +lk: Lk, +vs: List<&2, V>, +bend: U32) -> List<&2, V>:
   match ids:
@@ -596,14 +644,42 @@ def pitch(+lk: Lk, +d: Dr, +ch: U32, +b: U32) -> Dr:
       +c = cget(cs, ch)
       +bend = (b - 64 : U32)
       +g = gone(vs, al, ch, True{}, 0)
-      Dr{bends(g, lk, vs, bend), fr, List.append(&2, U32, keep(vs, al, ch, True{}, 0), g), cset(cs, ch, Cn{cn.ins(c), cn.vol(c), cn.base(c), bend}), cur, st}
+      Dr{bends(g, lk, vs, bend), fr, List.append(&2, U32, keep(vs, al, ch, True{}, 0), g), cset(cs, ch, Cn{cn.ins(c), cn.vol(c), cn.base(c), bend, cn.pan(c)}), cur, st}
+
+def v.pan(+lk: Lk, +v: V, +ch: U32, +pan: U32) -> V:
+  match v:
+    case V{+ins, +iv, +vch, +mk, +note, +freq, +nvol, +carv, +modv, +a0, +b0, +c0, +m, +c, +sm, +sc, +pr}:
+      +nc = (gb(lk, ins, (4 + iv * 16 + 6 : U32)) .|. pan : U32)
+      V{ins, iv, vch, mk, note, freq, nvol, carv, modv, a0, b0, Bool.pick(U32, U32.is_eq(vch, ch), nc, c0), m, c, sm, sc, pr}
+
+def pans(vs: List<&2, V>, +lk: Lk, +ch: U32, +pan: U32) -> List<&2, V>:
+  match vs:
+    case +v <> t:
+      v.pan(lk, v, ch, pan) <> pans(t, lk, ch, pan)
+    case []:
+      []
+
+def regpan(+b: U32) -> U32:
+  Bool.pick(U32, U32.is_ge(b, 96), 16, Bool.pick(U32, U32.is_le(b, 48), 32, 48))
+
+def chpan.go(same: Bool, +lk: Lk, +d: Dr, +ch: U32, +rp: U32) -> Dr:
+  match same d:
+    case False{} Dr{+vs, +fr, +al, +cs, +cur, +st}:
+      +c = cget(cs, ch)
+      Dr{pans(vs, lk, ch, rp), fr, al, cset(cs, ch, Cn{cn.ins(c), cn.vol(c), cn.base(c), cn.bend(c), rp}), cur, st}
+    case _ e:
+      e
+
+def chpan(+lk: Lk, +d: Dr, +ch: U32, +b: U32) -> Dr:
+  +rp = regpan(b)
+  chpan.go(Bool.or(U32.is_eq(o3(lk), 0), U32.is_eq(cn.pan(dr.cn(d, ch)), rp)), lk, d, ch, rp)
 
 def chans(n: Nat, +cur: U32) -> List<&2, Cn>:
   match n:
     case 0n:
       []
     case 1n+p:
-      Cn{0, U32.min(cur, 100), 100, 0} <> chans(p, cur)
+      Cn{0, U32.min(cur, 100), 100, 0, 48} <> chans(p, cur)
 
 def restart(+d: Dr) -> Dr:
   match d:
@@ -648,47 +724,54 @@ def ev.on(+lk: Lk, +d: Dr, +mc: U32, +a: U32, +b: U32) -> Dr:
   +ins = Bool.pick(U32, perc, (a + 93 : U32), cn.ins(dr.cn(d, ch)))
   note.on(ok, lk, d, ch, ins, Bool.pick(U32, perc, 60, a), a, b)
 
-def ev.f(f: Bool, +lk: Lk, +d: Dr, +ch: U32, +a: U32, +b: U32) -> Dr:
+def ev.p(pn: Bool, +lk: Lk, +d: Dr, +ch: U32, +b: U32) -> Dr:
+  match pn:
+    case True{}:
+      chpan(lk, d, ch, b)
+    case False{}:
+      d
+
+def ev.f(f: Bool, pn: Bool, +lk: Lk, +d: Dr, +ch: U32, +a: U32, +b: U32) -> Dr:
   match f:
     case True{}:
       pitch(lk, d, ch, b)
     case False{}:
-      d
+      ev.p(pn, lk, d, ch, b)
 
-def ev.e(e: Bool, f: Bool, +lk: Lk, +d: Dr, +ch: U32, +a: U32, +b: U32) -> Dr:
+def ev.e(e: Bool, f: Bool, pn: Bool, +lk: Lk, +d: Dr, +ch: U32, +a: U32, +b: U32) -> Dr:
   match e:
     case True{}:
       prog(d, ch, a)
     case False{}:
-      ev.f(f, lk, d, ch, a, b)
+      ev.f(f, pn, lk, d, ch, a, b)
 
-def ev.d(c: Bool, e: Bool, f: Bool, +lk: Lk, +d: Dr, +ch: U32, +a: U32, +b: U32) -> Dr:
+def ev.d(c: Bool, e: Bool, f: Bool, pn: Bool, +lk: Lk, +d: Dr, +ch: U32, +a: U32, +b: U32) -> Dr:
   match c:
     case True{}:
       release(d, ch, True{}, 0)
     case False{}:
-      ev.e(e, f, lk, d, ch, a, b)
+      ev.e(e, f, pn, lk, d, ch, a, b)
 
-def ev.c(c: Bool, d7: Bool, e: Bool, f: Bool, +lk: Lk, +d: Dr, +ch: U32, +a: U32, +b: U32) -> Dr:
+def ev.c(c: Bool, d7: Bool, e: Bool, f: Bool, pn: Bool, +lk: Lk, +d: Dr, +ch: U32, +a: U32, +b: U32) -> Dr:
   match d7:
     case True{}:
       chvol(lk, d, ch, b, True{})
     case False{}:
-      ev.d(c, e, f, lk, d, ch, a, b)
+      ev.d(c, e, f, pn, lk, d, ch, a, b)
 
-def ev.b(on: Bool, c: Bool, d7: Bool, e: Bool, f: Bool, +lk: Lk, +d: Dr, +mc: U32, +a: U32, +b: U32) -> Dr:
+def ev.b(on: Bool, c: Bool, d7: Bool, e: Bool, f: Bool, pn: Bool, +lk: Lk, +d: Dr, +mc: U32, +a: U32, +b: U32) -> Dr:
   match on:
     case True{}:
       ev.on(lk, d, mc, a, b)
     case False{}:
-      ev.c(c, d7, e, f, lk, d, chan.of(mc), a, b)
+      ev.c(c, d7, e, f, pn, lk, d, chan.of(mc), a, b)
 
-def ev.a(off: Bool, on: Bool, c: Bool, d7: Bool, e: Bool, f: Bool, +lk: Lk, +d: Dr, +mc: U32, +a: U32, +b: U32) -> Dr:
+def ev.a(off: Bool, on: Bool, c: Bool, d7: Bool, e: Bool, f: Bool, pn: Bool, +lk: Lk, +d: Dr, +mc: U32, +a: U32, +b: U32) -> Dr:
   match off:
     case True{}:
       release(d, chan.of(mc), False{}, a)
     case False{}:
-      ev.b(on, c, d7, e, f, lk, d, mc, a, b)
+      ev.b(on, c, d7, e, f, pn, lk, d, mc, a, b)
 
 def ev(+lk: Lk, +d: Dr, +x: U32) -> Dr:
   +st = (x >> 16n : U32)
@@ -696,7 +779,7 @@ def ev(+lk: Lk, +d: Dr, +x: U32) -> Dr:
   +a = ((x >> 8n) .&. 255 : U32)
   +b = (x .&. 255 : U32)
   +cc = U32.is_eq(hi, 176)
-  ev.a(Bool.or(U32.is_eq(hi, 128), Bool.and(U32.is_eq(hi, 144), U32.is_eq(b, 0))), U32.is_eq(hi, 144), Bool.and(cc, U32.is_eq(a, 123)), Bool.and(cc, U32.is_eq(a, 7)), U32.is_eq(hi, 192), U32.is_eq(hi, 224), lk, d, (st .&. 15 : U32), a, b)
+  ev.a(Bool.or(U32.is_eq(hi, 128), Bool.and(U32.is_eq(hi, 144), U32.is_eq(b, 0))), U32.is_eq(hi, 144), Bool.and(cc, U32.is_eq(a, 123)), Bool.and(cc, U32.is_eq(a, 7)), U32.is_eq(hi, 192), U32.is_eq(hi, 224), Bool.and(cc, U32.is_eq(a, 10)), lk, d, (st .&. 15 : U32), a, b)
 
 type Tm is Data:
   Tm{w: U32, f: U32}
@@ -1117,7 +1200,7 @@ def run.go?(stop: Bool, tb: Array<U32>, +n: U32, +lk: Lk, +sq: Sq, out: List<&2,
       ((tb, sq), out)
     case False{}:
       +k = U32.max(bound(sq, n), 1)
-      run.seg(n, k, lk, sq, out, seg(sq.vs(sq), zeros(U32.to_nat(k)), tb, sq.ck(sq, k)))
+      run.seg(n, k, lk, sq, out, seg(sq.vs(sq), o3(lk), zeros(U32.to_nat((k * (1 + o3(lk)) : U32))), tb, sq.ck(sq, k)))
 
 def grun.seg2?(+n: U32, +k: U32, +lk: Lk, +sq: Sq, out: List<&2, U32>, acc: List<&2, U32>, p: Array<F32> & Y.Syn) -> (Array<F32> & Sq) & List<&2, U32>:
   (smp, +gs) = p
@@ -1253,9 +1336,39 @@ def final(xs: List<&2, U32>, +last: U32) -> U32:
     case []:
       last
 
+def frames2(xs: List<&2, U32>, +ll: U32, +lr: U32) -> List<&2, U32>:
+  match xs:
+    case +x <> +y <> t:
+      +ml = clip(x)
+      +mr = clip(y)
+      F.sar((ll + ml : U32), 1n) <> F.sar((lr + mr : U32), 1n) <> ml <> mr <> frames2(t, ml, mr)
+    case _:
+      []
+
+def final2(xs: List<&2, U32>, +last: U32) -> U32:
+  match xs:
+    case +x <> +y <> t:
+      final2(t, ((clip(x) .&. 65535) .|. (clip(y) << 16n) : U32))
+    case _:
+      last
+
+def frames.of(st2: Bool, xs: List<&2, U32>, +last: U32) -> List<&2, U32>:
+  match st2:
+    case False{}:
+      frames(xs, last)
+    case True{}:
+      frames2(xs, sx((last .&. 65535 : U32)), sx((last >> 16n : U32)))
+
+def final.of(st2: Bool, xs: List<&2, U32>, +last: U32) -> U32:
+  match st2:
+    case False{}:
+      final(xs, last)
+    case True{}:
+      final2(xs, last)
+
 def rendered2(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, smp: Array<F32>, +song: U32, +last: U32, p: Array<U32> & Sq, +out: List<&2, U32>) -> Mu & List<&2, U32>:
   (tb, +sq) = p
-  (Mu{tb, lib, ix, lk, sq, song, final(out, last), smp}, frames(out, last))
+  (Mu{tb, lib, ix, lk, sq, song, final.of(U32.is_eq(o3(lk), 1), out, last), smp}, frames.of(U32.is_eq(o3(lk), 1), out, last))
 
 def rendered(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, smp: Array<F32>, +song: U32, +last: U32, r: (Array<U32> & Sq) & List<&2, U32>) -> Mu & List<&2, U32>:
   (p, +out) = r
@@ -1288,16 +1401,27 @@ def kslrom() -> List<&2, U32>:
   [0, 32, 40, 45, 48, 51, 53, 55, 56, 58, 59, 60, 61, 62, 63, 64]
 
 def tables() -> Array<U32>:
-  M.fill(List.append(&2, U32, O.wave(), List.append(&2, U32, O.expo(), List.append(&2, U32, O.dec(), List.append(&2, U32, O.att(), List.append(&2, U32, kslrom(), mt()))))), Array.new(U32, 13n, 0), 0)
+  M.fill(T.flat(U32, [O.wave(), O.expo(), O.dec(), O.att(), kslrom(), mt(), O.wave2()]), Array.new(U32, 14n, 0), 0)
 
-def ids() -> List<&2, U32>:
-  [0, 1, 2, 3, 4, 5, 6, 7, 8]
+def ids(n: Nat, +i: U32) -> List<&2, U32>:
+  match n:
+    case 0n:
+      []
+    case 1n+p:
+      i <> ids(p, (i + 1 : U32))
 
-def driver(+cur: U32) -> Dr:
-  Dr{[nov(), nov(), nov(), nov(), nov(), nov(), nov(), nov(), nov()], ids(), [], chans(16n, cur), cur, cur}
+def novs(n: Nat) -> List<&2, V>:
+  match n:
+    case 0n:
+      []
+    case 1n+p:
+      nov() <> novs(p)
 
-def idle() -> Sq:
-  Sq{driver(64), [], [], 0, 0, 0, 0, 0, 0, Y.new()}
+def driver(+cur: U32, +nv: U32) -> Dr:
+  Dr{novs(U32.to_nat(nv)), ids(U32.to_nat(nv), 0), [], chans(16n, cur), cur, cur}
+
+def idle(+o3: U32) -> Sq:
+  Sq{driver(64, (9 + 9 * o3 : U32)), [], [], 0, 0, 0, 0, 0, 0, Y.new()}
 
 def fill(bss: List<&2, List<&2, U32>>, a: Array<U32>, +at: U32, +idx: List<&2, U32>) -> Array<U32> & List<&2, U32>:
   match bss:
@@ -1314,33 +1438,41 @@ def total(+bss: List<&2, List<&2, U32>>) -> U32:
     case []:
       0
 
-def lk(+gm: List<&2, U32>, +ps: G.Bank) -> Lk:
-  Lk{T.from_list(U32, gm), T.from_list(U32, O.freq()), T.from_list(U32, O.vmt()), ps}
+def lk(+gm: List<&2, U32>, +ps: G.Bank, +o3: U32) -> Lk:
+  Lk{T.from_list(U32, gm), T.from_list(U32, O.freq()), T.from_list(U32, O.vmt()), ps, o3}
 
-def built.font(+gm: List<&2, U32>, lib: Array<U32>, +idx: List<&2, U32>, f: G.Font) -> Mu:
+def built.font(+gm: List<&2, U32>, lib: Array<U32>, +idx: List<&2, U32>, f: G.Font, +o3: U32) -> Mu:
   match f:
     case G.Font{smp, +bk, n}:
-      Mu{tables(), lib, T.from_list(U32, idx), lk(gm, bk), idle(), 0, 0, smp}
+      +o = Bool.pick(U32, Y.empty(bk), o3, 0)
+      Mu{tables(), lib, T.from_list(U32, idx), lk(gm, bk, o), idle(o), 0, 0, smp}
 
-def built(+gm: List<&2, U32>, f: G.Font, r: Array<U32> & List<&2, U32>) -> Mu:
+def built(+gm: List<&2, U32>, f: G.Font, +o3: U32, r: Array<U32> & List<&2, U32>) -> Mu:
   (lib, +idx) = r
-  built.font(gm, lib, idx, f)
+  built.font(gm, lib, idx, f, o3)
 
-def build(+gm: List<&2, U32>, f: G.Font, +bss: List<&2, List<&2, U32>>) -> Mu:
-  built(gm, f, fill(bss, Array.new(U32, M.depth((total(bss) + 1 : U32)), 0), 0, []))
+def build(+gm: List<&2, U32>, f: G.Font, +o3: U32, +bss: List<&2, List<&2, U32>>) -> Mu:
+  built(gm, f, o3, fill(bss, Array.new(U32, M.depth((total(bss) + 1 : U32)), 0), 0, []))
 
-def got.split(f: G.Font, +bss: List<&2, List<&2, U32>>) -> Mu:
+def got.split(f: G.Font, +o3: U32, +bss: List<&2, List<&2, U32>>) -> Mu:
   match bss:
     case +gm <> t:
-      build(gm, f, t)
+      build(gm, f, o3, t)
     case []:
-      build([], f, [])
+      build([], f, o3, [])
 
-def got(f: G.Font, p: W.Wad & List<&2, List<&2, U32>>) -> IO(Mu):
+def got(f: G.Font, +o3: U32, p: W.Wad & List<&2, List<&2, U32>>) -> IO(Mu):
   (w, bss) = p
   do IO<Mu>:
     W.close(w)
-    return got.split(f, bss)
+    return got.split(f, o3, bss)
+
+def dmx(r: Result<&1, &1, U32 & String, String>) -> U32:
+  match r:
+    case Done{+v}:
+      Bool.pick(U32, String.contains(v, "-opl3"), 1, 0)
+    case Fail{e}:
+      0
 
 def font.pick(+none: Bool, +path: String) -> IO(G.Font):
   match none:
@@ -1358,15 +1490,21 @@ def load(+path: String) -> IO(Mu):
     f : G.Font <- font(path)
     w : W.Wad <- W.open(path)
     p : W.Wad & List<&2, List<&2, U32>> <- W.get(w, "GENMIDI" <> names())
-    got(f, p)
+    o : Result<&1, &1, U32 & String, String> <- IO.get_env("DMXOPTION")
+    got(f, dmx(o), p)
 
 def silent() -> Mu:
-  Mu{tables(), Array.new(U32, 0n, 0), T.from_list(U32, []), lk([], G.bank([])), idle(), 0, 0, Array.new(F32, 0n, 0.0)}
+  Mu{tables(), Array.new(U32, 0n, 0), T.from_list(U32, []), lk([], G.bank([]), 0), idle(0), 0, 0, Array.new(F32, 0n, 0.0)}
 
 def gm(m: Mu) -> Mu & Bool:
   match m:
     case Mu{tb, lib, +ix, +lk, +sq, +song, +last, smp}:
       (Mu{tb, lib, ix, lk, sq, song, last, smp}, isgm(lk))
+
+def form(m: Mu) -> Mu & U32:
+  match m:
+    case Mu{tb, lib, +ix, +lk, +sq, +song, +last, smp}:
+      (Mu{tb, lib, ix, lk, sq, song, last, smp}, Bool.pick(U32, isgm(lk), 2, o3(lk)))
 
 def clips(xs: List<&2, U32>) -> List<&2, U32>:
   match xs:
