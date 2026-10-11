@@ -119,7 +119,7 @@ type Tm is Data:
   Tm{thing: U32, flags: U32, x: U32, y: U32, top: U32, bottom: U32, left: U32, right: U32, floorz: U32, ceilz: U32, dropoff: U32, floatok: U32, ceilline: U32, spechit: List<&2,U32>, mo: U32, best: U32, second: U32, bestline: U32, secondline: U32, xmove: U32, ymove: U32, crush: U32, nofit: U32, trx: U32, try: U32, trdx: U32, trdy: U32, ins: List<&2,Icpt>, otop: U32, obottom: U32, orange: U32, olow: U32, ok: U32, sz: U32, tops: U32, bots: U32, t2x: U32, t2y: U32, range: U32, aim: U32, shootz: U32, shooter: U32, ltarget: U32, ladmg: U32, bspot: U32, bsrc: U32, bdmg: U32, corpse: U32, vx: U32, vy: U32, sx: U32, sy: U32, sdx: U32, sdy: U32, nil: List<&2,Tm>}
 
 type Lvl is Data:
-  Lvl{lines: T.Vec<RLine>, seclines: T.Vec<List<&2,U32>>, secbox: T.Vec<U32>, bmap: T.Vec<U32>, ox: U32, oy: U32, bw: U32, bh: U32, mi: T.Vec<U32>, st: T.Vec<U32>, tb: V.Tabs, anims: List<&2,Anim>, switches: T.Vec<U32>, nswitch: U32, scrolls: List<&2,U32>, tex0: T.Vec<M.Info>, flat0: T.Vec<U32>, theights: T.Vec<U32>, nsec: U32, nlines: U32, commercial: Bool, episode: U32, map: U32, things: T.Vec<L.Thing>, rndt: T.Vec<U32>, skill: U32, subsec: T.Vec<U32>, xtab: T.Vec<U32>, utab: T.Vec<U32>, reject: T.Vec<U32>, segline: T.Vec<U32>, hud: T.Vec<U32>, nil: List<&2,Lvl>}
+  Lvl{lines: T.Vec<RLine>, seclines: T.Vec<List<&2,U32>>, secbox: T.Vec<U32>, bmap: T.Vec<U32>, ox: U32, oy: U32, bw: U32, bh: U32, mi: T.Vec<U32>, st: T.Vec<U32>, tb: V.Tabs, anims: List<&2,Anim>, switches: T.Vec<U32>, nswitch: U32, scrolls: List<&2,U32>, tex0: T.Vec<M.Info>, flat0: T.Vec<U32>, theights: T.Vec<U32>, nsec: U32, nlines: U32, commercial: Bool, episode: U32, map: U32, things: T.Vec<L.Thing>, rndt: T.Vec<U32>, skill: U32, subsec: T.Vec<U32>, xtab: T.Vec<U32>, utab: T.Vec<U32>, reject: T.Vec<U32>, segline: T.Vec<U32>, hud: T.Vec<U32>, gtex: T.Vec<U32>, gflat: T.Vec<U32>, nil: List<&2,Lvl>}
 
 type Sim is Data:
   Sim{w: R.World, mp: Lvl, lspec: T.Vec<U32>, links: T.Vec<U32>, valid: T.Vec<U32>, vc: U32, ths: T.Vec<Th>, tn: T.Vec<U32>, tp: T.Vec<U32>, free: List<&2,U32>, next: U32, pl: T.Vec<U32>, time: U32, rnd: U32, plats: T.Vec<U32>, ceils: T.Vec<U32>, buttons: T.Vec<U32>, exit: U32, tm: Tm, kills: U32, items: U32, secrets: U32, halt: U32, ret: U32, secv: T.Vec<U32>, sndt: T.Vec<U32>, sndn: T.Vec<U32>, brains: T.Vec<U32>, nbrain: U32, brainon: U32, easy: U32, snd: List<&2,U32>, tic: U32, mrnd: U32, wipe: U32, stface: U32, stcount: U32, stprio: U32, stlad: U32, stold: U32, stpainh: U32, stpainc: U32, stweap: U32, strnd: U32, hmsg: U32, hcount: U32, gs: U32, act: U32, ui: T.Vec<U32>, seen: T.Vec<U32>, cp: U32, ingame: U32, net: U32, starts: T.Vec<U32>, bodyq: T.Vec<U32>, bodyn: U32, demo: T.Vec<U32>, dpos: U32, saves: T.Vec<U32>, nil: List<&2,Sim>}
@@ -676,168 +676,178 @@ def tmr.nil.set(r: Tm, v: List<&2,Tm>) -> Tm:
 
 def mpr.lines(+r: Lvl) -> T.Vec<RLine>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x0
 
 def mpr.seclines(+r: Lvl) -> T.Vec<List<&2,U32>>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x1
 
 def mpr.secbox(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x2
 
 def mpr.bmap(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x3
 
 def mpr.ox(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x4
 
 def mpr.oy(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x5
 
 def mpr.bw(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x6
 
 def mpr.bh(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x7
 
 def mpr.mi(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x8
 
 def mpr.st(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x9
 
 def mpr.tb(+r: Lvl) -> V.Tabs:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x10
 
 def mpr.anims(+r: Lvl) -> List<&2,Anim>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x11
 
 def mpr.switches(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x12
 
 def mpr.nswitch(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x13
 
 def mpr.scrolls(+r: Lvl) -> List<&2,U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x14
 
 def mpr.tex0(+r: Lvl) -> T.Vec<M.Info>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x15
 
 def mpr.flat0(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x16
 
 def mpr.theights(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x17
 
 def mpr.nsec(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x18
 
 def mpr.nlines(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x19
 
 def mpr.commercial(+r: Lvl) -> Bool:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x20
 
 def mpr.episode(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x21
 
 def mpr.map(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x22
 
 def mpr.things(+r: Lvl) -> T.Vec<L.Thing>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x23
 
 def mpr.rndt(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x24
 
 def mpr.skill(+r: Lvl) -> U32:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x25
 
 def mpr.subsec(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x26
 
 def mpr.xtab(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x27
 
 def mpr.utab(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x28
 
 def mpr.reject(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x29
 
 def mpr.segline(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x30
 
 def mpr.hud(+r: Lvl) -> T.Vec<U32>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
       x31
+
+def mpr.gtex(+r: Lvl) -> T.Vec<U32>:
+  match r:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
+      x32
+
+def mpr.gflat(+r: Lvl) -> T.Vec<U32>:
+  match r:
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
+      x33
 
 def mpr.nil(+r: Lvl) -> List<&2,Lvl>:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
-      x32
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
+      x34
 
 def sim.w(+r: Sim) -> R.World:
   match r:
@@ -1865,13 +1875,19 @@ def mp.segline(+g: Sim) -> T.Vec<U32>:
 def mp.hud(+g: Sim) -> T.Vec<U32>:
   mpr.hud(sim.mp(g))
 
+def mp.gtex(+g: Sim) -> T.Vec<U32>:
+  mpr.gtex(sim.mp(g))
+
+def mp.gflat(+g: Sim) -> T.Vec<U32>:
+  mpr.gflat(sim.mp(g))
+
 def mp.nil(+g: Sim) -> List<&2,Lvl>:
   mpr.nil(sim.mp(g))
 
 def mpr.tb.set(r: Lvl, v: V.Tabs) -> Lvl:
   match r:
-    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}:
-      Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, v, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32}
+    case Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}:
+      Lvl{x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, v, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34}
 
 def mp.tb.set(+g: Sim, v: V.Tabs) -> Sim:
   sim.mp.set(g, mpr.tb.set(sim.mp(g), v))

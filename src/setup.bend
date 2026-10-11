@@ -205,7 +205,7 @@ def fast.info(+sk: U32, +mi: T.Vec<U32>) -> T.Vec<U32>:
 
 def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>, +sk: U32) -> S.Lvl:
   match lv t:
-    case L.Level{+name, +th, +li, +si, +ve, +se, ss, no, +sc, +rj, +bm} D.Texs{+names, ts, sky, +fl, fd, +hs, +ta, +fa, +sw, +tbs, +fbs}:
+    case L.Level{+name, +th, +li, +si, +ve, +se, ss, no, +sc, +rj, +bm} D.Texs{+names, ts, sky, +fl, fd, +hs, +ta, +fa, +sw, +tbs, +fbs, +gt, +gf}:
       +nl = T.size(L.Line, li)
       +ns = T.size(L.Sector, sc)
       +ls = T.from_list(S.RLine, rlines(U32.to_nat(nl), li, ve, si, 0))
@@ -222,7 +222,7 @@ def lvl(+lv: L.Level, +t: D.Texs, +w: R.World, +tb: V.Tabs, +hud: T.Vec<U32>, +s
         R.texs(w), R.flats(w), T.from_list(U32, hs), ns, nl, com, episode(name), mapnum(name), th, X.rndtable(), sk,
         T.from_list(U32, subsecs(U32.to_nat(T.size(L.Sub, R.subs(w))), w, 0)),
         T.from_list(U32, O.crosstab()), T.from_list(U32, O.usetab()),
-        rj, T.from_list(U32, seglines(U32.to_nat(T.size(L.Seg, se)), se, 0)), hud, []}
+        rj, T.from_list(U32, seglines(U32.to_nat(T.size(L.Seg, se)), se, 0)), hud, T.from_list(U32, gt), T.from_list(U32, gf), []}
 
 def skynum(+lv: L.Level, +sky: U32) -> U32:
   match lv:

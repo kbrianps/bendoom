@@ -6,7 +6,7 @@ import ./level.bend as L
 import ./gfx.bend as G
 
 type Texs is Data:
-  Texs{names: List<&2, String>, texs: List<&2, G.Tex>, sky: String, flats: List<&2, String>, flatdata: List<&2, List<&2, U32>>, heights: List<&2, U32>, tanims: List<&2, List<&2, String>>, fanims: List<&2, List<&2, String>>, switches: List<&2, String>, tbases: List<&2, U32>, fbases: List<&2, U32>}
+  Texs{names: List<&2, String>, texs: List<&2, G.Tex>, sky: String, flats: List<&2, String>, flatdata: List<&2, List<&2, U32>>, heights: List<&2, U32>, tanims: List<&2, List<&2, String>>, fanims: List<&2, List<&2, String>>, switches: List<&2, String>, tbases: List<&2, U32>, fbases: List<&2, U32>, gtex: List<&2, U32>, gflat: List<&2, U32>}
 
 def has(xs: List<&2, String>, +s: String) -> Bool:
   match xs:
@@ -264,15 +264,22 @@ def heights(+defs: List<&2, G.TexDef>, names: List<&2, String>) -> List<&2, U32>
     case []:
       []
 
-def textures.flats(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, +hs: List<&2, U32>, +tr: List<&2, List<&2, String>>, +fr: List<&2, List<&2, String>>, +sw: List<&2, String>, +tb: List<&2, U32>, +fb: List<&2, U32>, ts: List<&2, G.Tex>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
+def textures.flats(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, +hs: List<&2, U32>, +tr: List<&2, List<&2, String>>, +fr: List<&2, List<&2, String>>, +sw: List<&2, String>, +tb: List<&2, U32>, +fb: List<&2, U32>, +gt: List<&2, U32>, +gf: List<&2, U32>, ts: List<&2, G.Tex>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
   (w, fds) = p
-  IO.pure(W.Wad & Texs, (w, Texs{names, ts, sky, fl, fds, hs, tr, fr, sw, tb, fb}))
+  IO.pure(W.Wad & Texs, (w, Texs{names, ts, sky, fl, fds, hs, tr, fr, sw, tb, fb, gt, gf}))
 
-def textures.fin(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, +hs: List<&2, U32>, +tr: List<&2, List<&2, String>>, +fr: List<&2, List<&2, String>>, +sw: List<&2, String>, +tb: List<&2, U32>, +fb: List<&2, U32>, r: W.Wad & List<&2, G.Tex>) -> IO(W.Wad & Texs):
+def textures.fin(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, +hs: List<&2, U32>, +tr: List<&2, List<&2, String>>, +fr: List<&2, List<&2, String>>, +sw: List<&2, String>, +tb: List<&2, U32>, +fb: List<&2, U32>, +gt: List<&2, U32>, +gf: List<&2, U32>, r: W.Wad & List<&2, G.Tex>) -> IO(W.Wad & Texs):
   (w, ts) = r
-  IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Texs, W.get(w, fl), p => textures.flats(names, sky, fl, hs, tr, fr, sw, tb, fb, ts, p))
+  IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Texs, W.get(w, fl), p => textures.flats(names, sky, fl, hs, tr, fr, sw, tb, fb, gt, gf, ts, p))
 
-def textures.with(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, w: W.Wad, +pn: T.Vec<String>, +defs: List<&2, G.TexDef>) -> IO(W.Wad & Texs):
+def gnums(xs: List<&2, String>, +order: List<&2, String>) -> List<&2, U32>:
+  match xs:
+    case +x <> t:
+      pos(order, x, 0) <> gnums(t, order)
+    case []:
+      []
+
+def textures.with(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, +gf: List<&2, U32>, w: W.Wad, +pn: T.Vec<String>, +defs: List<&2, G.TexDef>) -> IO(W.Wad & Texs):
   +skip = first(defs)
   +names0 = List.reverse(&2, String, add(skip, needed(U32.to_nat(T.size(L.Side, sides)), sides, 0, skip, []), sky))
   +order = defnames(defs)
@@ -281,18 +288,19 @@ def textures.with(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +f
   +sw = pairs(switchdefs(com), order, names0)
   +names = extend(skip, names0, List.append(&2, String, concat(tr), sw))
   +hs = heights(defs, skip <> names)
-  IO.bind(W.Wad & List<&2, G.Tex>, W.Wad & Texs, built(names, w, defs, pn, mk), r => textures.fin(names, sky, fl, hs, tr, fr, sw, tb, fb, r))
+  +gt = List.append(&2, U32, [0], gnums(names, order))
+  IO.bind(W.Wad & List<&2, G.Tex>, W.Wad & Texs, built(names, w, defs, pn, mk), r => textures.fin(names, sky, fl, hs, tr, fr, sw, tb, fb, gt, gf, r))
 
-def textures.parts(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, w: W.Wad, bss: List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
+def textures.parts(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, +gf: List<&2, U32>, w: W.Wad, bss: List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
   match bss:
     case pn <> t1 <> t2 <> t:
-      textures.with(sides, mk, sky, fl, fr, fb, com, w, T.from_list(String, G.pnames(List.drop(&2, U32, B.words(pn), 2n))), List.append(&2, G.TexDef, G.texdefs(t1), G.texdefs(t2)))
+      textures.with(sides, mk, sky, fl, fr, fb, com, gf, w, T.from_list(String, G.pnames(List.drop(&2, U32, B.words(pn), 2n))), List.append(&2, G.TexDef, G.texdefs(t1), G.texdefs(t2)))
     case _:
       IO.die(W.Wad & Texs, 1, "no PNAMES or TEXTURE1")
 
-def textures.got(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, p: W.Wad & List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
+def textures.got(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, +gf: List<&2, U32>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
   (w, bss) = p
-  textures.parts(sides, mk, sky, fl, fr, fb, com, w, bss)
+  textures.parts(sides, mk, sky, fl, fr, fb, com, gf, w, bss)
 
 def textures.of(+si: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl0: List<&2, String>, +com: Bool, r: W.Wad & List<&2, W.Lump>) -> IO(W.Wad & Texs):
   (w, fls) = r
@@ -300,7 +308,8 @@ def textures.of(+si: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl0: L
   +fr = ranges(fanimdefs(), lns, fl0)
   +fb = bases(fanimdefs(), lns, fl0)
   +fl = extend("F_SKY1", fl0, concat(fr))
-  IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Texs, W.get(w, ["PNAMES", "TEXTURE1", "TEXTURE2"]), p => textures.got(si, mk, sky, fl, fr, fb, com, p))
+  +gf = List.append(&2, U32, gnums(fl, lns), [pos(lns, "F_SKY1", 0)])
+  IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Texs, W.get(w, ["PNAMES", "TEXTURE1", "TEXTURE2"]), p => textures.got(si, mk, sky, fl, fr, fb, com, gf, p))
 
 def textures(w: W.Wad, +lv: L.Level, +skyn: U32) -> IO(W.Wad & Texs):
   match lv:

@@ -43,7 +43,7 @@ def hudaddrs(hbs: List<&2, List<&2, U32>>, +at: U32) -> List<&2, U32>:
 
 def assemble(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +hbs: List<&2, List<&2, U32>>, +mode: U32, +pl: T.Vec<U32>, +cv: T.Vec<U32>) -> S.Sim & Array<U32>:
   match t:
-    case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw, tbs, fbs}:
+    case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw, tbs, fbs, gt, gf}:
       +tb = V.tabs()
       +ly = O.layout(ts, fd)
       +w0 = R.build(lv, t, ly, frames(sp))
@@ -58,7 +58,7 @@ def assemble(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +
 
 def spritebase(+t: D.Texs) -> U32:
   match t:
-    case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw, tbs, fbs}:
+    case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw, tbs, fbs, gt, gf}:
       (O.texs.end(ts, M.texbase()) + 4096 * U32.from_nat(List.length(&2, List<&2, U32>, fd)) : U32)
 
 def hudded(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +mode: U32, +pl: T.Vec<U32>, +cv: T.Vec<U32>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):

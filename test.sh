@@ -116,6 +116,16 @@ pwad "E1M4 loaded over E1M1, frame 300 as the reference draws it" e1m4.wad c160f
 pwad "E1M1 with ZDoom compressed nodes plays as with the original nodes" znod.wad 608671ffca4c76c4fc7d2164f4dc90cd4fc80ec32b12756a1af05568e30a2ec3 "40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3" pwad.out
 pwad "E1M1 with ZDoom extended nodes draws as with the original nodes" xnod.wad 11d7119724f8c49dcf7ca7d1961600f5934f6aeabfcb3322a7e4e76d66c3cb7f "40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3" xn330.bmp 330 "$TMP/xn330.bmp"
 
+IWAD="$PWD/$WADS/freedoom1.wad"
+mkdir -p "$TMP/sv" &&
+  python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3 &&
+  (cd "$TMP/sv" && "$TMP/demo" "$IWAD" E1M1 "$TMP/demo.lmp" savegame 200 >/dev/null) &&
+  echo "486c825704c9c8585453319cf0da37959f787a0f81e31ca9dacebf1b1973fdb6  $TMP/sv/doomsav0.dsg" | sha256sum -c --quiet &&
+  ok "save: E1M1 pistol fight saved at tic 200 in vanilla's .dsg layout" || bad "save: E1M1 pistol fight at tic 200"
+(cd "$TMP/sv" && "$TMP/demo" "$IWAD" E1M1 title loadgame | head -200 > "$TMP/load.out") || true
+echo "ba568e70c5799928045fc94c545acefb404ac015586877bbabbd4358b654ef05  $TMP/load.out" | sha256sum -c --quiet &&
+  ok "load: that save plays on as the reference engine plays its own save, tic by tic" || bad "load: E1M1 save from tic 200"
+
 frame() {
   local name=$1 wad=$2 ep=$3 map=$4 lump=$5 file=$6 sha=$7 segs=$8; shift 8
   python3 tests/mklmp.py "$TMP/demo.lmp" "$ep" "$map" $segs &&

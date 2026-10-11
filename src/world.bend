@@ -113,7 +113,7 @@ def rsectors(n: Nat, +secs: T.Vec<L.Sector>, +fs: List<&2, String>, +i: U32) -> 
 
 def build(lv: L.Level, t: D.Texs, ly: M.Layout, +fm: T.Vec<P.SFrame>) -> World:
   match lv t ly:
-    case L.Level{n, th, +li, +si, +ve, +se, +ss, +no, +sc, rj, bm} D.Texs{+names, ts, +sky, +fl, fd, hs, ta, fa, sw, tbs, fbs} M.Layout{+infos, +bases, size}:
+    case L.Level{n, th, +li, +si, +ve, +se, +ss, +no, +sc, rj, bm} D.Texs{+names, ts, +sky, +fl, fd, hs, ta, fa, sw, tbs, fbs, gt, gf} M.Layout{+infos, +bases, size}:
       +tv = T.from_list(M.Info, infos)
       World{
         T.from_list(RSide, rsides(U32.to_nat(T.size(L.Side, si)), si, names, 0)),

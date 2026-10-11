@@ -179,11 +179,14 @@ def play.go?(quit: Bool, load: Bool, +g: S.Sim, rom: Array<U32>, +path: String, 
     case False{} False{}:
       play.tic(fire(ks, g, gt), rom, path, gt, at, out, ex, all)
 
+def disk.save(+g: S.Sim, +t: U32) -> S.Sim:
+  C.when(Bool.and(U32.is_ne(t, 0), Bool.and(U32.is_eq(S.sim.gs(g), 0), U32.is_eq(S.sim.time(g), t))), g, +h => U.ui.set(S.sim.act.set(h, 7), 90, 0))
+
 def play.tic?(fk: Fk, rom: Array<U32>, +path: String, +gt: U32, +at: U32, +out: String, +ex: U32, +all: U32) -> IO(Unit):
   match fk:
     case Fk{+g, ks1}:
       +g0 = C.when(Bool.and(U32.is_ne((all .&. 1 : U32), 0), Bool.and(U32.is_eq(S.sim.gs(g), 0), U32.is_eq(S.sim.time(g), 0))), g, +h => give(h))
-      +g1 = stop(exits(Q.tick(g0), ex), gt, at)
+      +g1 = disk.save(stop(exits(Q.tick(g0), ex), gt, at), (all >> 3n : U32))
       +gt1 = (gt + 1 : U32)
       do IO<Unit>:
         play.trace(Bool.and(U32.is_eq(S.sim.gs(g1), 0), Bool.not(Q.quit(g1))), U32.is_ne((all .&. 2 : U32), 0), g1)
@@ -237,7 +240,8 @@ def loaded(+all: Opts, +path: String, name: String, r: File & Result<&1, &1, U32
 
 def titled.go?(+all: U32, +at: U32, +out: String, +ex: U32, ks: List<&2, U32>, +path: String, p: S.Sim & Array<U32>) -> IO(Unit):
   (+g, rom) = p
-  play(Q.boot.title(U.ui.set(g, 168, 1)), rom, path, 0, at, out, ex, ks, all)
+  +g1 = Q.boot.title(U.ui.set(g, 168, 1))
+  play(C.when(U32.is_ne((all .&. 4 : U32), 0), g1, +h => U.ui.set(U.ui.set(S.sim.act.set(h, 6), 90, 0), 125, 0)), rom, path, 0, at, out, ex, ks, all)
 
 def titled?(+o: Opts, +path: String, p: S.Sim & Array<U32>) -> IO(Unit):
   match o:
@@ -269,9 +273,20 @@ def num(+x: String) -> U32:
 def opts?(xs: List<String>, +o: Opts) -> Opts:
   match xs o:
     case +x <> +t Opts{+all, +at, +out, +ex, +ks}:
-      opts.one(String.eq(x, "give"), String.eq(x, "exit"), String.eq(x, "secret"), x, t, Bool.pick(U32, String.eq(x, "sound"), (all .|. 2 : U32), all), at, out, ex, ks)
+      opts.disk(String.eq(x, "loadgame"), String.eq(x, "savegame"), x, t, Bool.pick(U32, String.eq(x, "sound"), (all .|. 2 : U32), all), at, out, ex, ks)
     case [] _:
       o
+
+def opts.disk?(load: Bool, save: Bool, +x: String, t: List<String>, +all: U32, +at: U32, +out: String, +ex: U32, +ks: List<&2, U32>) -> Opts:
+  match load save t:
+    case True{} _ r:
+      opts(r, Opts{(all .|. 4 : U32), at, out, ex, ks})
+    case False{} True{} n <> r:
+      opts(r, Opts{(all .|. (num(n) << 3n) : U32), at, out, ex, ks})
+    case False{} False{} r:
+      opts.one(String.eq(x, "give"), String.eq(x, "exit"), String.eq(x, "secret"), x, r, all, at, out, ex, ks)
+    case _ _ _:
+      Opts{all, at, out, ex, ks}
 
 def opts.keys?(xs: List<String>, +o: Opts) -> Opts:
   match xs o:
@@ -320,7 +335,7 @@ def args(xs: List<String>) -> IO(Unit):
     case prog <> path <> name <> lmp <> t:
       run(opts(t, Opts{0, 4294967295, "", 0, []}), path, name, lmp)
     case _:
-      IO.die(Unit, 2, "usage: demo FILE.wad [-file PWAD.wad ...] MAP DEMO.lmp [give] [exit TIC] [secret TIC] [every N PREFIX] [keys TIC CODE DOWN ... end] [sound] [TIC OUT.bmp]")
+      IO.die(Unit, 2, "usage: demo FILE.wad [-file PWAD.wad ...] MAP DEMO.lmp [give] [exit TIC] [secret TIC] [every N PREFIX] [keys TIC CODE DOWN ... end] [sound] [savegame TIC] [loadgame] [TIC OUT.bmp]")
 
 def main() -> IO(Unit):
   do IO<Unit>:
