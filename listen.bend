@@ -5,6 +5,7 @@ import ./src/boot.bend as B
 import ./src/flow.bend as Q
 import ./src/tab.bend as T
 import ./src/sound.bend as N
+import ./src/wad.bend as W
 
 def s16(+x: U32) -> U32:
   +v = (x - 1048576 : U32)
@@ -87,9 +88,9 @@ def args?(xs: List<String>) -> IO(Unit):
         r : File & Result<&1, &1, U32 & String, List<&2, U32>> <- File.read_at(f, 0, 4194304)
         loaded(path, name, out, r)
     case _:
-      IO.die(Unit, 2, "usage: listen FILE.wad MAP DEMO.lmp OUT.wav")
+      IO.die(Unit, 2, "usage: listen FILE.wad [-file PWAD.wad ...] [-soundfont FONT.sf2] MAP DEMO.lmp OUT.wav")
 
 def main() -> IO(Unit):
   do IO<Unit>:
     xs : List<String> <- IO.args()
-    args(xs)
+    args(W.cli(xs))

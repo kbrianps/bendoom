@@ -335,7 +335,7 @@ def args(xs: List<String>) -> IO(Unit):
     case prog <> path <> name <> lmp <> t:
       run(opts(t, Opts{0, 4294967295, "", 0, []}), path, name, lmp)
     case _:
-      IO.die(Unit, 2, "usage: demo FILE.wad [-file PWAD.wad ...] MAP DEMO.lmp [give] [exit TIC] [secret TIC] [every N PREFIX] [keys TIC CODE DOWN ... end] [sound] [savegame TIC] [loadgame] [TIC OUT.bmp]")
+      IO.die(Unit, 2, "usage: demo FILE.wad [-file PWAD.wad ...] [-soundfont FONT.sf2] MAP DEMO.lmp [give] [exit TIC] [secret TIC] [every N PREFIX] [keys TIC CODE DOWN ... end] [sound] [savegame TIC] [loadgame] [TIC OUT.bmp]")
 
 def main() -> IO(Unit):
   do IO<Unit>:

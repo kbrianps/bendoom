@@ -6,6 +6,8 @@ import ./hud.bend as U
 import ./mem.bend as M
 import ./wad.bend as W
 import ./opltab.bend as O
+import ./sf2.bend as G
+import ./gm.bend as Y
 
 type St is Data:
   St{ph: U32, eg: U32, gen: U32, out: U32}
@@ -26,7 +28,7 @@ type Dr is Data:
   Dr{vs: List<&2, V>, fr: List<&2, U32>, al: List<&2, U32>, cs: List<&2, Cn>, cur: U32, st: U32}
 
 type Lk is Data:
-  Lk{gm: T.Vec<U32>, fq: T.Vec<U32>, vm: T.Vec<U32>}
+  Lk{gm: T.Vec<U32>, fq: T.Vec<U32>, vm: T.Vec<U32>, ps: G.Bank}
 
 type E is Data:
   E{t: U32, e: U32}
@@ -260,18 +262,26 @@ def seg.next?(r: (List<&2, U32> & Array<U32>) & V, +ck: List<&2, U32>, t: List<&
 
 def gb(+lk: Lk, +ins: U32, +off: U32) -> U32:
   match lk:
-    case Lk{+gm, fq, vm}:
+    case Lk{+gm, fq, vm, ps}:
       T.get(U32, gm, (8 + ins * 36 + off : U32), 0)
 
 def vmt(+lk: Lk, +i: U32) -> U32:
   match lk:
-    case Lk{gm, fq, +vm}:
+    case Lk{gm, fq, +vm, ps}:
       T.get(U32, vm, i, 0)
 
 def fqc(+lk: Lk, +i: U32) -> U32:
   match lk:
-    case Lk{gm, +fq, vm}:
+    case Lk{gm, +fq, vm, ps}:
       T.get(U32, fq, i, 0)
+
+def lps(+lk: Lk) -> G.Bank:
+  match lk:
+    case Lk{gm, fq, vm, +ps}:
+      ps
+
+def isgm(+lk: Lk) -> Bool:
+  Bool.not(Y.empty(lps(lk)))
 
 def lget(+xs: List<&2, U32>, +i: U32) -> U32:
   match xs:
@@ -943,10 +953,9 @@ def mus.ev(+ty: U32, +ch: U32, +mc: U32, +bs: T.Vec<U32>, +p: U32, +w: U32, +vel
   Bool.pick(List<&2, E>, U32.is_eq(ty, 0), [E{w, pack((128 .|. ch : U32), (k .&. 127 : U32), 0)}],
     Bool.pick(List<&2, E>, U32.is_eq(ty, 1), [E{w, pack((144 .|. ch : U32), (k .&. 127 : U32), nv)}],
       Bool.pick(List<&2, E>, U32.is_eq(ty, 2), [E{w, pack((224 .|. ch : U32), (kw .&. 127 : U32), ((kw >> 7n) .&. 127 : U32))}],
-        Bool.pick(List<&2, E>, Bool.and(U32.is_eq(ty, 3), U32.is_eq(k, 11)), [E{w, pack((176 .|. ch : U32), 123, 0)}],
+        Bool.pick(List<&2, E>, Bool.and(U32.is_eq(ty, 3), Bool.and(U32.is_ge(k, 10), U32.is_le(k, 14))), [E{w, pack((176 .|. ch : U32), T.get(U32, T.from_list(U32, [120, 123, 126, 127, 121]), (k - 10 : U32), 0), 0)}],
           Bool.pick(List<&2, E>, U32.is_eq(ty, 4), Bool.pick(List<&2, E>, U32.is_eq(k, 0), [E{w, pack((192 .|. ch : U32), cv, 0)}],
-            Bool.pick(List<&2, E>, U32.is_eq(k, 3), [E{w, pack((176 .|. ch : U32), 7, cv)}],
-              Bool.pick(List<&2, E>, U32.is_eq(k, 4), [E{w, pack((176 .|. ch : U32), 10, cv)}], []))), [])))))
+            Bool.pick(List<&2, E>, U32.is_le(k, 9), [E{w, pack((176 .|. ch : U32), T.get(U32, T.from_list(U32, [0, 0, 1, 7, 10, 11, 91, 93, 64, 67]), k, 0), cv)}], [])), [])))))
 
 def mus.len(+ty: U32, +k: U32) -> U32:
   Bool.pick(U32, U32.is_eq(ty, 1), Bool.pick(U32, U32.is_ge(k, 128), 2, 1), Bool.pick(U32, U32.is_eq(ty, 4), 2, Bool.pick(U32, Bool.or(U32.is_eq(ty, 0), Bool.or(U32.is_eq(ty, 2), U32.is_eq(ty, 3))), 1, 0)))
@@ -1011,7 +1020,14 @@ def song(+bs: T.Vec<U32>) -> List<&2, E> & U32:
   song.pick(ismus, ismidi, bs)
 
 type Sq is Data:
-  Sq{dr: Dr, evs: List<&2, E>, all: List<&2, E>, lp: U32, end: U32, base: U32, now: U32, clk: U32, cfr: U32}
+  Sq{dr: Dr, evs: List<&2, E>, all: List<&2, E>, lp: U32, end: U32, base: U32, now: U32, clk: U32, cfr: U32, gs: Y.Syn}
+
+def empty(+evs: List<&2, E>) -> Bool:
+  match evs:
+    case x <> t:
+      False{}
+    case []:
+      True{}
 
 def due(+evs: List<&2, E>, +base: U32, +now: U32) -> Bool:
   match evs:
@@ -1022,28 +1038,28 @@ def due(+evs: List<&2, E>, +base: U32, +now: U32) -> Bool:
 
 def again(+sq: Sq) -> Bool:
   match sq:
-    case Sq{dr, +evs, all, +lp, +end, +base, +now, clk, cfr}:
-      Bool.and(U32.is_eq(U32.from_nat(List.length(&2, E, evs)), 0), Bool.and(U32.is_eq(lp, 1), U32.is_le((base + end + 55 : U32), now)))
+    case Sq{dr, +evs, all, +lp, +end, +base, +now, clk, cfr, gs}:
+      Bool.and(empty(evs), Bool.and(U32.is_eq(lp, 1), U32.is_le((base + end + 55 : U32), now)))
 
 def drain?(+lk: Lk, +sq: Sq) -> Sq:
   match sq:
-    case Sq{+dr, +evs, +all, +lp, +end, +base, +now, +clk, +cfr}:
-      drain.go(due(evs, base, now), again(sq), lk, dr, evs, all, lp, end, base, now, clk, cfr)
+    case Sq{+dr, +evs, +all, +lp, +end, +base, +now, +clk, +cfr, +gs}:
+      drain.go(due(evs, base, now), again(sq), lk, dr, evs, all, lp, end, base, now, clk, cfr, gs)
 
-def drain.go?(d: Bool, r: Bool, +lk: Lk, +dr: Dr, evs: List<&2, E>, +all: List<&2, E>, +lp: U32, +end: U32, +base: U32, +now: U32, +clk: U32, +cfr: U32) -> Sq:
+def drain.go?(d: Bool, r: Bool, +lk: Lk, +dr: Dr, evs: List<&2, E>, +all: List<&2, E>, +lp: U32, +end: U32, +base: U32, +now: U32, +clk: U32, +cfr: U32, +gs: Y.Syn) -> Sq:
   match d r evs:
     case True{} _ +x <> t:
-      drain(lk, Sq{ev(lk, dr, e.v(x)), t, all, lp, end, base, now, clk, cfr})
+      drain(lk, Sq{ev(lk, dr, e.v(x)), t, all, lp, end, base, now, clk, cfr, Y.ev(lps(lk), gs, e.v(x))})
     case False{} True{} xs:
-      drain(lk, Sq{restart(dr), all, all, lp, end, now, now, clk, cfr})
+      drain(lk, Sq{restart(dr), all, all, lp, end, now, now, clk, cfr, Y.restart(lps(lk), gs)})
     case _ _ xs:
-      Sq{dr, xs, all, lp, end, base, now, clk, cfr}
+      Sq{dr, xs, all, lp, end, base, now, clk, cfr, gs}
 
 def bound(+sq: Sq, +n: U32) -> U32:
   match sq:
-    case Sq{dr, +evs, all, +lp, +end, +base, +now, clk, cfr}:
+    case Sq{dr, +evs, all, +lp, +end, +base, +now, clk, cfr, gs}:
       +lim = (now + n : U32)
-      +ne = Bool.pick(U32, U32.is_eq(U32.from_nat(List.length(&2, E, evs)), 0), Bool.pick(U32, U32.is_eq(lp, 1), (base + end + 55 : U32), lim), (first(evs) + base : U32))
+      +ne = Bool.pick(U32, empty(evs), Bool.pick(U32, U32.is_eq(lp, 1), (base + end + 55 : U32), lim), (first(evs) + base : U32))
       (U32.min(lim, ne) - now : U32)
 
 def dr.vs(+d: Dr) -> List<&2, V>:
@@ -1053,7 +1069,7 @@ def dr.vs(+d: Dr) -> List<&2, V>:
 
 def sq.vs(+sq: Sq) -> List<&2, V>:
   match sq:
-    case Sq{+dr, evs, all, lp, end, base, now, clk, cfr}:
+    case Sq{+dr, evs, all, lp, end, base, now, clk, cfr, gs}:
       dr.vs(dr)
 
 def dr.setvs(+d: Dr, vs: List<&2, V>) -> Dr:
@@ -1063,18 +1079,28 @@ def dr.setvs(+d: Dr, vs: List<&2, V>) -> Dr:
 
 def sq.clock(+sq: Sq, c: U32 & U32) -> Sq:
   match sq:
-    case Sq{+dr, +evs, +all, +lp, +end, +base, +now, clk, cfr}:
+    case Sq{+dr, +evs, +all, +lp, +end, +base, +now, clk, cfr, +gs}:
       (+a, +b) = c
-      Sq{dr, evs, all, lp, end, base, now, a, b}
+      Sq{dr, evs, all, lp, end, base, now, a, b, gs}
 
 def sq.ran(+sq: Sq, +k: U32, vs: List<&2, V>) -> Sq:
   match sq:
-    case Sq{+dr, +evs, +all, +lp, +end, +base, +now, +clk, +cfr}:
-      sq.clock(Sq{dr.setvs(dr, vs), evs, all, lp, end, base, (now + k : U32), clk, cfr}, clock.at(U32.to_nat(k), clk, cfr))
+    case Sq{+dr, +evs, +all, +lp, +end, +base, +now, +clk, +cfr, +gs}:
+      sq.clock(Sq{dr.setvs(dr, vs), evs, all, lp, end, base, (now + k : U32), clk, cfr, gs}, clock.at(U32.to_nat(k), clk, cfr))
+
+def sq.gs(+sq: Sq) -> Y.Syn:
+  match sq:
+    case Sq{dr, evs, all, lp, end, base, now, clk, cfr, +gs}:
+      gs
+
+def sq.gran(+sq: Sq, +k: U32, +gs: Y.Syn) -> Sq:
+  match sq:
+    case Sq{+dr, +evs, +all, +lp, +end, +base, +now, +clk, +cfr, g0}:
+      Sq{dr, evs, all, lp, end, base, (now + k : U32), clk, cfr, gs}
 
 def sq.ck(+sq: Sq, +k: U32) -> List<&2, U32>:
   match sq:
-    case Sq{dr, evs, all, lp, end, base, now, +clk, +cfr}:
+    case Sq{dr, evs, all, lp, end, base, now, +clk, +cfr, gs}:
       clocks(U32.to_nat(k), clk, cfr)
 
 def run.seg?(+n: U32, +k: U32, +lk: Lk, +sq: Sq, out: List<&2, U32>, r: (List<&2, U32> & Array<U32>) & List<&2, V>) -> (Array<U32> & Sq) & List<&2, U32>:
@@ -1093,8 +1119,27 @@ def run.go?(stop: Bool, tb: Array<U32>, +n: U32, +lk: Lk, +sq: Sq, out: List<&2,
       +k = U32.max(bound(sq, n), 1)
       run.seg(n, k, lk, sq, out, seg(sq.vs(sq), zeros(U32.to_nat(k)), tb, sq.ck(sq, k)))
 
+def grun.seg2?(+n: U32, +k: U32, +lk: Lk, +sq: Sq, out: List<&2, U32>, acc: List<&2, U32>, p: Array<F32> & Y.Syn) -> (Array<F32> & Sq) & List<&2, U32>:
+  (smp, +gs) = p
+  grun(smp, (n - k : U32), lk, sq.gran(sq, k, gs), List.append(&2, U32, out, acc))
+
+def grun.seg?(+n: U32, +k: U32, +lk: Lk, +sq: Sq, out: List<&2, U32>, r: (Array<F32> & Y.Syn) & List<&2, U32>) -> (Array<F32> & Sq) & List<&2, U32>:
+  (p, acc) = r
+  grun.seg2(n, k, lk, sq, out, acc, p)
+
+def grun?(smp: Array<F32>, +n: U32, +lk: Lk, +sq: Sq, out: List<&2, U32>) -> (Array<F32> & Sq) & List<&2, U32>:
+  grun.go(U32.is_eq(n, 0), smp, n, lk, drain(lk, sq), out)
+
+def grun.go?(stop: Bool, smp: Array<F32>, +n: U32, +lk: Lk, +sq: Sq, out: List<&2, U32>) -> (Array<F32> & Sq) & List<&2, U32>:
+  match stop:
+    case True{}:
+      ((smp, sq), out)
+    case False{}:
+      +k = U32.max(bound(sq, n), 1)
+      grun.seg(n, k, lk, sq, out, Y.render(sq.gs(sq), smp, k))
+
 type Mu is Type:
-  Mu{tb: Array<U32>, lib: Array<U32>, ix: T.Vec<U32>, lk: Lk, sq: Sq, song: U32, last: U32}
+  Mu{tb: Array<U32>, lib: Array<U32>, ix: T.Vec<U32>, lk: Lk, sq: Sq, song: U32, last: U32, smp: Array<F32>}
 
 def names() -> List<&2, String>:
   ["D_E1M1", "D_E1M2", "D_E1M3", "D_E1M4", "D_E1M5", "D_E1M6", "D_E1M7", "D_E1M8", "D_E1M9",
@@ -1143,37 +1188,37 @@ def offall(n: Nat, +d: Dr, +i: U32) -> Dr:
     case 1n+p:
       offall(p, release(d, i, True{}, 0), (i + 1 : U32))
 
-def sq.start(+sq: Sq, +lp: U32, r: List<&2, E> & U32) -> Sq:
+def sq.start(+lk: Lk, +sq: Sq, +lp: U32, r: List<&2, E> & U32) -> Sq:
   match sq:
-    case Sq{+dr, evs, all, olp, end, base, +now, +clk, +cfr}:
+    case Sq{+dr, evs, all, olp, end, base, +now, +clk, +cfr, +gs}:
       (+es, +e) = r
       +on = U32.is_ne(U32.from_nat(List.length(&2, E, es)), 0)
-      Sq{restart(offall(16n, dr, 0)), es, es, Bool.pick(U32, on, lp, 0), e, now, now, clk, cfr}
+      Sq{restart(offall(16n, dr, 0)), es, es, Bool.pick(U32, on, lp, 0), e, now, now, clk, cfr, Y.restart(lps(lk), gs)}
 
-def started(tb: Array<U32>, +ix: T.Vec<U32>, +lk: Lk, +sq: Sq, +id: U32, +lp: U32, +last: U32, r: Array<U32> & List<&2, U32>) -> Mu:
+def started(tb: Array<U32>, smp: Array<F32>, +ix: T.Vec<U32>, +lk: Lk, +sq: Sq, +id: U32, +lp: U32, +last: U32, r: Array<U32> & List<&2, U32>) -> Mu:
   (lib, +bs) = r
-  Mu{tb, lib, ix, lk, sq.start(sq, lp, song(T.from_list(U32, bs))), id, last}
+  Mu{tb, lib, ix, lk, sq.start(lk, sq, lp, song(T.from_list(U32, bs))), id, last, smp}
 
 def start(m: Mu, +id: U32, +lp: U32) -> Mu:
   match m:
-    case Mu{tb, lib, +ix, +lk, +sq, song, +last}:
+    case Mu{tb, lib, +ix, +lk, +sq, song, +last, smp}:
       +k = ((id - 1) * 2 : U32)
-      started(tb, ix, lk, sq, id, lp, last, take(U32.to_nat(T.get(U32, ix, (k + 1 : U32), 0)), lib, T.get(U32, ix, k, 0)))
+      started(tb, smp, ix, lk, sq, id, lp, last, take(U32.to_nat(T.get(U32, ix, (k + 1 : U32), 0)), lib, T.get(U32, ix, k, 0)))
 
 def mu.song(m: Mu) -> Mu & U32:
   match m:
-    case Mu{tb, lib, +ix, +lk, +sq, +song, +last}:
-      (Mu{tb, lib, ix, lk, sq, song, last}, song)
+    case Mu{tb, lib, +ix, +lk, +sq, +song, +last, smp}:
+      (Mu{tb, lib, ix, lk, sq, song, last, smp}, song)
 
 def sq.vol(+lk: Lk, +sq: Sq, +v: U32) -> Sq:
   match sq:
-    case Sq{+dr, +evs, +all, +lp, +end, +base, +now, +clk, +cfr}:
-      Sq{setvol(lk, dr, v), evs, all, lp, end, base, now, clk, cfr}
+    case Sq{+dr, +evs, +all, +lp, +end, +base, +now, +clk, +cfr, +gs}:
+      Sq{setvol(lk, dr, v), evs, all, lp, end, base, now, clk, cfr, Y.syn.vol.set(gs, v)}
 
 def mu.vol(m: Mu, +v: U32) -> Mu:
   match m:
-    case Mu{tb, lib, +ix, +lk, +sq, +song, +last}:
-      Mu{tb, lib, ix, lk, sq.vol(lk, sq, v), song, last}
+    case Mu{tb, lib, +ix, +lk, +sq, +song, +last, smp}:
+      Mu{tb, lib, ix, lk, sq.vol(lk, sq, v), song, last, smp}
 
 def switch(go: Bool, m: Mu, +w: U32) -> Mu:
   match go:
@@ -1209,18 +1254,33 @@ def final(xs: List<&2, U32>, +last: U32) -> U32:
     case []:
       last
 
-def rendered2(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, +song: U32, +last: U32, p: Array<U32> & Sq, +out: List<&2, U32>) -> Mu & List<&2, U32>:
+def rendered2(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, smp: Array<F32>, +song: U32, +last: U32, p: Array<U32> & Sq, +out: List<&2, U32>) -> Mu & List<&2, U32>:
   (tb, +sq) = p
-  (Mu{tb, lib, ix, lk, sq, song, final(out, last)}, frames(out, last))
+  (Mu{tb, lib, ix, lk, sq, song, final(out, last), smp}, frames(out, last))
 
-def rendered(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, +song: U32, +last: U32, r: (Array<U32> & Sq) & List<&2, U32>) -> Mu & List<&2, U32>:
+def rendered(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, smp: Array<F32>, +song: U32, +last: U32, r: (Array<U32> & Sq) & List<&2, U32>) -> Mu & List<&2, U32>:
   (p, +out) = r
-  rendered2(ix, lk, lib, song, last, p, out)
+  rendered2(ix, lk, lib, smp, song, last, p, out)
+
+def grendered2(tb: Array<U32>, +ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, +song: U32, +last: U32, +out: List<&2, U32>, p: Array<F32> & Sq) -> Mu & List<&2, U32>:
+  (smp, +sq) = p
+  (Mu{tb, lib, ix, lk, sq, song, last, smp}, out)
+
+def grendered(tb: Array<U32>, +ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, +song: U32, +last: U32, r: (Array<F32> & Sq) & List<&2, U32>) -> Mu & List<&2, U32>:
+  (p, +out) = r
+  grendered2(tb, ix, lk, lib, song, last, out, p)
+
+def render.pick(gm: Bool, tb: Array<U32>, lib: Array<U32>, smp: Array<F32>, +ix: T.Vec<U32>, +lk: Lk, +sq: Sq, +song: U32, +last: U32) -> Mu & List<&2, U32>:
+  match gm:
+    case True{}:
+      grendered(tb, ix, lk, lib, song, last, grun(smp, 315, lk, sq, []))
+    case False{}:
+      rendered(ix, lk, lib, smp, song, last, run(tb, 315, lk, sq, []))
 
 def render(m: Mu) -> Mu & List<&2, U32>:
   match m:
-    case Mu{tb, lib, +ix, +lk, +sq, +song, +last}:
-      rendered(ix, lk, lib, song, last, run(tb, 315, lk, sq, []))
+    case Mu{tb, lib, +ix, +lk, +sq, +song, +last, smp}:
+      render.pick(isgm(lk), tb, lib, smp, ix, lk, sq, song, last)
 
 def mt() -> List<&2, U32>:
   [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 24, 24, 30, 30]
@@ -1238,7 +1298,7 @@ def driver(+cur: U32) -> Dr:
   Dr{[nov(), nov(), nov(), nov(), nov(), nov(), nov(), nov(), nov()], ids(), [], chans(16n, cur), cur, cur}
 
 def idle() -> Sq:
-  Sq{driver(64), [], [], 0, 0, 0, 0, 0, 0}
+  Sq{driver(64), [], [], 0, 0, 0, 0, 0, 0, Y.new()}
 
 def fill(bss: List<&2, List<&2, U32>>, a: Array<U32>, +at: U32, +idx: List<&2, U32>) -> Array<U32> & List<&2, U32>:
   match bss:
@@ -1255,37 +1315,59 @@ def total(+bss: List<&2, List<&2, U32>>) -> U32:
     case []:
       0
 
-def lk(+gm: List<&2, U32>) -> Lk:
-  Lk{T.from_list(U32, gm), T.from_list(U32, O.freq()), T.from_list(U32, O.vmt())}
+def lk(+gm: List<&2, U32>, +ps: G.Bank) -> Lk:
+  Lk{T.from_list(U32, gm), T.from_list(U32, O.freq()), T.from_list(U32, O.vmt()), ps}
 
-def built(+gm: List<&2, U32>, r: Array<U32> & List<&2, U32>) -> Mu:
+def built.font(+gm: List<&2, U32>, lib: Array<U32>, +idx: List<&2, U32>, f: G.Font) -> Mu:
+  match f:
+    case G.Font{smp, +bk, n}:
+      Mu{tables(), lib, T.from_list(U32, idx), lk(gm, bk), idle(), 0, 0, smp}
+
+def built(+gm: List<&2, U32>, f: G.Font, r: Array<U32> & List<&2, U32>) -> Mu:
   (lib, +idx) = r
-  Mu{tables(), lib, T.from_list(U32, idx), lk(gm), idle(), 0, 0}
+  built.font(gm, lib, idx, f)
 
-def build(+gm: List<&2, U32>, +bss: List<&2, List<&2, U32>>) -> Mu:
-  built(gm, fill(bss, Array.new(U32, M.depth((total(bss) + 1 : U32)), 0), 0, []))
+def build(+gm: List<&2, U32>, f: G.Font, +bss: List<&2, List<&2, U32>>) -> Mu:
+  built(gm, f, fill(bss, Array.new(U32, M.depth((total(bss) + 1 : U32)), 0), 0, []))
 
-def got.split(+bss: List<&2, List<&2, U32>>) -> Mu:
+def got.split(f: G.Font, +bss: List<&2, List<&2, U32>>) -> Mu:
   match bss:
     case +gm <> t:
-      build(gm, t)
+      build(gm, f, t)
     case []:
-      build([], [])
+      build([], f, [])
 
-def got(p: W.Wad & List<&2, List<&2, U32>>) -> IO(Mu):
+def got(f: G.Font, p: W.Wad & List<&2, List<&2, U32>>) -> IO(Mu):
   (w, bss) = p
   do IO<Mu>:
     W.close(w)
-    return got.split(bss)
+    return got.split(f, bss)
 
-def load(path: String) -> IO(Mu):
+def font.pick(+none: Bool, +path: String) -> IO(G.Font):
+  match none:
+    case True{}:
+      IO.pure(G.Font, G.empty())
+    case False{}:
+      G.load(path)
+
+def font(+path: String) -> IO(G.Font):
+  +p = W.font(path)
+  font.pick(String.eq(p, ""), p)
+
+def load(+path: String) -> IO(Mu):
   do IO<Mu>:
+    f : G.Font <- font(path)
     w : W.Wad <- W.open(path)
     p : W.Wad & List<&2, List<&2, U32>> <- W.get(w, "GENMIDI" <> names())
-    got(p)
+    got(f, p)
 
 def silent() -> Mu:
-  Mu{tables(), Array.new(U32, 0n, 0), T.from_list(U32, []), lk([]), idle(), 0, 0}
+  Mu{tables(), Array.new(U32, 0n, 0), T.from_list(U32, []), lk([], G.bank([])), idle(), 0, 0, Array.new(F32, 0n, 0.0)}
+
+def gm(m: Mu) -> Mu & Bool:
+  match m:
+    case Mu{tb, lib, +ix, +lk, +sq, +song, +last, smp}:
+      (Mu{tb, lib, ix, lk, sq, song, last, smp}, isgm(lk))
 
 def clips(xs: List<&2, U32>) -> List<&2, U32>:
   match xs:
@@ -1294,18 +1376,25 @@ def clips(xs: List<&2, U32>) -> List<&2, U32>:
     case []:
       []
 
-def raw.out(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, +song: U32, +last: U32, p: Array<U32> & Sq, +out: List<&2, U32>) -> Mu & List<&2, U32>:
+def raw.out(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, smp: Array<F32>, +song: U32, +last: U32, p: Array<U32> & Sq, +out: List<&2, U32>) -> Mu & List<&2, U32>:
   (tb, +sq) = p
-  (Mu{tb, lib, ix, lk, sq, song, last}, clips(out))
+  (Mu{tb, lib, ix, lk, sq, song, last, smp}, clips(out))
 
-def raw.got(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, +song: U32, +last: U32, r: (Array<U32> & Sq) & List<&2, U32>) -> Mu & List<&2, U32>:
+def raw.got(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, smp: Array<F32>, +song: U32, +last: U32, r: (Array<U32> & Sq) & List<&2, U32>) -> Mu & List<&2, U32>:
   (p, +out) = r
-  raw.out(ix, lk, lib, song, last, p, out)
+  raw.out(ix, lk, lib, smp, song, last, p, out)
+
+def raw.pick(gm: Bool, tb: Array<U32>, lib: Array<U32>, smp: Array<F32>, +ix: T.Vec<U32>, +lk: Lk, +sq: Sq, +song: U32, +last: U32) -> Mu & List<&2, U32>:
+  match gm:
+    case True{}:
+      grendered(tb, ix, lk, lib, song, last, grun(smp, 315, lk, sq, []))
+    case False{}:
+      raw.got(ix, lk, lib, smp, song, last, run(tb, 315, lk, sq, []))
 
 def raw(m: Mu) -> Mu & List<&2, U32>:
   match m:
-    case Mu{tb, lib, +ix, +lk, +sq, +song, +last}:
-      raw.got(ix, lk, lib, song, last, run(tb, 315, lk, sq, []))
+    case Mu{tb, lib, +ix, +lk, +sq, +song, +last, smp}:
+      raw.pick(isgm(lk), tb, lib, smp, ix, lk, sq, song, last)
 
 def find(xs: List<&2, String>, +name: String, +i: U32) -> U32:
   match xs:

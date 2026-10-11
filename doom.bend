@@ -57,7 +57,7 @@ def args(xs: List<String>) -> IO(Unit):
     case prog <> +path <> t:
       IO.bind(M.Sim & Array<U32>, Unit, B.first(path), s => play(path, True{}, s))
     case _:
-      IO.die(Unit, 2, "usage: doom FILE.wad [-file PWAD.wad ...] [MAP]")
+      IO.die(Unit, 2, "usage: doom FILE.wad [-file PWAD.wad ...] [-soundfont FONT.sf2] [MAP]")
 
 def main() -> IO(Unit):
   do IO<Unit>:

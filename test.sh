@@ -20,6 +20,13 @@ if [ ! -f "$CACHE/$FREEDOOM/freedoom1.wad" ]; then
   unzip -q -o "$CACHE/$FREEDOOM.zip" -d "$CACHE" || exit 1
 fi
 WADS="$CACHE/$FREEDOOM"
+SOUNDFONT="$CACHE/TimGM6mb.sf2"
+SOUNDFONT_SHA=82475b91a76de15cb28a104707d3247ba932e228bada3f47bba63c6b31aaf7a1
+if [ ! -f "$SOUNDFONT" ]; then
+  curl -fsSL -o "$SOUNDFONT" \
+    "https://raw.githubusercontent.com/craffel/pretty-midi/0.2.10/pretty_midi/TimGM6mb.sf2" || exit 1
+fi
+echo "$SOUNDFONT_SHA  $SOUNDFONT" | sha256sum -c --quiet || exit 1
 
 $BEND wadinfo.bend -o "$TMP/wadinfo" >/dev/null 2>&1 || { echo "build wadinfo failed"; exit 1; }
 $BEND automap.bend -o "$TMP/automap" >/dev/null 2>&1 || { echo "build automap failed"; exit 1; }
@@ -95,6 +102,17 @@ song() {
 song freedoom1 D_E1M1 10 78b9c6a66cb7c4e7ae16396d80b8b98338b7ce09b3eaca8a26e1fbca3c1bfcfe
 song freedoom1 D_INTER 80 16a078aab1e54868eac11c0a738b3634786249847e57143fdceaee0cbed2f113
 song freedoom2 D_RUNNIN 10 b9b50ec44823dcebe8c2939d1a4b86b4c03e0945c8ae0263d02b820e8de40516
+
+gmsong() {
+  local what=$1 wad=$2 lump=$3 secs=$4 sha=$5; shift 5
+  "$TMP/song" "$WADS/$wad.wad" "$@" -soundfont "$SOUNDFONT" "$lump" "$secs" "$TMP/gm.wav" &&
+    echo "$sha  $TMP/gm.wav" | sha256sum -c --quiet &&
+    ok "General MIDI: $secs seconds of $what" || bad "General MIDI: $what"
+}
+gmsong "D_E1M1" freedoom1 D_E1M1 10 71a5dcb2aec6d334f233fe6d6c8e167d4993088b114953de7fd73b47b4e30931
+gmsong "D_INTER, looping" freedoom1 D_INTER 80 045c8c42b80528de3d691737d95c87ab176393786c0dd043e76423f2a4e96f83
+python3 tests/mkmus.py "$WADS/freedoom1.wad" D_E1M1 "$TMP/mus.wad" &&
+  gmsong "D_E1M1 as a MUS lump" freedoom1 D_E1M1 20 5c0f8328571aba3e79457ef9990989ba65914758680ed8532acc868d0afa40a5 -file "$TMP/mus.wad" || bad "build the MUS PWAD"
 
 python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3 &&
   "$TMP/demo" "$WADS/freedoom1.wad" E1M1 "$TMP/demo.lmp" 330 "$TMP/frame.bmp" >/dev/null &&

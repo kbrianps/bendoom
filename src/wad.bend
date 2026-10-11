@@ -104,8 +104,28 @@ def open.paths(ps: List<&2, String>) -> IO(Wad):
     case []:
       IO.die(Wad, 2, "no WAD file")
 
+def sf2(+p: String) -> Bool:
+  String.ends_with(String.to_lower(p), ".sf2")
+
+def wads(ps: List<&2, String>) -> List<&2, String>:
+  match ps:
+    case +p <> +t:
+      Bool.pick(List<&2, String>, sf2(p), wads(t), p <> wads(t))
+    case []:
+      []
+
+def fonts(ps: List<&2, String>) -> String:
+  match ps:
+    case +p <> +t:
+      Bool.pick(String, sf2(p), p, fonts(t))
+    case []:
+      ""
+
+def font(+path: String) -> String:
+  fonts(String.split(path, '\n'))
+
 def open(path: String) -> IO(Wad):
-  open.paths(String.split(path, '\n'))
+  open.paths(wads(String.split(path, '\n')))
 
 def join(+iwad: String, +pwads: List<&2, String>) -> String:
   String.join(iwad <> pwads, "\n")
@@ -325,17 +345,26 @@ def cli.two?(pw: Bool, x: String, t: List<String>) -> List<&2, String> & List<St
     case False{}:
       cli.keep(x, cli.go(t, False{}))
 
-def cli.one?(flag: Bool, +pw: Bool, x: String, t: List<String>) -> List<&2, String> & List<String>:
-  match flag:
-    case True{}:
+def cli.sf?(t: List<String>) -> List<&2, String> & List<String>:
+  match t:
+    case y <> r:
+      cli.pw(y, cli.go(r, False{}))
+    case []:
+      ([], [])
+
+def cli.one?(flag: Bool, sf: Bool, +pw: Bool, x: String, t: List<String>) -> List<&2, String> & List<String>:
+  match flag sf:
+    case True{} _:
       cli.go(t, True{})
-    case False{}:
+    case False{} True{}:
+      cli.sf(t)
+    case False{} False{}:
       cli.two(pw, x, t)
 
 def cli.go?(xs: List<String>, +on: Bool) -> List<&2, String> & List<String>:
   match xs:
     case +x <> t:
-      cli.one(String.eq(x, "-file"), Bool.and(on, String.ends_with(String.to_lower(x), ".wad")), x, t)
+      cli.one(String.eq(x, "-file"), String.eq(x, "-soundfont"), Bool.and(on, String.ends_with(String.to_lower(x), ".wad")), x, t)
     case []:
       ([], [])
 
