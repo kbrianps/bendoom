@@ -2,6 +2,7 @@ import Base
 import ./src/wad.bend as W
 import ./src/level.bend as L
 import ./src/tab.bend as T
+import ./src/fixed.bend as F
 
 def mix(h: U32, v: U32) -> U32:
   (h * 31 + v : U32)
@@ -39,22 +40,25 @@ def side(h: U32, x: L.Side) -> U32:
 def vert(h: U32, x: L.Vertex) -> U32:
   match x:
     case L.Vertex{a, b}:
-      mix(mix(h, a), b)
+      mix(mix(h, F.sar(a, 16n)), F.sar(b, 16n))
 
 def seg(h: U32, x: L.Seg) -> U32:
   match x:
     case L.Seg{a, b, c, d, e, f}:
-      mix(mix(mix(mix(mix(mix(h, a), b), c), d), e), f)
+      mix(mix(mix(mix(mix(mix(h, a), b), (c >> 16n : U32)), d), e), F.sar(f, 16n))
 
 def sub(h: U32, x: L.Sub) -> U32:
   match x:
     case L.Sub{a, b}:
       mix(mix(h, a), b)
 
+def child(+c: U32) -> U32:
+  Bool.pick(U32, U32.is_eq((c .&. 2147483648 : U32), 0), c, (32768 .|. (c .&. 32767) : U32))
+
 def node(h: U32, x: L.Node) -> U32:
   match x:
     case L.Node{a, b, c, d, r, l, e, f}:
-      mix(mix(box(box(mix(mix(mix(mix(h, a), b), c), d), r), l), e), f)
+      mix(mix(box(box(mix(mix(mix(mix(h, a), b), c), d), r), l), child(e)), child(f))
 
 def sector(h: U32, x: L.Sector) -> U32:
   match x:
@@ -98,16 +102,16 @@ def each.next(p: W.Wad & L.Level, k: W.Wad -> IO(W.Wad)) -> IO(W.Wad):
 
 def each(ms: List<&2, W.Lump>, w: W.Wad) -> IO(W.Wad):
   match ms:
-    case W.Lump{n, at, size} <> t:
+    case W.Lump{n, at, size, k} <> t:
       IO.bind(W.Wad & L.Level, W.Wad, L.load(w, n), p => each.next(p, v => each(t, v)))
     case []:
       IO.pure(W.Wad, w)
 
 def run(w: W.Wad) -> IO(Unit):
   match w:
-    case W.Wad{f, +d}:
+    case W.Wad{f, m, +d}:
       do IO<Unit>:
-        w : W.Wad <- each(W.maps(d), W.Wad{f, d})
+        w : W.Wad <- each(W.maps(d), W.Wad{f, m, d})
         W.close(w)
 
 def args(xs: List<String>) -> IO(Unit):

@@ -883,7 +883,7 @@ def subsector.of(fr: Frame, +tb: Tabs, +w: R.World, +v: View, +s: L.Sub) -> Fram
       lines(U32.to_nat(n), addsprites(subsector.planes(fr, v, fs), tb, w, v, fi, sec.light(fs)), tb, w, v, fs, f)
 
 def subsector(fr: Frame, +tb: Tabs, +w: R.World, +v: View, +num: U32) -> Frame:
-  subsector.of(fr, tb, w, v, sub(w, Bool.pick(U32, U32.is_eq(num, 65535), 0, (num .&. 32767 : U32))))
+  subsector.of(fr, tb, w, v, sub(w, Bool.pick(U32, U32.is_eq(num, 4294967295), 0, (num .&. 2147483647 : U32))))
 
 def children(+back: Bool, +n: L.Node, rest: List<&2, Item>) -> List<&2, Item>:
   match n:
@@ -900,7 +900,7 @@ def visit(leaf: Bool, fr: Frame, +tb: Tabs, +w: R.World, +v: View, +num: U32, re
 def walk(n: Nat, st: St, +tb: Tabs, +w: R.World, +v: View) -> St:
   match n st:
     case 1n+p St{fr, Visit{+num} <> rest}:
-      walk(p, visit(Bool.not(U32.is_eq((num .&. 32768 : U32), 0)), fr, tb, w, v, num, rest), tb, w, v)
+      walk(p, visit(Bool.not(U32.is_eq((num .&. 2147483648 : U32), 0)), fr, tb, w, v, num, rest), tb, w, v)
     case 1n+p St{Frame{fb, rom, ram, +rs}, Check{num, +b} <> +rest}:
       walk(p, St{Frame{fb, rom, ram, rs}, Bool.pick(List<&2, Item>, bbox(tb, v, rs, b), Visit{num} <> rest, rest)}, tb, w, v)
     case _ s:
@@ -1124,7 +1124,7 @@ def locate(n: Nat, +w: R.World, +x: U32, +y: U32, +num: U32) -> U32:
     case 0n:
       num
     case 1n+p:
-      Bool.pick(U32, U32.is_eq((num .&. 32768 : U32), 0), locate(p, w, x, y, locate.child(side(View{x, y, 0, 0, 0, 0}, node(w, num)), node(w, num))), num)
+      Bool.pick(U32, U32.is_eq((num .&. 2147483648 : U32), 0), locate(p, w, x, y, locate.child(side(View{x, y, 0, 0, 0, 0}, node(w, num)), node(w, num))), num)
 
 def sector.floor(+s: R.RSector) -> U32:
   match s:
@@ -1137,7 +1137,7 @@ def sub.first(+s: L.Sub) -> U32:
       f
 
 def locate.first(+w: R.World, +num: U32) -> U32:
-  sub.first(sub(w, Bool.pick(U32, U32.is_eq(num, 65535), 0, (num .&. 32767 : U32))))
+  sub.first(sub(w, Bool.pick(U32, U32.is_eq(num, 4294967295), 0, (num .&. 2147483647 : U32))))
 
 def floor.at(+w: R.World, +x: U32, +y: U32) -> U32:
   sector.floor(sector(w, seg.front(w, seg(w, locate.first(w, locate(64n, w, x, y, (T.size(L.Node, nodes(w)) - 1 : U32)))))))

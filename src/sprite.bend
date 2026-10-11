@@ -81,7 +81,7 @@ def prefix(+names: T.Vec<String>, +c: U32) -> String:
 
 def matches(+names: T.Vec<String>, +c: U32, +l: W.Lump) -> Bool:
   match l:
-    case W.Lump{+n, p, z}:
+    case W.Lump{+n, p, z, k}:
       Bool.and(String.eq(String.take(n, 4n), prefix(names, c)),
         Bool.or(U32.is_eq(at(n, 4n), (65 + (c .&. 31) : U32)), U32.is_eq(at(n, 6n), (65 + (c .&. 31) : U32))))
 
@@ -124,7 +124,7 @@ def install(+f: SFrame, +r: U32, +lump: U32, +fl: Bool) -> SFrame:
 
 def apply(+names: T.Vec<String>, +c: U32, +f: SFrame, +l: W.Lump, +off: U32) -> SFrame:
   match l:
-    case W.Lump{+n, p, z}:
+    case W.Lump{+n, p, z, k}:
       +same = String.eq(String.take(n, 4n), prefix(names, c))
       +a = Bool.and(same, U32.is_eq(at(n, 4n), (65 + (c .&. 31) : U32)))
       +b = Bool.and(same, U32.is_eq(at(n, 6n), (65 + (c .&. 31) : U32)))
@@ -133,7 +133,7 @@ def apply(+names: T.Vec<String>, +c: U32, +f: SFrame, +l: W.Lump, +off: U32) -> 
 
 def lsize(+l: W.Lump) -> U32:
   match l:
-    case W.Lump{n, p, z}:
+    case W.Lump{n, p, z, k}:
       z
 
 def build(ls: List<&2, W.Lump>, +names: T.Vec<String>, +c: U32, +off: U32, f: SFrame) -> SFrame:

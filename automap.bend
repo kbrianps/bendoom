@@ -17,8 +17,8 @@ def level(+name: String, out: String, p: W.Wad & List<&2, U32>) -> IO(Unit):
 
 def run(+name: String, out: String, w: W.Wad) -> IO(Unit):
   match w:
-    case W.Wad{f, +d}:
-      IO.bind(W.Wad & List<&2, U32>, Unit, W.lump(W.Wad{f, d}, W.part(d, "PLAYPAL")), p => level(name, out, p))
+    case W.Wad{f, m, +d}:
+      IO.bind(W.Wad & List<&2, U32>, Unit, W.lump(W.Wad{f, m, d}, W.part(d, "PLAYPAL")), p => level(name, out, p))
 
 def args(xs: List<String>) -> IO(Unit):
   match xs:

@@ -19,12 +19,12 @@ type BB is Data:
 def vx(+v: L.Vertex) -> U32:
   match v:
     case L.Vertex{x, y}:
-      (x << 16n : U32)
+      x
 
 def vy(+v: L.Vertex) -> U32:
   match v:
     case L.Vertex{x, y}:
-      (y << 16n : U32)
+      y
 
 def smax(+a: U32, +b: U32) -> U32:
   Bool.pick(U32, F.gt(a, b), a, b)
@@ -236,8 +236,8 @@ type Bx is Data:
 def amb.one(+b: Bx, +v: L.Vertex) -> Bx:
   match b v:
     case Bx{+a, +c, +e, +f} L.Vertex{+x, +y}:
-      +px = (x << 16n : U32)
-      +py = (y << 16n : U32)
+      +px = x
+      +py = y
       Bx{Bool.pick(U32, F.lt(px, a), px, a), Bool.pick(U32, F.lt(py, c), py, c),
         Bool.pick(U32, Bool.and(Bool.not(F.lt(px, a)), F.gt(px, e)), px, e), Bool.pick(U32, Bool.and(Bool.not(F.lt(py, c)), F.gt(py, f)), py, f)}
 

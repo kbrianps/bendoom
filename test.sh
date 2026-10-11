@@ -101,6 +101,21 @@ python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 20
   echo "11d7119724f8c49dcf7ca7d1961600f5934f6aeabfcb3322a7e4e76d66c3cb7f  $TMP/frame.bmp" | sha256sum -c --quiet &&
   ok "demo: E1M1 pistol fight frame 330 with weapon and status bar" || bad "demo: E1M1 pistol fight frame 330"
 
+python3 tests/mkpwad.py "$WADS/freedoom1.wad" "$TMP/e1m4.wad" plain E1M4 E1M1 &&
+  python3 tests/mkpwad.py "$WADS/freedoom1.wad" "$TMP/xnod.wad" xnod E1M1 E1M1 &&
+  python3 tests/mkpwad.py "$WADS/freedoom1.wad" "$TMP/znod.wad" znod E1M1 E1M1 || bad "build the test PWADs"
+pwad() {
+  local name=$1 pw=$2 sha=$3 segs=$4 file=$5; shift 5
+  python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 $segs &&
+    "$TMP/demo" "$WADS/freedoom1.wad" -file "$TMP/$pw" E1M1 "$TMP/demo.lmp" "$@" > "$TMP/pwad.out" &&
+    echo "$sha  $TMP/$file" | sha256sum -c --quiet &&
+    ok "pwad: $name" || bad "pwad: $name"
+}
+pwad "E1M4 loaded over E1M1 matches the reference engine tic by tic" e1m4.wad 1af90345749c93892a49f1640a0c1805f75b1fe6a6b14c882b41c7ffc8369862 "100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 200,50,0,4,3" pwad.out
+pwad "E1M4 loaded over E1M1, frame 300 as the reference draws it" e1m4.wad c160f66e83080a381f8638204898533f7f47095cd0c28b593ca9fb503529c099 "100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 200,50,0,4,3" pw300.bmp 300 "$TMP/pw300.bmp"
+pwad "E1M1 with ZDoom compressed nodes plays as with the original nodes" znod.wad 608671ffca4c76c4fc7d2164f4dc90cd4fc80ec32b12756a1af05568e30a2ec3 "40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3" pwad.out
+pwad "E1M1 with ZDoom extended nodes draws as with the original nodes" xnod.wad 11d7119724f8c49dcf7ca7d1961600f5934f6aeabfcb3322a7e4e76d66c3cb7f "40,0,0,0,1 100,50,0,0,1 40,0,0,8,1 200,50,20,0,3 100,-30,0,248,1 300,50,0,4,3" xn330.bmp 330 "$TMP/xn330.bmp"
+
 frame() {
   local name=$1 wad=$2 ep=$3 map=$4 lump=$5 file=$6 sha=$7 segs=$8; shift 8
   python3 tests/mklmp.py "$TMP/demo.lmp" "$ep" "$map" $segs &&

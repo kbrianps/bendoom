@@ -22,6 +22,7 @@ The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): ever
     bend doom.bend -o doom
     ./doom doom.wad
     ./doom doom.wad E1M1
+    ./doom doom2.wad -file mymaps.wad MAP01
 
 `doom` opens a 640x400 window and runs the game at Doom's 35 tics a second. With only a WAD it starts at the title screen, which cycles through the title, credits and help pages until a key opens the main menu; with a map it starts on that map at the medium skill. The arrow keys or W and S walk and turn, A and D or comma and period strafe, Shift runs, Ctrl or F fires, Space or E uses and 1 to 7 pick a weapon. Escape opens the menu: new game with its episode and skill screens, options with messages, detail, screen size, mouse sensitivity and volumes, the read-this pages, end game and quit, with the arrow keys, Enter and Backspace, and Y or N for the questions; F1 to F10 are the help, save, load, sound, quick save, end game, messages, quick load and quit keys of the original. Minus and equals shrink and grow the view, as the screen size slider does, and F5 toggles low detail. Tab opens the automap, where the arrows pan, minus and equals zoom, 0 shows the whole map, F follows the player, G draws the grid, M marks a spot and C clears the marks. The cheats are id's: iddqd, idkfa, idfa, idclip or idspispopd, idbehold with v, s, i, r, a or l for each power-up, and iddt in the automap.
 
@@ -61,18 +62,19 @@ Sound effects are mixed in 8 channels at 22050 Hz with vanilla's channel stealin
 
 `automap` draws a map the way Doom's automap does with every line revealed: one-sided walls red, floor steps brown, ceiling steps yellow, the rest grey, things as green crosses and player starts white, in the WAD's own palette. `wadinfo` prints every map with the count and a hash of each of its lumps.
 
-Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://freedoom.github.io), which is free and what the tests use.
+Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://freedoom.github.io), which is free and what the tests use. PWADs load after it with `-file`, in `doom`, `shot`, `walk` and `demo` alike, and the last lump of a name wins, as in the original: maps, textures, patches, flats, sounds and music replace the IWAD's. Sprites and flats between `S_START` or `SS_START` and `F_START` or `FF_START` markers are merged into the IWAD's lists by name, as Chocolate Doom's `-merge` does, so a PWAD can replace them or add new ones. Maps can carry ZDoom's extended nodes, `XNOD`, or their zlib-compressed form, `ZNOD`, which `src/inflate.bend` decompresses; their extra vertices keep their fractions, and seg angles and offsets are computed from the vertices as the ports that read these nodes compute them.
 
 ## Tests
 
-`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps and three rendered views against their known images, plays three short walks through E1M1: riding a lift down, opening a door and pressing the exit switch, and plays nine demos across Doom and Doom II maps, among them a pistol fight and every weapon fired on MAP01, and checks one frame of the pistol fight, weapon and status bar included, which is pixel for pixel the frame Chocolate Doom draws, then drives the menus and the in-game automap with keys and checks those frames, an intermission and a finale screen, and the invulnerability, light amplification and invisibility power-ups given with idbehold, the last across a level change, all pixel for pixel Chocolate Doom's too, built by `tests/mklmp.py`, whose traces must match the ones Chocolate Doom prints for the same demos, tic by tic, monsters included. Four demos check every sound start against Chocolate Doom's, and three songs, Doom's and Doom II's, MUS and MIDI, a loop included, check the music sample for sample against Chocolate Doom's OPL output. `BEND=path/to/bend ./test.sh` picks the compiler.
+`./test.sh` downloads Freedoom 0.13.0 (checked by SHA-256), reads all 68 maps of `freedoom1.wad` and `freedoom2.wad` and compares every field of every lump with `tests/wadinfo.py`, an independent reader in Python, then checks three automaps and three rendered views against their known images, plays three short walks through E1M1: riding a lift down, opening a door and pressing the exit switch, and plays nine demos across Doom and Doom II maps, among them a pistol fight and every weapon fired on MAP01, and checks one frame of the pistol fight, weapon and status bar included, which is pixel for pixel the frame Chocolate Doom draws, then drives the menus and the in-game automap with keys and checks those frames, an intermission and a finale screen, the invulnerability, light amplification and invisibility power-ups given with idbehold, the last across a level change, and every screen size in high and low detail, all pixel for pixel Chocolate Doom's too, built by `tests/mklmp.py`, whose traces must match the ones Chocolate Doom prints for the same demos, tic by tic, monsters included. Four demos check every sound start against Chocolate Doom's, and three songs, Doom's and Doom II's, MUS and MIDI, a loop included, check the music sample for sample against Chocolate Doom's OPL output. `tests/mkpwad.py` builds three PWADs: E1M4 in E1M1's place, whose demo and frame must match Chocolate Doom's with the same `-file`, and E1M1 with its nodes rewritten as `XNOD` and as `ZNOD`, which must play and draw exactly as with the original nodes. `BEND=path/to/bend ./test.sh` picks the compiler.
 
 ## Layout
 
 | File | What |
 |---|---|
-| `src/wad.bend` | the WAD header and directory, lumps read on demand at their offset |
-| `src/level.bend` | a map's lumps as typed records |
+| `src/wad.bend` | the WAD header and directory, PWADs after the IWAD, lumps read on demand at their offset, merged sprite and flat lists, `-file` on the command line |
+| `src/inflate.bend` | a DEFLATE decoder for `ZNOD` nodes: stored, fixed and dynamic Huffman blocks |
+| `src/level.bend` | a map's lumps as typed records, with original, `XNOD` or `ZNOD` nodes |
 | `src/tab.bend` | `Vec`, a shared, indexable table for data read once and looked up often |
 | `src/bytes.bend` | little-endian words, lump names, signed 16-bit values |
 | `src/fixed.bend`, `src/tables.bend` | Doom's 16.16 fixed point on `U32`, and its sine, tangent, arctangent and random tables |
@@ -111,6 +113,6 @@ Any Doom-format IWAD works: Doom, Doom II, Final Doom, or [Freedoom](https://fre
 
 - **Bend 2.0.36**, native build (`-o`). The programs run under `bend file.bend` too, but a whole WAD overflows the JS lane's stack.
 - Music is OPL only, as Doom's Adlib and Sound Blaster cards played it; there is no General MIDI or OPL3 mode. Saves are this port's own format, not vanilla's `.dsg` layout.
-- Map nodes must be in Doom's original format; ZDoom's extended nodes come later, with PWAD support.
+- Maps are in Doom's format; Hexen-format and UDMF maps, GL nodes and DeHackEd patches are not read.
 
 The code is GPL-2.0, the license of Doom's source. The WADs are not included.

@@ -90,9 +90,9 @@ def locate(n: Nat, leaf: Bool, +w: R.World, +x: U32, +y: U32, +num: U32) -> U32:
     case 1n+p False{}:
       +nd = R.node(w, num)
       +c = child(nd, nodeside(x, y, nd))
-      locate(p, C.has(c, 32768), w, x, y, c)
+      locate(p, C.has(c, 2147483648), w, x, y, c)
     case _ _:
-      (num .&. 32767 : U32)
+      (num .&. 2147483647 : U32)
 
 def subsector(+g: S.Sim, +x: U32, +y: U32) -> U32:
   +w = S.sim.w(g)

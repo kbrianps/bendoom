@@ -9,6 +9,11 @@ type View is Data:
 def size() -> U32:
   1024
 
+def whole(v: L.Vertex) -> L.Vertex:
+  match v:
+    case L.Vertex{x, y}:
+      L.Vertex{F.sar(x, 16n), F.sar(y, 16n)}
+
 def grow(b: L.Box, v: L.Vertex) -> L.Box:
   match b v:
     case L.Box{t, bo, le, r} L.Vertex{+x, +y}:
@@ -19,7 +24,7 @@ def bounds(n: Nat, +vs: T.Vec<L.Vertex>, +i: U32, b: L.Box) -> L.Box:
     case 0n:
       b
     case 1n+p:
-      bounds(p, vs, (i + 1 : U32), grow(b, T.get(L.Vertex, vs, i, L.Vertex{0, 0})))
+      bounds(p, vs, (i + 1 : U32), grow(b, whole(T.get(L.Vertex, vs, i, L.Vertex{0, 0}))))
 
 def edge(+ro: U32, +sp: U32, +w: U32) -> U32:
   (16 + (ro - w * ro / sp) / 2 : U32)
@@ -85,7 +90,7 @@ def color(+pal: T.Vec<U32>, +i: U32) -> U32:
   T.get(U32, pal, i, 0)
 
 def vert(+vs: T.Vec<L.Vertex>, +i: U32) -> L.Vertex:
-  T.get(L.Vertex, vs, i, L.Vertex{0, 0})
+  whole(T.get(L.Vertex, vs, i, L.Vertex{0, 0}))
 
 def line.draw(a: Array<U32>, +v: View, p: L.Vertex, q: L.Vertex, +c: U32) -> Array<U32>:
   match p q:

@@ -145,7 +145,7 @@ def sprited(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +p
 
 def textured(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +pl: T.Vec<U32>, +cv: T.Vec<U32>, p: W.Wad & D.Texs) -> IO(S.Sim & Array<U32>):
   (w, ts) = p
-  sprited(lv, pal, cm, ts, pl, cv, W.between(w, "S_START", "S_END"))
+  sprited(lv, pal, cm, ts, pl, cv, W.section(w, "S_START", "S_END", "SS_START", "SS_END"))
 
 def level(+pal: List<&2, U32>, cm: List<&2, U32>, +pl: T.Vec<U32>, +cv: T.Vec<U32>, p: W.Wad & L.Level) -> IO(S.Sim & Array<U32>):
   (w, +lv) = p

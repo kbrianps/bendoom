@@ -151,7 +151,7 @@ def defnames(ds: List<&2, G.TexDef>) -> List<&2, String>:
 
 def lumpnames.of(ls: List<&2, W.Lump>) -> List<&2, String>:
   match ls:
-    case W.Lump{n, p, z} <> t:
+    case W.Lump{n, p, z, k} <> t:
       n <> lumpnames.of(t)
     case []:
       []
@@ -308,4 +308,4 @@ def textures(w: W.Wad, +lv: L.Level, +skyn: U32) -> IO(W.Wad & Texs):
       +mk = masked(U32.to_nat(T.size(L.Line, li)), li, si, 0, [])
       +sky = Bool.pick(String, U32.is_eq(skyn, 0), skyname(n), String.append("SKY", U32.show(skyn)))
       +fl0 = List.reverse(&2, String, flatnames(U32.to_nat(T.size(L.Sector, sc)), sc, 0, []))
-      textures.of(si, mk, sky, fl0, String.starts_with(n, "MAP"), W.between(w, "F_START", "F_END"))
+      textures.of(si, mk, sky, fl0, String.starts_with(n, "MAP"), W.section(w, "F_START", "F_END", "FF_START", "FF_END"))

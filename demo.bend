@@ -1,4 +1,5 @@
 import Base
+import ./src/wad.bend as W
 import ./src/hud.bend as U
 import ./src/screen.bend as P
 import ./src/sys.bend as Y
@@ -319,9 +320,9 @@ def args(xs: List<String>) -> IO(Unit):
     case prog <> path <> name <> lmp <> t:
       run(opts(t, Opts{0, 4294967295, "", 0, []}), path, name, lmp)
     case _:
-      IO.die(Unit, 2, "usage: demo FILE.wad MAP DEMO.lmp [give] [exit TIC] [secret TIC] [every N PREFIX] [keys TIC CODE DOWN ... end] [sound] [TIC OUT.bmp]")
+      IO.die(Unit, 2, "usage: demo FILE.wad [-file PWAD.wad ...] MAP DEMO.lmp [give] [exit TIC] [secret TIC] [every N PREFIX] [keys TIC CODE DOWN ... end] [sound] [TIC OUT.bmp]")
 
 def main() -> IO(Unit):
   do IO<Unit>:
     xs : List<String> <- IO.args()
-    args(xs)
+    args(W.cli(xs))

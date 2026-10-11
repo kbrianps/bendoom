@@ -1,4 +1,5 @@
 import Base
+import ./src/wad.bend as W
 import ./src/hud.bend as U
 import ./src/state.bend as S
 import ./src/draw.bend as D
@@ -46,9 +47,9 @@ def args(xs: List<String>) -> IO(Unit):
     case prog <> path <> name <> out <> t:
       IO.bind(S.Sim & Array<U32>, Unit, B.new(path, name), s => shoot(out, t, s))
     case _:
-      IO.die(Unit, 2, "usage: walk FILE.wad MAP OUT.bmp [TICS KEYS]...")
+      IO.die(Unit, 2, "usage: walk FILE.wad [-file PWAD.wad ...] MAP OUT.bmp [TICS KEYS]...")
 
 def main() -> IO(Unit):
   do IO<Unit>:
     xs : List<String> <- IO.args()
-    args(xs)
+    args(W.cli(xs))

@@ -2142,7 +2142,7 @@ def sight.split?(+g: S.Sim, +bsp: U32) -> S.Sim:
 
 
 def sight.node?(+g: S.Sim, +bsp: U32) -> S.Sim:
-  C.br(C.has(bsp, 32768), g, +h => sight.sub(h, Bool.pick(U32, U32.is_eq(bsp, 4294967295), 0, (bsp .&. 32767 : U32))), +h => sight.split(h, bsp))
+  C.br(C.has(bsp, 2147483648), g, +h => sight.sub(h, Bool.pick(U32, U32.is_eq(bsp, 4294967295), 0, (bsp .&. 2147483647 : U32))), +h => sight.split(h, bsp))
 
 
 def sight.run(+g: S.Sim, +t1: U32, +t2: U32) -> S.Sim:

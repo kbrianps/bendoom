@@ -76,7 +76,7 @@ def side.sector(+sides: T.Vec<L.Side>, +i: U32) -> U32:
 def rseg.of(+sides: T.Vec<L.Side>, a: L.Vertex, b: L.Vertex, +an: U32, +of: U32, +sd: U32, l: L.Line) -> RSeg:
   match a b l:
     case L.Vertex{ax, ay} L.Vertex{bx, by} L.Line{v1, v2, +fl, sp, tg, +fr, +bk}:
-      RSeg{(ax << 16n : U32), (ay << 16n : U32), (bx << 16n : U32), (by << 16n : U32), (an << 16n : U32), (of << 16n : U32), fl,
+      RSeg{ax, ay, bx, by, an, of, fl,
         Bool.pick(U32, U32.is_eq(sd, 0), fr, bk),
         Bool.pick(U32, U32.is_eq((fl .&. 4 : U32), 0), 65535, side.sector(sides, Bool.pick(U32, U32.is_eq(sd, 0), bk, fr)))}
 

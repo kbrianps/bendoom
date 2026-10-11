@@ -1,4 +1,5 @@
 import Base
+import ./src/wad.bend as W
 import ./src/screen.bend as S
 import ./src/state.bend as M
 import ./src/boot.bend as B
@@ -56,9 +57,9 @@ def args(xs: List<String>) -> IO(Unit):
     case prog <> +path <> t:
       IO.bind(M.Sim & Array<U32>, Unit, B.first(path), s => play(path, True{}, s))
     case _:
-      IO.die(Unit, 2, "usage: doom FILE.wad [MAP]")
+      IO.die(Unit, 2, "usage: doom FILE.wad [-file PWAD.wad ...] [MAP]")
 
 def main() -> IO(Unit):
   do IO<Unit>:
     xs : List<String> <- IO.args()
-    args(xs)
+    args(W.cli(xs))
