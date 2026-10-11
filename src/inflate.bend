@@ -1,5 +1,6 @@
 import Base
 import ./mem.bend as M
+import ./tab.bend as X
 
 def lcnt() -> U32:
   0
@@ -322,5 +323,5 @@ def inflate.go(+xs: List<&2, U32>, +n: U32, +skip: U32, +total: U32) -> List<&2,
   M.let(List<&2, U32>, M.rd(a, outn()), a1 => +o => out(U32.to_nat(o), a1, (inp() + n + o : U32), []))
 
 def inflate(+xs: List<&2, U32>, +skip: U32) -> List<&2, U32>:
-  +n = U32.from_nat(List.length(&2, U32, xs))
+  +n = X.len(U32, xs)
   inflate.go(xs, n, skip, size(run(False{}, load(xs, n, 0), n, skip)))

@@ -84,7 +84,7 @@ def patch(r: PRef, bs: List<&2, U32>, +at: U32) -> Patch:
 def patches(rs: List<&2, PRef>, bss: List<&2, List<&2, U32>>, +at: U32) -> List<&2, Patch>:
   match rs bss:
     case r <> rt +bs <> bt:
-      patch(r, bs, at) <> patches(rt, bt, (at + U32.from_nat(List.length(&2, U32, bs)) : U32))
+      patch(r, bs, at) <> patches(rt, bt, (at + T.len(U32, bs) : U32))
     case _ _:
       []
 

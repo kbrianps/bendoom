@@ -151,7 +151,7 @@ def fin.text(+c: Bool, +ep: U32, +map: U32) -> U32:
 
 def finale.start(+g: S.Sim) -> S.Sim:
   +t = fin.text(U.com(g), U.ui(g, 26), U.ui(g, 25))
-  +g1 = U.ui.set(U.ui.set(U.ui.set(U.ui.set(U.ui.set(S.sim.gs.set(S.sim.act.set(g, 0), 2), 140, 0), 50, 0), 51, 0), 52, t), 53, U32.from_nat(List.length(&2, U32, text(t))))
+  +g1 = U.ui.set(U.ui.set(U.ui.set(U.ui.set(U.ui.set(S.sim.gs.set(S.sim.act.set(g, 0), 2), 140, 0), 50, 0), 51, 0), 52, t), 53, T.len(U32, text(t)))
   wipe(g1)
 
 def finishpl(+g: S.Sim) -> S.Sim:
@@ -480,7 +480,7 @@ def demo.start(+g: S.Sim, +bs: T.Vec<U32>) -> S.Sim:
 
 def demo.loaded(+g: S.Sim, +bs: List<&2, U32>) -> S.Sim:
   +g1 = S.sim.act.set(g, 0)
-  C.br(U32.is_lt(U32.from_nat(List.length(&2, U32, bs)), 14), g1, +h => U.ui.set(h, 125, 1), +h => demo.start(U.ui.set(h, 129, 0), T.from_list(U32, bs)))
+  C.br(U32.is_lt(T.len(U32, bs), 14), g1, +h => U.ui.set(h, 125, 1), +h => demo.start(U.ui.set(h, 129, 0), T.from_list(U32, bs)))
 
 def reborns(n: Nat, +g: S.Sim, +i: U32) -> S.Sim:
   match n:

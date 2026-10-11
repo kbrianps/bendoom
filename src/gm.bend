@@ -852,7 +852,7 @@ def bk.ps(+b: G.Bank) -> T.Vec<G.Pr>:
 def empty(+bk: G.Bank) -> Bool:
   match bk:
     case G.Bank{ps, +ks}:
-      U32.is_eq(U32.from_nat(List.length(&2, U32, ks)), 0)
+      U32.is_eq(T.len(U32, ks), 0)
 
 def pidx(+bk: G.Bank, +bank: U32, +num: U32) -> U32:
   kidx(bk.ks(bk), 0, ((bank << 16n) + num : U32))

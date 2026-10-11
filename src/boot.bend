@@ -19,11 +19,7 @@ def view(+g: S.Sim) -> V.View:
   V.View{S.m.x(g, m), S.m.y(g, m), S.p.viewz(g), S.m.angle(g, m), S.p.extralight(g), S.p.fixedcm(g)}
 
 def blobs(bss: List<&2, List<&2, U32>>) -> List<&2, U32>:
-  match bss:
-    case bs <> t:
-      List.append(&2, U32, bs, blobs(t))
-    case []:
-      []
+  T.flat(U32, bss)
 
 def frames(+sp: P.Sprites) -> T.Vec<P.SFrame>:
   match sp:
@@ -36,7 +32,7 @@ def eyes(+g: S.Sim) -> S.Sim:
 def hudaddrs(hbs: List<&2, List<&2, U32>>, +at: U32) -> List<&2, U32>:
   match hbs:
     case bs <> t:
-      +n = U32.from_nat(List.length(&2, U32, bs))
+      +n = T.len(U32, bs)
       Bool.pick(U32, U32.is_eq(n, 0), 0, at) <> hudaddrs(t, (at + n : U32))
     case []:
       []
@@ -48,18 +44,18 @@ def assemble(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +
       +ly = O.layout(ts, fd)
       +w0 = R.build(lv, t, ly, frames(sp))
       +sbytes = blobs(sbs)
-      +pb = (base + U32.from_nat(List.length(&2, U32, sbytes)) : U32)
+      +pb = (base + T.len(U32, sbytes) : U32)
       +pals = List.take(&2, U32, A.rgb(pal), 3584n)
       +hbytes = blobs(hbs)
       +hud = T.from_list(U32, pb <> (mode .&. 15 : U32) <> (mode >> 4n : U32) <> hudaddrs(hbs, (pb + 3584 : U32)))
-      +all = List.append(&2, U32, sbytes, List.append(&2, U32, pals, hbytes))
+      +all = T.cat(U32, sbytes, T.cat(U32, pals, hbytes))
       (eyes(U.sim(lv, t, w0, tb, hud, pl, cv)),
-        M.fill(all, O.build(tb, A.palette(pal), cm, ts, fd, (pb + 3584 + U32.from_nat(List.length(&2, U32, hbytes)) : U32), O.texs.end(ts, M.texbase())), base))
+        M.fill(all, O.build(tb, A.palette(pal), cm, ts, fd, (pb + 3584 + T.len(U32, hbytes) : U32), O.texs.end(ts, M.texbase())), base))
 
 def spritebase(+t: D.Texs) -> U32:
   match t:
     case D.Texs{n, +ts, s, f, +fd, hs, ta, fa, sw, tbs, fbs, gt, gf}:
-      (O.texs.end(ts, M.texbase()) + 4096 * U32.from_nat(List.length(&2, List<&2, U32>, fd)) : U32)
+      (O.texs.end(ts, M.texbase()) + 4096 * T.len(List<&2, U32>, fd) : U32)
 
 def hudded(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +mode: U32, +pl: T.Vec<U32>, +cv: T.Vec<U32>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(S.Sim & Array<U32>):
   (w, hbs) = p

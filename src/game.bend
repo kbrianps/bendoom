@@ -1454,11 +1454,7 @@ def nth(xs: List<&2, U32>, +k: U32) -> U32:
       0
 
 def len(xs: List<&2, U32>) -> U32:
-  match xs:
-    case x <> t:
-      (1 + len(t) : U32)
-    case []:
-      0
+  T.len(U32, xs)
 
 def anim.frame(+g: S.Sim, +tex: Bool, +id: U32, +f: U32) -> S.Sim:
   +w = S.sim.w(g)

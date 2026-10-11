@@ -35,7 +35,7 @@ def u32(+bs: List<&2, U32>, +i: Nat) -> U32:
   (u16(bs, i) + 65536 * u16(bs, 2n+i) : U32)
 
 def ok(+bs: List<&2, U32>) -> Bool:
-  +n = U32.from_nat(List.length(&2, U32, bs))
+  +n = T.len(U32, bs)
   Bool.and(U32.is_eq(u16(bs, 0n), 3), Bool.and(U32.is_gt(n, 40), U32.is_ge(n, (u32(bs, 4n) + 8 : U32))))
 
 def put(xs: List<&2, U32>, n: Nat, a: Array<U32>, +i: U32) -> Array<U32>:

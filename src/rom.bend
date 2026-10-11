@@ -48,7 +48,7 @@ def tex.info(+at: U32, +t: G.Tex) -> M.Info:
 def tex.size(+t: G.Tex) -> U32:
   match t:
     case G.Tex{m, h, xs, +ps, +bl}:
-      ((m + 1) * 128 + U32.from_nat(List.length(&2, U32, ps)) + U32.from_nat(List.length(&2, U32, bl)) : U32)
+      ((m + 1) * 128 + T.len(U32, ps) + T.len(U32, bl) : U32)
 
 def infos(ts: List<&2, G.Tex>, +at: U32) -> List<&2, M.Info>:
   match ts:
@@ -73,7 +73,7 @@ def flat.bases(fs: List<&2, List<&2, U32>>, +at: U32) -> List<&2, U32>:
 
 def layout(+ts: List<&2, G.Tex>, +fs: List<&2, List<&2, U32>>) -> M.Layout:
   +fb = texs.end(ts, M.texbase())
-  M.Layout{infos(ts, M.texbase()), flat.bases(fs, fb), (fb + 4096 * U32.from_nat(List.length(&2, List<&2, U32>, fs)) : U32)}
+  M.Layout{infos(ts, M.texbase()), flat.bases(fs, fb), (fb + 4096 * T.len(List<&2, U32>, fs) : U32)}
 
 def rebase(xs: List<&2, U32>, +b: U32) -> List<&2, U32>:
   match xs:
@@ -86,7 +86,7 @@ def put.tex(+t: G.Tex, a: Array<U32>, +at: U32) -> Array<U32>:
   match t:
     case G.Tex{+m, h, xs, +ps, bl}:
       +p0 = (at + (m + 1) * 128 : U32)
-      +b0 = (p0 + U32.from_nat(List.length(&2, U32, ps)) : U32)
+      +b0 = (p0 + T.len(U32, ps) : U32)
       M.fill(bl, M.fill(rebase(ps, b0), M.fill(xs, a, at), p0), b0)
 
 def put.texs(ts: List<&2, G.Tex>, a: Array<U32>, +at: U32) -> Array<U32>:
@@ -104,7 +104,7 @@ def put.flats(fs: List<&2, List<&2, U32>>, a: Array<U32>, +at: U32) -> Array<U32
       a
 
 def build(+tb: V.Tabs, +pal: T.Vec<U32>, cmaps: List<&2, U32>, ts: List<&2, G.Tex>, +fs: List<&2, List<&2, U32>>, +unused: U32, +flat0: U32) -> Array<U32>:
-  a0 = Array.new(U32, M.depth(U32.max(unused, (flat0 + 4096 * U32.from_nat(List.length(&2, List<&2, U32>, fs)) : U32))), 0)
+  a0 = Array.new(U32, M.depth(U32.max(unused, (flat0 + 4096 * T.len(List<&2, U32>, fs) : U32))), 0)
   a1 = M.fill(List.take(&2, U32, pal.list(256n, pal, 0), 256n), M.fill(List.take(&2, U32, cmaps, 8704n), a0, M.cmap()), M.pal())
   a2 = M.fill(fuzztab(), M.fill(zlights(16n, 0), a1, M.zlight()), M.fuzz())
   a5 = put.texs(ts, a2, M.texbase())

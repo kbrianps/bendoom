@@ -46,7 +46,7 @@ def pad(+pos: U32) -> List<&2, U32>:
   zeros(U32.to_nat(padn(pos)))
 
 def len(+xs: List<&2, U32>) -> U32:
-  U32.from_nat(List.length(&2, U32, xs))
+  T.len(U32, xs)
 
 def sar16(+v: U32) -> U32:
   F.sar(v, 16n)

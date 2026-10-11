@@ -535,7 +535,7 @@ def voice.on(+lk: Lk, +d: Dr, +ch: U32, +ins: U32, +iv: U32, +note: U32, +mk: U3
 def dr.free(+d: Dr) -> Bool:
   match d:
     case Dr{vs, +fr, al, cs, cur, st}:
-      U32.is_ne(U32.from_nat(List.length(&2, U32, fr)), 0)
+      U32.is_ne(T.len(U32, fr), 0)
 
 def dr.cn(+d: Dr, +ch: U32) -> Cn:
   match d:
@@ -1170,16 +1170,15 @@ def want(+g: S.Sim) -> U32:
   Bool.pick(U32, U32.is_eq(gs, 0), Bool.pick(U32, U32.is_eq(lv, 0), 0, (lv * 2 + 1 : U32)),
     Bool.pick(U32, U32.is_eq(gs, 1), Bool.pick(U32, c, 135, 57), Bool.pick(U32, U32.is_eq(gs, 2), fin, page)))
 
-def took(+v: U32, r: Array<U32> & List<&2, U32>) -> Array<U32> & List<&2, U32>:
-  (a, xs) = r
-  (a, v <> xs)
-
-def take(n: Nat, a: Array<U32>, +i: U32) -> Array<U32> & List<&2, U32>:
+def take.go(n: Nat, a: Array<U32>, +i: U32, acc: List<&2, U32>) -> Array<U32> & List<&2, U32>:
   match n:
     case 0n:
-      (a, [])
+      (a, List.reverse(&2, U32, acc))
     case 1n+p:
-      M.let(Array<U32> & List<&2, U32>, M.rd(a, i), a1 => +v => took(v, take(p, a1, (i + 1 : U32))))
+      M.let(Array<U32> & List<&2, U32>, M.rd(a, i), a1 => +v => take.go(p, a1, (i + 1 : U32), v <> acc))
+
+def take(n: Nat, a: Array<U32>, +i: U32) -> Array<U32> & List<&2, U32>:
+  take.go(n, a, i, [])
 
 def offall(n: Nat, +d: Dr, +i: U32) -> Dr:
   match n:
@@ -1192,7 +1191,7 @@ def sq.start(+lk: Lk, +sq: Sq, +lp: U32, r: List<&2, E> & U32) -> Sq:
   match sq:
     case Sq{+dr, evs, all, olp, end, base, +now, +clk, +cfr, +gs}:
       (+es, +e) = r
-      +on = U32.is_ne(U32.from_nat(List.length(&2, E, es)), 0)
+      +on = U32.is_ne(T.len(E, es), 0)
       Sq{restart(offall(16n, dr, 0)), es, es, Bool.pick(U32, on, lp, 0), e, now, now, clk, cfr, Y.restart(lps(lk), gs)}
 
 def started(tb: Array<U32>, smp: Array<F32>, +ix: T.Vec<U32>, +lk: Lk, +sq: Sq, +id: U32, +lp: U32, +last: U32, r: Array<U32> & List<&2, U32>) -> Mu:
@@ -1303,7 +1302,7 @@ def idle() -> Sq:
 def fill(bss: List<&2, List<&2, U32>>, a: Array<U32>, +at: U32, +idx: List<&2, U32>) -> Array<U32> & List<&2, U32>:
   match bss:
     case +bs <> t:
-      +n = U32.from_nat(List.length(&2, U32, bs))
+      +n = T.len(U32, bs)
       fill(t, M.fill(bs, a, at), (at + n : U32), List.append(&2, U32, idx, [at, n]))
     case []:
       (a, idx)
@@ -1311,7 +1310,7 @@ def fill(bss: List<&2, List<&2, U32>>, a: Array<U32>, +at: U32, +idx: List<&2, U
 def total(+bss: List<&2, List<&2, U32>>) -> U32:
   match bss:
     case +bs <> t:
-      (U32.from_nat(List.length(&2, U32, bs)) + total(t) : U32)
+      (T.len(U32, bs) + total(t) : U32)
     case []:
       0
 

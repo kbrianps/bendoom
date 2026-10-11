@@ -171,4 +171,18 @@ frame "MAP01 screen sizes and detail, status bar back from full screen" freedoom
 frame "E1M1 low detail small view with fuzz, help and automap" freedoom1 1 1 E1M1 lw_96.bmp a008e24724b21a315d12cf33e705db430382b57e4b24e5c39208de83b95a14b9 "60,25,0,0,1 80,30,0,4,1" \
   keys 3 105 1 4 105 0 5 100 1 6 100 0 7 98 1 8 98 0 9 101 1 10 101 0 11 104 1 12 104 0 13 111 1 14 111 0 15 108 1 16 108 0 17 100 1 18 100 0 19 105 1 20 105 0 25 63240 1 26 63240 0 30 45 1 31 45 0 32 45 1 33 45 0 40 63236 1 41 63236 0 50 27 1 51 27 0 60 9 1 61 9 0 70 45 1 71 45 0 80 9 1 81 9 0 90 61 1 91 61 0 100 63236 1 101 63236 0 102 63236 1 103 63236 0 110 27 1 111 27 0 120 61 1 121 61 0 122 61 1 123 61 0 124 61 1 125 61 0 end every 96 "$TMP/lw"
 
+for wad in freedoom1 freedoom2; do
+  $BEND wadinfo.bend "$WADS/$wad.wad" > "$TMP/$wad.js" 2>&1 && diff -q "$TMP/$wad.want" "$TMP/$wad.js" >/dev/null &&
+    ok "js: $wad.wad read under bend wadinfo.bend as the reference reads it" || bad "js: $wad.wad maps"
+done
+$BEND shot.bend "$WADS/freedoom1.wad" E1M1 "$TMP/js-shot.bmp" >/dev/null 2>&1 &&
+  echo "01a5fc5231cc17f6504ee81c37ce14a95403a8286f740468487fae7463ee06f2  $TMP/js-shot.bmp" | sha256sum -c --quiet &&
+  ok "js: shot of E1M1 under bend shot.bend" || bad "js: shot of E1M1"
+python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 300,50,0,0,0 &&
+  $BEND demo.bend "$WADS/freedoom1.wad" E1M1 "$TMP/demo.lmp" | sha256sum | grep -q "^703260c72dea907d0a9be07f29134444938cb441a82f3d186aa573b756a845fe " &&
+  ok "js: demo E1M1 walk under bend demo.bend" || bad "js: demo E1M1 walk"
+$BEND song.bend -- "$WADS/freedoom1.wad" -soundfont "$SOUNDFONT" D_E1M1 10 "$TMP/js-gm.wav" >/dev/null 2>&1 &&
+  echo "71a5dcb2aec6d334f233fe6d6c8e167d4993088b114953de7fd73b47b4e30931  $TMP/js-gm.wav" | sha256sum -c --quiet &&
+  ok "js: General MIDI D_E1M1 under bend song.bend" || bad "js: General MIDI D_E1M1"
+
 [ "$FAILS" -eq 0 ] && echo "ALL TESTS PASS" || { echo "$FAILS FAILED"; exit 1; }

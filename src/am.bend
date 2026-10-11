@@ -136,7 +136,7 @@ def addmark(+g: S.Sim) -> S.Sim:
   set(g1, 144, ((n + 1) % 10 : U32))
 
 def cheat.len(xs: List<&2, U32>) -> U32:
-  U32.from_nat(List.length(&2, U32, xs))
+  T.len(U32, xs)
 
 def cht(+g: S.Sim, +slot: U32, +seq: List<&2, U32>, +ch: U32) -> S.Sim:
   +p = ui(g, slot)

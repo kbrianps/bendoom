@@ -1,11 +1,14 @@
 import Base
 
-def words(xs: List<&2, U32>) -> List<&2, U32>:
+def words.go(xs: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case a <> b <> t:
-      (a .|. (b << 8n) : U32) <> words(t)
+      words.go(t, (a .|. (b << 8n) : U32) <> acc)
     case _:
-      []
+      List.reverse(&2, U32, acc)
+
+def words(xs: List<&2, U32>) -> List<&2, U32>:
+  words.go(xs, [])
 
 def s16(+w: U32) -> U32:
   Bool.pick(U32, U32.is_ge(w, 32768), (w .|. 4294901760 : U32), w)

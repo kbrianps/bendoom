@@ -207,7 +207,7 @@ def ranges(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, Strin
     case +a <> +b <> +t:
       +r = range(order, a, b)
       +rest = ranges(t, order, have)
-      Bool.pick(List<&2, List<&2, String>>, Bool.and(U32.is_gt(U32.from_nat(List.length(&2, String, r)), 1), any(r, have)), r <> rest, rest)
+      Bool.pick(List<&2, List<&2, String>>, Bool.and(U32.is_gt(T.len(String, r), 1), any(r, have)), r <> rest, rest)
     case _:
       []
 
@@ -223,7 +223,7 @@ def bases(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String
     case +a <> +b <> +t:
       +r = range(order, a, b)
       +rest = bases(t, order, have)
-      Bool.pick(List<&2, U32>, Bool.and(U32.is_gt(U32.from_nat(List.length(&2, String, r)), 1), any(r, have)), pos(order, a, 0) <> rest, rest)
+      Bool.pick(List<&2, U32>, Bool.and(U32.is_gt(T.len(String, r), 1), any(r, have)), pos(order, a, 0) <> rest, rest)
     case _:
       []
 

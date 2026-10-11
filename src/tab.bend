@@ -8,21 +8,27 @@ type Tab<-A: Data> is Data:
 type Vec<-A: Data> is Data:
   Vec{size: U32, tab: Tab<A>}
 
-def evens(-A: Data, xs: List<&2, A>) -> List<&2, A>:
+def evens.go(-A: Data, xs: List<&2, A>, acc: List<&2, A>) -> List<&2, A>:
   match xs:
     case a <> b <> t:
-      a <> evens(A, t)
+      evens.go(A, t, a <> acc)
     case a <> []:
-      [a]
+      List.reverse(&2, A, a <> acc)
     case []:
-      []
+      List.reverse(&2, A, acc)
+
+def evens(-A: Data, xs: List<&2, A>) -> List<&2, A>:
+  evens.go(A, xs, [])
+
+def odds.go(-A: Data, xs: List<&2, A>, acc: List<&2, A>) -> List<&2, A>:
+  match xs:
+    case a <> b <> t:
+      odds.go(A, t, b <> acc)
+    case _:
+      List.reverse(&2, A, acc)
 
 def odds(-A: Data, xs: List<&2, A>) -> List<&2, A>:
-  match xs:
-    case a <> b <> t:
-      b <> odds(A, t)
-    case _:
-      []
+  odds.go(A, xs, [])
 
 def leaf(-A: Data, xs: List<&2, A>) -> Tab<A>:
   match xs:
@@ -65,8 +71,38 @@ def size(-A: Data, +v: Vec<A>) -> U32:
 def depth(+n: U32) -> Nat:
   Bool.pick(Nat, U32.is_le(n, 1), 0n, 1n+U32.log2((n - 1 : U32)))
 
+def count(-A: Data, xs: List<&2, A>, +n: U32) -> U32:
+  match xs:
+    case h <> t:
+      count(A, t, (n + 1 : U32))
+    case []:
+      n
+
+def onto(-A: Data, xs: List<&2, A>, ys: List<&2, A>) -> List<&2, A>:
+  match xs:
+    case x <> t:
+      onto(A, t, x <> ys)
+    case []:
+      ys
+
+def cat(-A: Data, xs: List<&2, A>, ys: List<&2, A>) -> List<&2, A>:
+  onto(A, List.reverse(&2, A, xs), ys)
+
+def flat.go(-A: Data, xss: List<&2, List<&2, A>>, acc: List<&2, A>) -> List<&2, A>:
+  match xss:
+    case xs <> t:
+      flat.go(A, t, onto(A, xs, acc))
+    case []:
+      List.reverse(&2, A, acc)
+
+def flat(-A: Data, xss: List<&2, List<&2, A>>) -> List<&2, A>:
+  flat.go(A, xss, [])
+
+def len(-A: Data, xs: List<&2, A>) -> U32:
+  count(A, xs, 0)
+
 def from_list(-A: Data, +xs: List<&2, A>) -> Vec<A>:
-  +n = U32.from_nat(List.length(&2, A, xs))
+  +n = count(A, xs, 0)
   Vec{n, build(A, depth(n), xs)}
 
 def set.go(-A: Data, t: Tab<A>, b: Bool, +i: U32, v: A) -> Tab<A>:

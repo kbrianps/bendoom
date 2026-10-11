@@ -134,7 +134,7 @@ def blank(n: Nat, +g: S.Sim, +i: U32, +k: U32) -> S.Sim:
 def saveselect(+g: S.Sim, +i: U32) -> S.Sim:
   +g1 = copy(24n, set(set(g, 89, 1), 90, i), (i * 25 + 1 : U32), 150)
   +g2 = C.when(U32.is_eq(slot(g1, i, 0), 0), g1, +h => blank(24n, h, i, 1))
-  S.sim.saves.set(g2, T.set(U32, S.sim.saves(g2), 174, U32.from_nat(List.length(&2, U32, str(g2, i)))))
+  S.sim.saves.set(g2, T.set(U32, S.sim.saves(g2), 174, T.len(U32, str(g2, i))))
 
 def dosave(+g: S.Sim, +i: U32) -> S.Sim:
   +g1 = clear(S.sim.act.set(set(g, 90, i), 7))
