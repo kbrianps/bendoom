@@ -113,7 +113,7 @@ def sf2(+p: String) -> Bool:
 def wads(ps: List<&2, String>) -> List<&2, String>:
   match ps:
     case +p <> +t:
-      Bool.pick(List<&2, String>, sf2(p), wads(t), p <> wads(t))
+      Bool.pick(List<&2, String>, Bool.or(sf2(p), String.eq(p, "-noeffects")), wads(t), p <> wads(t))
     case []:
       []
 
@@ -123,6 +123,16 @@ def fonts(ps: List<&2, String>) -> String:
       Bool.pick(String, sf2(p), p, fonts(t))
     case []:
       ""
+
+def plain.go(ps: List<&2, String>, +acc: Bool) -> Bool:
+  match ps:
+    case +p <> t:
+      plain.go(t, Bool.or(acc, String.eq(p, "-noeffects")))
+    case []:
+      acc
+
+def plain(+path: String) -> Bool:
+  plain.go(String.split(path, '\n'), False{})
 
 def font(+path: String) -> String:
   fonts(String.split(path, '\n'))
@@ -403,10 +413,17 @@ def cli.one?(flag: Bool, sf: Bool, +pw: Bool, x: String, t: List<String>) -> Lis
     case False{} False{}:
       cli.two(pw, x, t)
 
+def cli.fx?(hit: Bool, +x: String, t: List<String>, +on: Bool) -> List<&2, String> & List<String>:
+  match hit:
+    case True{}:
+      cli.pw("-noeffects", cli.go(t, on))
+    case False{}:
+      cli.one(String.eq(x, "-file"), String.eq(x, "-soundfont"), Bool.and(on, String.ends_with(String.to_lower(x), ".wad")), x, t)
+
 def cli.go?(xs: List<String>, +on: Bool) -> List<&2, String> & List<String>:
   match xs:
     case +x <> t:
-      cli.one(String.eq(x, "-file"), String.eq(x, "-soundfont"), Bool.and(on, String.ends_with(String.to_lower(x), ".wad")), x, t)
+      cli.fx(String.eq(x, "-noeffects"), x, t, on)
     case []:
       ([], [])
 

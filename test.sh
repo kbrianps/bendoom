@@ -105,7 +105,7 @@ song freedoom2 D_RUNNIN 10 b9b50ec44823dcebe8c2939d1a4b86b4c03e0945c8ae0263d02b8
 
 gmsong() {
   local what=$1 wad=$2 lump=$3 secs=$4 sha=$5; shift 5
-  "$TMP/song" "$WADS/$wad.wad" "$@" -soundfont "$SOUNDFONT" "$lump" "$secs" "$TMP/gm.wav" &&
+  "$TMP/song" "$WADS/$wad.wad" -noeffects "$@" -soundfont "$SOUNDFONT" "$lump" "$secs" "$TMP/gm.wav" &&
     echo "$sha  $TMP/gm.wav" | sha256sum -c --quiet &&
     ok "General MIDI: $secs seconds of $what" || bad "General MIDI: $what"
 }
@@ -113,6 +113,16 @@ gmsong "D_E1M1" freedoom1 D_E1M1 10 71a5dcb2aec6d334f233fe6d6c8e167d4993088b1149
 gmsong "D_INTER, looping" freedoom1 D_INTER 80 045c8c42b80528de3d691737d95c87ab176393786c0dd043e76423f2a4e96f83
 python3 tests/mkmus.py "$WADS/freedoom1.wad" D_E1M1 "$TMP/mus.wad" &&
   gmsong "D_E1M1 as a MUS lump" freedoom1 D_E1M1 20 5c0f8328571aba3e79457ef9990989ba65914758680ed8532acc868d0afa40a5 -file "$TMP/mus.wad" || bad "build the MUS PWAD"
+"$TMP/song" "$WADS/freedoom1.wad" -soundfont "$SOUNDFONT" D_E1M1 10 "$TMP/fx.wav" &&
+  echo "2041e2e74f64b5fc1b6461365f0f60d5e66d3534edc25f36c4cef6ac18e438f0  $TMP/fx.wav" | sha256sum -c --quiet &&
+  ok "General MIDI: 10 seconds of D_E1M1 with modulators, reverb and chorus" || bad "General MIDI: D_E1M1 with effects"
+if command -v fluidsynth >/dev/null && python3 -c "import numpy" 2>/dev/null; then
+  python3 tests/gmsim.py lump "$WADS/freedoom1.wad" D_E1M1 "$TMP/e1m1.mid" &&
+    fluidsynth -ni -r 22050 -F "$TMP/fs.wav" "$SOUNDFONT" "$TMP/e1m1.mid" >/dev/null 2>&1 &&
+    "$TMP/song" "$WADS/freedoom1.wad" -noeffects -soundfont "$SOUNDFONT" D_E1M1 10 "$TMP/plain.wav" &&
+    python3 tests/gmsim.py compare 10 "$TMP/fs.wav" "$TMP/plain.wav" "$TMP/fx.wav" >/dev/null &&
+    ok "General MIDI: D_E1M1 with effects closer to FluidSynth than without" || bad "General MIDI: FluidSynth comparison"
+fi
 
 opl3() {
   local what=$1 wad=$2 lump=$3 secs=$4 sha=$5; shift 5
@@ -200,7 +210,7 @@ python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 300,50,0,0,0 &&
   $BEND demo.bend "$WADS/freedoom1.wad" E1M1 "$TMP/demo.lmp" | sha256sum | grep -q "^703260c72dea907d0a9be07f29134444938cb441a82f3d186aa573b756a845fe " &&
   ok "js: demo E1M1 walk under bend demo.bend" || bad "js: demo E1M1 walk"
 $BEND song.bend -- "$WADS/freedoom1.wad" -soundfont "$SOUNDFONT" D_E1M1 10 "$TMP/js-gm.wav" >/dev/null 2>&1 &&
-  echo "71a5dcb2aec6d334f233fe6d6c8e167d4993088b114953de7fd73b47b4e30931  $TMP/js-gm.wav" | sha256sum -c --quiet &&
+  echo "2041e2e74f64b5fc1b6461365f0f60d5e66d3534edc25f36c4cef6ac18e438f0  $TMP/js-gm.wav" | sha256sum -c --quiet &&
   ok "js: General MIDI D_E1M1 under bend song.bend" || bad "js: General MIDI D_E1M1"
 
 if command -v node >/dev/null; then

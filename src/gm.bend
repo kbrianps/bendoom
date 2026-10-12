@@ -1,6 +1,7 @@
 import Base
 import ./tab.bend as T
 import ./sf2.bend as G
+import ./fx.bend as X
 
 type Env is Data:
   Env{seg: U32, expo: U32, amp: U32, vel: U32, lv: F32, sl: F32, un: U32, dl: F32, at: F32, ho: F32, de: F32, su: F32, re: F32}
@@ -12,16 +13,16 @@ type Lf is Data:
   Lf{un: U32, lv: F32, dt: F32}
 
 type Rg is Data:
-  Rg{mode: U32, group: U32, end: U32, tr: U32, tune: U32, kc: U32, kt: U32, rate: U32, pan: F32, fc: U32, mlf: U32, mef: U32, mlp: U32, vlp: U32, mep: U32, mlv: U32}
+  Rg{mode: U32, group: U32, end: U32, tr: U32, tune: U32, kc: U32, kt: U32, rate: U32, pan: F32, fc: U32, mlf: U32, mef: U32, mlp: U32, vlp: U32, mep: U32, mlv: U32, sr: F32, sc: F32, wide: U32}
 
 type Vc is Data:
   Vc{pi: U32, key: U32, ch: U32, held: U32, play: U32, pin: F32, pout: F32, pos: U32, frac: U32, gdb: F32, pl: F32, pr: F32, ls: U32, le: U32, amp: Env, mod: Env, lp: Lp, ml: Lf, vl: Lf, rg: Rg}
 
 type Cn is Data:
-  Cn{pi: U32, bank: U32, wheel: U32, mpan: U32, mvol: U32, mexp: U32, rpn: U32, data: U32, sus: U32, po: F32, gdb: F32, rng: F32, tun: F32}
+  Cn{pi: U32, bank: U32, wheel: U32, mpan: U32, mvol: U32, mexp: U32, rpn: U32, data: U32, sus: U32, po: F32, gdb: F32, rng: F32, tun: F32, mw: U32, rv: U32, co: U32, cp: U32}
 
 type Syn is Data:
-  Syn{vs: List<&2, Vc>, cs: List<&2, Cn>, play: U32, vol: U32}
+  Syn{vs: List<&2, Vc>, cs: List<&2, Cn>, play: U32, vol: U32, fx: X.Fx}
 
 def env.seg(+x: Env) -> U32:
   match x:
@@ -175,82 +176,82 @@ def lf.dt(+x: Lf) -> F32:
 
 def rg.mode(+x: Rg) -> U32:
   match x:
-    case Rg{+mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{+mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       mode
 
 def rg.group(+x: Rg) -> U32:
   match x:
-    case Rg{mode, +group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, +group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       group
 
 def rg.end(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, +end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, +end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       end
 
 def rg.tr(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, +tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, +tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       tr
 
 def rg.tune(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, +tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, +tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       tune
 
 def rg.kc(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, +kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, tune, +kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       kc
 
 def rg.kt(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, +kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, tune, kc, +kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       kt
 
 def rg.rate(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, kt, +rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, tune, kc, kt, +rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       rate
 
 def rg.pan(+x: Rg) -> F32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, kt, rate, +pan, fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, +pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       pan
 
 def rg.fc(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, +fc, mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, +fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       fc
 
 def rg.mlf(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, +mlf, mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, +mlf, mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       mlf
 
 def rg.mef(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, +mef, mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, +mef, mlp, vlp, mep, mlv, sr, sc, wide}:
       mef
 
 def rg.mlp(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, +mlp, vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, +mlp, vlp, mep, mlv, sr, sc, wide}:
       mlp
 
 def rg.vlp(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, +vlp, mep, mlv}:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, +vlp, mep, mlv, sr, sc, wide}:
       vlp
 
 def rg.mep(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, +mep, mlv}:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, +mep, mlv, sr, sc, wide}:
       mep
 
 def rg.mlv(+x: Rg) -> U32:
   match x:
-    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, +mlv}:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, +mlv, sr, sc, wide}:
       mlv
 
 def vc.pi(+x: Vc) -> U32:
@@ -430,175 +431,250 @@ def vc.rg(+x: Vc) -> Rg:
 
 def cn.pi(+x: Cn) -> U32:
   match x:
-    case Cn{+pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun}:
+    case Cn{+pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}:
       pi
 
 def cn.pi.set(+x: Cn, +v: U32) -> Cn:
   match x:
-    case Cn{pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun}:
-      Cn{v, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun}
+    case Cn{pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{v, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.bank(+x: Cn) -> U32:
   match x:
-    case Cn{pi, +bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun}:
+    case Cn{pi, +bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}:
       bank
 
 def cn.bank.set(+x: Cn, +v: U32) -> Cn:
   match x:
-    case Cn{+pi, bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun}:
-      Cn{pi, v, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun}
+    case Cn{+pi, bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, v, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.wheel(+x: Cn) -> U32:
   match x:
-    case Cn{pi, bank, +wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun}:
+    case Cn{pi, bank, +wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}:
       wheel
 
 def cn.wheel.set(+x: Cn, +v: U32) -> Cn:
   match x:
-    case Cn{+pi, +bank, wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun}:
-      Cn{pi, bank, v, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun}
+    case Cn{+pi, +bank, wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, v, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.mpan(+x: Cn) -> U32:
   match x:
-    case Cn{pi, bank, wheel, +mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun}:
+    case Cn{pi, bank, wheel, +mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}:
       mpan
 
 def cn.mpan.set(+x: Cn, +v: U32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun}:
-      Cn{pi, bank, wheel, v, mvol, mexp, rpn, data, sus, po, gdb, rng, tun}
+    case Cn{+pi, +bank, +wheel, mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, v, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.mvol(+x: Cn) -> U32:
   match x:
-    case Cn{pi, bank, wheel, mpan, +mvol, mexp, rpn, data, sus, po, gdb, rng, tun}:
+    case Cn{pi, bank, wheel, mpan, +mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}:
       mvol
 
 def cn.mvol.set(+x: Cn, +v: U32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, +mpan, mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun}:
-      Cn{pi, bank, wheel, mpan, v, mexp, rpn, data, sus, po, gdb, rng, tun}
+    case Cn{+pi, +bank, +wheel, +mpan, mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, v, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.mexp(+x: Cn) -> U32:
   match x:
-    case Cn{pi, bank, wheel, mpan, mvol, +mexp, rpn, data, sus, po, gdb, rng, tun}:
+    case Cn{pi, bank, wheel, mpan, mvol, +mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}:
       mexp
 
 def cn.mexp.set(+x: Cn, +v: U32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, +mpan, +mvol, mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun}:
-      Cn{pi, bank, wheel, mpan, mvol, v, rpn, data, sus, po, gdb, rng, tun}
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, v, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.rpn(+x: Cn) -> U32:
   match x:
-    case Cn{pi, bank, wheel, mpan, mvol, mexp, +rpn, data, sus, po, gdb, rng, tun}:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, +rpn, data, sus, po, gdb, rng, tun, mw, rv, co, cp}:
       rpn
 
 def cn.rpn.set(+x: Cn, +v: U32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, rpn, +data, +sus, +po, +gdb, +rng, +tun}:
-      Cn{pi, bank, wheel, mpan, mvol, mexp, v, data, sus, po, gdb, rng, tun}
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, v, data, sus, po, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.data(+x: Cn) -> U32:
   match x:
-    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, +data, sus, po, gdb, rng, tun}:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, +data, sus, po, gdb, rng, tun, mw, rv, co, cp}:
       data
 
 def cn.data.set(+x: Cn, +v: U32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, data, +sus, +po, +gdb, +rng, +tun}:
-      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, v, sus, po, gdb, rng, tun}
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, v, sus, po, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.sus(+x: Cn) -> U32:
   match x:
-    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, +sus, po, gdb, rng, tun}:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, +sus, po, gdb, rng, tun, mw, rv, co, cp}:
       sus
 
 def cn.sus.set(+x: Cn, +v: U32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, sus, +po, +gdb, +rng, +tun}:
-      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, v, po, gdb, rng, tun}
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, v, po, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.po(+x: Cn) -> F32:
   match x:
-    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, +po, gdb, rng, tun}:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, +po, gdb, rng, tun, mw, rv, co, cp}:
       po
 
 def cn.po.set(+x: Cn, +v: F32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, po, +gdb, +rng, +tun}:
-      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, v, gdb, rng, tun}
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, po, +gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, v, gdb, rng, tun, mw, rv, co, cp}
 
 def cn.gdb(+x: Cn) -> F32:
   match x:
-    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, +gdb, rng, tun}:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, +gdb, rng, tun, mw, rv, co, cp}:
       gdb
 
 def cn.gdb.set(+x: Cn, +v: F32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, gdb, +rng, +tun}:
-      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, v, rng, tun}
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, gdb, +rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, v, rng, tun, mw, rv, co, cp}
 
 def cn.rng(+x: Cn) -> F32:
   match x:
-    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, +rng, tun}:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, +rng, tun, mw, rv, co, cp}:
       rng
 
 def cn.rng.set(+x: Cn, +v: F32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, rng, +tun}:
-      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, v, tun}
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, rng, +tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, v, tun, mw, rv, co, cp}
 
 def cn.tun(+x: Cn) -> F32:
   match x:
-    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, +tun}:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, +tun, mw, rv, co, cp}:
       tun
 
 def cn.tun.set(+x: Cn, +v: F32) -> Cn:
   match x:
-    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, tun}:
-      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, v}
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, tun, +mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, v, mw, rv, co, cp}
 
 def syn.vs(+x: Syn) -> List<&2, Vc>:
   match x:
-    case Syn{+vs, cs, play, vol}:
+    case Syn{+vs, cs, play, vol, fx}:
       vs
 
 def syn.vs.set(+x: Syn, +v: List<&2, Vc>) -> Syn:
   match x:
-    case Syn{vs, +cs, +play, +vol}:
-      Syn{v, cs, play, vol}
+    case Syn{vs, +cs, +play, +vol, +fx}:
+      Syn{v, cs, play, vol, fx}
 
 def syn.cs(+x: Syn) -> List<&2, Cn>:
   match x:
-    case Syn{vs, +cs, play, vol}:
+    case Syn{vs, +cs, play, vol, fx}:
       cs
 
 def syn.cs.set(+x: Syn, +v: List<&2, Cn>) -> Syn:
   match x:
-    case Syn{+vs, cs, +play, +vol}:
-      Syn{vs, v, play, vol}
+    case Syn{+vs, cs, +play, +vol, +fx}:
+      Syn{vs, v, play, vol, fx}
 
 def syn.play(+x: Syn) -> U32:
   match x:
-    case Syn{vs, cs, +play, vol}:
+    case Syn{vs, cs, +play, vol, fx}:
       play
 
 def syn.play.set(+x: Syn, +v: U32) -> Syn:
   match x:
-    case Syn{+vs, +cs, play, +vol}:
-      Syn{vs, cs, v, vol}
+    case Syn{+vs, +cs, play, +vol, +fx}:
+      Syn{vs, cs, v, vol, fx}
 
 def syn.vol(+x: Syn) -> U32:
   match x:
-    case Syn{vs, cs, play, +vol}:
+    case Syn{vs, cs, play, +vol, fx}:
       vol
 
 def syn.vol.set(+x: Syn, +v: U32) -> Syn:
   match x:
-    case Syn{+vs, +cs, +play, vol}:
-      Syn{vs, cs, play, v}
+    case Syn{+vs, +cs, +play, vol, +fx}:
+      Syn{vs, cs, play, v, fx}
 
 
+
+def rg.sr(+x: Rg) -> F32:
+  match x:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, +sr, sc, wide}:
+      sr
+
+def rg.sr.set(+x: Rg, +v: F32) -> Rg:
+  match x:
+    case Rg{+mode, +group, +end, +tr, +tune, +kc, +kt, +rate, +pan, +fc, +mlf, +mef, +mlp, +vlp, +mep, +mlv, sr, +sc, +wide}:
+      Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, v, sc, wide}
+
+def rg.sc(+x: Rg) -> F32:
+  match x:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, +sc, wide}:
+      sc
+
+def rg.sc.set(+x: Rg, +v: F32) -> Rg:
+  match x:
+    case Rg{+mode, +group, +end, +tr, +tune, +kc, +kt, +rate, +pan, +fc, +mlf, +mef, +mlp, +vlp, +mep, +mlv, +sr, sc, +wide}:
+      Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, v, wide}
+
+def cn.mw(+x: Cn) -> U32:
+  match x:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, +mw, rv, co, cp}:
+      mw
+
+def cn.mw.set(+x: Cn, +v: U32) -> Cn:
+  match x:
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, mw, +rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, v, rv, co, cp}
+
+def cn.rv(+x: Cn) -> U32:
+  match x:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, +rv, co, cp}:
+      rv
+
+def cn.rv.set(+x: Cn, +v: U32) -> Cn:
+  match x:
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, rv, +co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, v, co, cp}
+
+def cn.co(+x: Cn) -> U32:
+  match x:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, +co, cp}:
+      co
+
+def cn.co.set(+x: Cn, +v: U32) -> Cn:
+  match x:
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, co, +cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, v, cp}
+
+def cn.cp(+x: Cn) -> U32:
+  match x:
+    case Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, +cp}:
+      cp
+
+def cn.cp.set(+x: Cn, +v: U32) -> Cn:
+  match x:
+    case Cn{+pi, +bank, +wheel, +mpan, +mvol, +mexp, +rpn, +data, +sus, +po, +gdb, +rng, +tun, +mw, +rv, +co, cp}:
+      Cn{pi, bank, wheel, mpan, mvol, mexp, rpn, data, sus, po, gdb, rng, tun, mw, rv, co, v}
+
+def syn.fx(+x: Syn) -> X.Fx:
+  match x:
+    case Syn{vs, cs, play, vol, +fx}:
+      fx
+
+def syn.fx.set(+x: Syn, +v: X.Fx) -> Syn:
+  match x:
+    case Syn{+vs, +cs, +play, +vol, fx}:
+      Syn{vs, cs, play, vol, v}
+
+def rg.wide(+x: Rg) -> U32:
+  match x:
+    case Rg{mode, group, end, tr, tune, kc, kt, rate, pan, fc, mlf, mef, mlp, vlp, mep, mlv, sr, sc, +wide}:
+      wide
 
 def none() -> U32:
   4294967295
@@ -620,6 +696,124 @@ def c2hz(+c: F32) -> F32:
 
 def g2db(+g: F32) -> F32:
   Bool.pick(F32, F32.is_le(g, 0.00001), (0.0 - 100.0 : F32), (20.0 * F32.log10(g) : F32))
+
+def fxon(+s: Syn) -> Bool:
+  X.on(syn.fx(s))
+
+def ctab(+j: U32) -> F32:
+  Bool.pick(F32, U32.is_eq(j, 0), 0.0, Bool.pick(F32, U32.is_ge(j, 127), 1.0, ((0.0 - (5.0 / 12.0 : F32) : F32) * F32.log10((U32.to_f32((127 - j : U32)) / 127.0 : F32)) : F32)))
+
+def vtab(+j: U32) -> F32:
+  Bool.pick(F32, U32.is_eq(j, 0), 0.0, Bool.pick(F32, U32.is_ge(j, 127), 1.0, (1.0 + ((5.0 / 12.0 : F32) * F32.log10((U32.to_f32(j) / 127.0 : F32)) : F32) : F32)))
+
+def tab(+cvx: Bool, +j: U32) -> F32:
+  Bool.pick(F32, cvx, vtab(j), ctab(j))
+
+def bend(+cvx: Bool, +x: F32) -> F32:
+  +i = toi(Bool.pick(F32, F32.is_lt(x, 0.0), 0.0, x))
+  +a = tab(cvx, i)
+  Bool.pick(F32, F32.is_lt(x, 0.0), 0.0, Bool.pick(F32, F32.is_ge(x, 127.0), 1.0, (a + ((tab(cvx, (i + 1 : U32)) - a : F32) * (x - U32.to_f32(i) : F32) : F32) : F32)))
+
+def curve(+ty: U32, +x: F32) -> F32:
+  Bool.pick(F32, U32.is_eq(ty, 0), (x / 127.0 : F32), Bool.pick(F32, U32.is_eq(ty, 1), bend(False{}, x), Bool.pick(F32, U32.is_eq(ty, 2), bend(True{}, x), 0.0)))
+
+def xform(+w: U32, +vn: F32) -> F32:
+  +neg = U32.is_eq(((w >> 8n) .&. 1 : U32), 1)
+  +bip = U32.is_eq(((w >> 9n) .&. 1 : U32), 1)
+  +ty = (w >> 10n : U32)
+  +sw = Bool.pick(F32, F32.is_ge(vn, 0.5), 1.0, 0.0)
+  +swv = Bool.pick(F32, bip, Bool.pick(F32, neg, (1.0 - (2.0 * sw : F32) : F32), ((2.0 * sw : F32) - 1.0 : F32)), Bool.pick(F32, neg, (1.0 - sw : F32), sw))
+  +uni = curve(ty, (127.0 * Bool.pick(F32, neg, (1.0 - vn : F32), vn) : F32))
+  +mag = Bool.pick(F32, F32.is_gt(vn, 0.5), curve(ty, (254.0 * (vn - 0.5 : F32) : F32)), (0.0 - curve(ty, (254.0 * (0.5 - vn : F32) : F32)) : F32))
+  +bi = Bool.pick(F32, neg, (0.0 - mag : F32), mag)
+  Bool.pick(F32, U32.is_eq(ty, 3), swv, Bool.pick(F32, bip, bi, uni))
+
+def ccval(+c: Cn, +i: U32) -> U32:
+  Bool.pick(U32, U32.is_eq(i, 1), cn.mw(c), Bool.pick(U32, U32.is_eq(i, 7), (cn.mvol(c) >> 7n : U32), Bool.pick(U32, U32.is_eq(i, 10), (cn.mpan(c) >> 7n : U32), Bool.pick(U32, U32.is_eq(i, 11), (cn.mexp(c) >> 7n : U32),
+    Bool.pick(U32, U32.is_eq(i, 64), (cn.sus(c) * 127 : U32), Bool.pick(U32, U32.is_eq(i, 91), cn.rv(c), Bool.pick(U32, U32.is_eq(i, 93), cn.co(c), 0)))))))
+
+def raw(+c: Cn, +w: U32, +key: U32, +vel: U32) -> F32:
+  +i = (w .&. 127 : U32)
+  Bool.pick(F32, U32.is_eq(((w >> 7n) .&. 1 : U32), 1), (U32.to_f32(ccval(c, i)) / 128.0 : F32),
+    Bool.pick(F32, U32.is_eq(i, 0), 1.0, Bool.pick(F32, U32.is_eq(i, 2), (U32.to_f32(vel) / 128.0 : F32), Bool.pick(F32, U32.is_eq(i, 3), (U32.to_f32(key) / 128.0 : F32),
+      Bool.pick(F32, U32.is_eq(i, 13), (U32.to_f32(cn.cp(c)) / 128.0 : F32), Bool.pick(F32, U32.is_eq(i, 14), (U32.to_f32(cn.wheel(c)) / 16384.0 : F32), Bool.pick(F32, U32.is_eq(i, 16), (cn.rng(c) / 128.0 : F32), 0.0)))))))
+
+def srcval(+c: Cn, +w: U32, +key: U32, +vel: U32) -> F32:
+  xform(w, raw(c, w, key, vel))
+
+def chanmod(+s1: U32, +d: U32, +s2: U32) -> Bool:
+  Bool.or(Bool.or(Bool.and(Bool.and(U32.is_eq(s1, 258), U32.is_eq(d, 8)), U32.is_eq(s2, 3074)), Bool.and(Bool.and(U32.is_eq(s1, 1415), U32.is_eq(d, 48)), U32.is_eq(s2, 0))),
+    Bool.or(Bool.or(Bool.and(Bool.and(U32.is_eq(s1, 650), U32.is_eq(d, 17)), U32.is_eq(s2, 0)), Bool.and(Bool.and(U32.is_eq(s1, 1419), U32.is_eq(d, 48)), U32.is_eq(s2, 0))), Bool.and(Bool.and(U32.is_eq(s1, 526), U32.is_eq(d, 52)), U32.is_eq(s2, 16))))
+
+def modval(+c: Cn, +s1: U32, +d: U32, +amt: U32, +s2: U32, +key: U32, +vel: U32) -> F32:
+  +v1 = srcval(c, s1, key, vel)
+  +v2 = Bool.pick(F32, U32.is_eq((s2 .&. 127 : U32), 0), 1.0, srcval(c, s2, key, vel))
+  Bool.pick(F32, Bool.or(U32.is_eq((s1 .&. 127 : U32), 0), chanmod(s1, d, s2)), 0.0, ((G.sf(G.sx16(amt)) * v1 : F32) * v2 : F32))
+
+def iadd(+r: T.Vec<U32>, +i: U32, +v: F32, +lo: U32, +hi: U32) -> T.Vec<U32>:
+  G.put(r, i, G.iclamp((G.get(r, i) + G.fs(F32.round(v)) : U32), lo, hi))
+
+def tmul(+r: T.Vec<U32>, +i: U32, +v: F32) -> T.Vec<U32>:
+  G.pf(r, i, (G.gf(r, i) * G.tc2s(v) : F32))
+
+def envdest(+d: U32) -> U32:
+  Bool.pick(U32, Bool.and(U32.is_ge(d, 25), U32.is_le(d, 28)), d, Bool.pick(U32, U32.is_eq(d, 30), 30, Bool.pick(U32, Bool.and(U32.is_ge(d, 33), U32.is_le(d, 36)), (d - 16 : U32), Bool.pick(U32, U32.is_eq(d, 38), 22, 0))))
+
+def mapply.int(+d: U32) -> U32:
+  Bool.pick(U32, U32.is_eq(d, 5), 41, Bool.pick(U32, U32.is_eq(d, 6), 44, Bool.pick(U32, U32.is_eq(d, 7), 35, Bool.pick(U32, U32.is_eq(d, 10), 37, Bool.pick(U32, U32.is_eq(d, 11), 36,
+    Bool.pick(U32, U32.is_eq(d, 22), 40, Bool.pick(U32, U32.is_eq(d, 24), 43, Bool.pick(U32, U32.is_eq(d, 51), 11, Bool.pick(U32, U32.is_eq(d, 52), 12, 0)))))))))
+
+def mapply.rest(+r: T.Vec<U32>, +d: U32, +v: F32) -> T.Vec<U32>:
+  Bool.pick(T.Vec<U32>, U32.is_eq(d, 8), iadd(r, 34, v, 1500, 13500),
+    Bool.pick(T.Vec<U32>, U32.is_eq(d, 9), iadd(r, 33, v, 0, 960),
+      Bool.pick(T.Vec<U32>, U32.is_eq(d, 13), iadd(r, 38, v, 4294966336, 960),
+        Bool.pick(T.Vec<U32>, U32.is_eq(d, 15), iadd(r, 45, v, 0, 1000),
+          Bool.pick(T.Vec<U32>, U32.is_eq(d, 16), iadd(r, 46, v, 0, 1000),
+            Bool.pick(T.Vec<U32>, U32.is_eq(d, 17), G.pf(r, 16, G.fclamp((G.gf(r, 16) + (v * 0.001 : F32) : F32), (0.0 - 0.5 : F32), 0.5)),
+              Bool.pick(T.Vec<U32>, U32.is_eq(d, 48), G.pf(r, 15, (G.gf(r, 15) + (v * 0.1 : F32) : F32)),
+                Bool.pick(T.Vec<U32>, Bool.or(U32.is_eq(d, 21), U32.is_eq(d, 23)), tmul(r, Bool.pick(U32, U32.is_eq(d, 21), 39, 42), v),
+                  Bool.pick(T.Vec<U32>, U32.is_eq(d, 37), G.pf(r, 21, G.fclamp((G.gf(r, 21) * G.db2g(((0.0 - v : F32) / 10.0 : F32)) : F32), 0.0, 1.0)),
+                    Bool.pick(T.Vec<U32>, U32.is_eq(d, 29), G.pf(r, 29, G.fclamp((G.gf(r, 29) - (v / 1000.0 : F32) : F32), 0.0, 1.0)), r))))))))))
+
+def mapply.pick(ia: Bool, ea: Bool, +r: T.Vec<U32>, +d: U32, +v: F32, +ii: U32, +ed: U32) -> T.Vec<U32>:
+  match ia ea:
+    case True{} _:
+      iadd(r, ii, v, 4294955296, 12000)
+    case False{} True{}:
+      tmul(r, ed, v)
+    case False{} False{}:
+      mapply.rest(r, d, v)
+
+
+def mapply(+r: T.Vec<U32>, +d: U32, +v: F32) -> T.Vec<U32>:
+  +ii = mapply.int(d)
+  +ed = envdest(d)
+  mapply.pick(U32.is_ne(ii, 0), U32.is_ne(ed, 0), r, d, v, ii, ed)
+
+def mods.go(n: Nat, +r: T.Vec<U32>, +m: T.Vec<U32>, +i: U32, +c: Cn, +key: U32, +vel: U32) -> T.Vec<U32>:
+  match n:
+    case 0n:
+      r
+    case 1n+k:
+      +d = G.get(m, (i + 1 : U32))
+      +v = modval(c, G.get(m, i), d, G.get(m, (i + 2 : U32)), G.get(m, (i + 3 : U32)), key, vel)
+      mods.go(k, Bool.pick(T.Vec<U32>, F32.is_eq(v, 0.0), r, mapply(r, d, v)), m, (i + 4 : U32), c, key, vel)
+
+def modulate(+r: T.Vec<U32>, +c: Cn, +key: U32, +velb: U32) -> T.Vec<U32>:
+  +r0 = G.pf(r, 15, (G.gf(r, 15) * 0.4 : F32))
+  +r1 = mods.go(U32.to_nat(G.get(r, 49)), r0, r, 50, c, key, velb)
+  +vel = (U32.to_f32(velb) / 127.0 : F32)
+  G.put(G.pf(r1, 15, (G.fclamp(G.gf(r1, 15), 0.0, 144.0) - g2db((1.0 / vel : F32)) : F32)), 47, 4294967294)
+
+def modulated.go(rs: List<&2, T.Vec<U32>>, +c: Cn, +key: U32, +velb: U32, acc: List<&2, T.Vec<U32>>) -> List<&2, T.Vec<U32>>:
+  match rs:
+    case +r <> t:
+      modulated.go(t, c, key, velb, modulate(r, c, key, velb) <> acc)
+    case []:
+      List.reverse(&2, T.Vec<U32>, acc)
+
+def modulated(rs: List<&2, T.Vec<U32>>, +c: Cn, +key: U32, +velb: U32) -> List<&2, T.Vec<U32>>:
+  modulated.go(rs, c, key, velb, [])
 
 def env.mk(+e: Env, +seg: U32, +expo: U32, +lv: F32, +sl: F32, +un: U32) -> Env:
   match e:
@@ -718,18 +912,23 @@ def pitch(+v: Vc, +sh: F32) -> Vc:
   +adj2 = Bool.pick(F32, F32.is_ne(sh, 0.0), (adj + sh : F32), adj)
   vc.pout.set(vc.pin.set(v, (adj2 * 100.0 : F32)), (U32.to_f32(rg.rate(r)) / (G.tc2s((kc * 100.0 : F32)) * rate() : F32) : F32))
 
-def setpan(+v: Vc, +np: F32) -> Vc:
+def setpan.tsf(+v: Vc, +np: F32) -> Vc:
   Bool.pick(Vc, F32.is_le(np, (0.0 - 0.5 : F32)), vc.pr.set(vc.pl.set(v, 1.0), 0.0),
     Bool.pick(Vc, F32.is_ge(np, 0.5), vc.pr.set(vc.pl.set(v, 0.0), 1.0),
       vc.pr.set(vc.pl.set(v, F32.sqrt((0.5 - np : F32))), F32.sqrt((0.5 + np : F32)))))
 
+def setpan(+v: Vc, +np: F32) -> Vc:
+  +h = (F32.pi() / 2.0 : F32)
+  +c = G.fclamp(np, (0.0 - 0.5 : F32), 0.5)
+  Bool.pick(Vc, U32.is_eq(rg.wide(vc.rg(v)), 1), vc.pr.set(vc.pl.set(v, F32.sin(((0.5 - c : F32) * h : F32))), F32.sin(((c + 0.5 : F32) * h : F32))), setpan.tsf(v, np))
+
 def nov() -> Vc:
   +e : Env = Env{0, 0, 0, 0, 0.0, 0.0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
   +l : Lf = Lf{0, 0.0, 0.0}
-  Vc{none(), 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0.0, 0, 0, e, e, Lp{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0}, l, l, Rg{0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0, 0}}
+  Vc{none(), 0, 0, 0, 0, 0.0, 0.0, 0, 0, 0.0, 0.0, 0.0, 0, 0, e, e, Lp{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0}, l, l, Rg{0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0}}
 
 def chan() -> Cn:
-  Cn{0, 0, 8192, 8192, 16383, 16383, 65535, 0, 0, 0.0, 0.0, 2.0, 0.0}
+  Cn{0, 0, 8192, 8192, 16383, 16383, 65535, 0, 0, 0.0, 0.0, 2.0, 0.0, 0, 0, 0, 0}
 
 def vlist.go(n: Nat, acc: List<&2, Vc>) -> List<&2, Vc>:
   match n:
@@ -892,7 +1091,8 @@ def setprog(+bk: G.Bank, +s: Syn, +ch: U32, +num: U32) -> Syn:
 def volumed(+s: Syn, +ch: U32, +c: Cn) -> Syn:
   +a = (U32.to_f32(cn.mvol(c)) / 16383.0 : F32)
   +b = (U32.to_f32(cn.mexp(c)) / 16383.0 : F32)
-  setvolume(syn.setchan(s, ch, c), ch, F32.pow((a * b : F32), 3.0))
+  +fv = G.db2g((0.0 - ((96.0 * bend(False{}, (127.0 * (1.0 - (U32.to_f32((cn.mvol(c) >> 7n : U32)) / 128.0 : F32) : F32) : F32)) : F32) + (96.0 * bend(False{}, (127.0 * (1.0 - (U32.to_f32((cn.mexp(c) >> 7n : U32)) / 128.0 : F32) : F32) : F32)) : F32) : F32) : F32))
+  setvolume(syn.setchan(s, ch, c), ch, Bool.pick(F32, fxon(s), fv, F32.pow((a * b : F32), 3.0)))
 
 def dataed(+s: Syn, +ch: U32, +c: Cn, +ctl: U32, +val: U32) -> Syn:
   +s1 = syn.setchan(s, ch, c)
@@ -1032,7 +1232,11 @@ def ctl.c0(hit: Bool, +s: Syn, +ch: U32, +ctl: U32, +val: U32, +c: Cn, +rp: U32,
     case False{}:
       ctl.c1(U32.is_eq(ctl, 39), s, ch, ctl, val, c, rp, bk)
 
-def control(+s: Syn, +ch: U32, +ctl: U32, +val: U32) -> Syn:
+def kept(+c: Cn, +ctl: U32, +val: U32) -> Cn:
+  Bool.pick(Cn, U32.is_eq(ctl, 1), cn.mw.set(c, val), Bool.pick(Cn, U32.is_eq(ctl, 91), cn.rv.set(c, val), Bool.pick(Cn, U32.is_eq(ctl, 93), cn.co.set(c, val), Bool.pick(Cn, U32.is_eq(ctl, 121), cn.cp.set(cn.co.set(cn.rv.set(cn.mw.set(c, 0), 0), 0), 0), c))))
+
+def control(+s0: Syn, +ch: U32, +ctl: U32, +val: U32) -> Syn:
+  +s = syn.setchan(s0, ch, kept(syn.chan(s0, ch), ctl, val))
   +c = syn.chan(s, ch)
   +rp = Bool.pick(U32, U32.is_eq(cn.rpn(c), 65535), 0, cn.rpn(c))
   +bk = cn.bank(c)
@@ -1109,8 +1313,11 @@ def steal(vs: List<&2, Vc>, +i: U32, +best: U32, +at: U32) -> U32:
     case []:
       at
 
+def send(+x: U32) -> F32:
+  G.fclamp((G.sf(x) / 1000.0 : F32), 0.0, 1.0)
+
 def voice(+r: T.Vec<U32>, +c: Cn, +pi: U32, +ch: U32, +key: U32, +mv: U32, +vel: F32, +idx: U32) -> Vc:
-  +rg : Rg = Rg{G.get(r, 0), G.get(r, 6), G.get(r, 8), G.get(r, 11), G.get(r, 12), G.get(r, 13), G.get(r, 14), G.get(r, 1), G.gf(r, 16), G.get(r, 34), G.get(r, 37), G.get(r, 36), G.get(r, 41), G.get(r, 44), G.get(r, 35), G.get(r, 38)}
+  +rg : Rg = Rg{G.get(r, 0), G.get(r, 6), G.get(r, 8), G.get(r, 11), G.get(r, 12), G.get(r, 13), G.get(r, 14), G.get(r, 1), G.gf(r, 16), G.get(r, 34), G.get(r, 37), G.get(r, 36), G.get(r, 41), G.get(r, 44), G.get(r, 35), G.get(r, 38), send(G.get(r, 46)), send(G.get(r, 45)), Bool.pick(U32, U32.is_eq(G.get(r, 47), 4294967294), 1, 0)}
   +gdb = (((0.0 - G.gf(r, 15) : F32) - g2db((1.0 / vel : F32)) : F32) + cn.gdb(c) : F32)
   +loop = Bool.and(U32.is_ne(G.get(r, 0), 0), U32.is_lt(G.get(r, 9), G.get(r, 10)))
   +fc = Bool.pick(F32, G.slt(G.get(r, 34), 13501), (c2hz(G.sf(G.get(r, 34))) / rate() : F32), 1.0)
@@ -1162,12 +1369,19 @@ def pr.rs(+p: G.Pr) -> List<&2, T.Vec<U32>>:
     case G.Pr{b, n, +rs}:
       rs
 
+def fxrs(on: Bool, rs: List<&2, T.Vec<U32>>, +c: Cn, +key: U32, +mv: U32) -> List<&2, T.Vec<U32>>:
+  match on:
+    case True{}:
+      modulated(rs, c, key, mv)
+    case False{}:
+      rs
+
 def noteon.go(skip: Bool, +bk: G.Bank, +s: Syn, +s1: Syn, +c: Cn, +pi: U32, +ch: U32, +key: U32, +mv: U32, +vel: F32, +idx: U32) -> Syn:
   match skip:
     case True{}:
       s
     case False{}:
-      syn.vs.set(s1, regions(pr.rs(T.get(G.Pr, bk.ps(bk), pi, G.Pr{0, 0, []})), syn.vs(s1), c, pi, ch, key, mv, vel, idx))
+      syn.vs.set(s1, regions(fxrs(fxon(s1), pr.rs(T.get(G.Pr, bk.ps(bk), pi, G.Pr{0, 0, []})), c, key, mv), syn.vs(s1), c, pi, ch, key, mv, vel, idx))
 
 def noteon(+bk: G.Bank, +s: Syn, +ch: U32, +key: U32, +velb: U32) -> Syn:
   +c = syn.chan(s, ch)
@@ -1182,19 +1396,24 @@ def wheel(+s: Syn, +ch: U32, +w: U32) -> Syn:
   +c = syn.chan(s, ch)
   Bool.pick(Syn, U32.is_eq(cn.wheel(c), w), s, applypitch(syn.setchan(s, ch, cn.wheel.set(c, w)), ch))
 
-def ev.go(off: Bool, on: Bool, cc: Bool, pc: Bool, pw: Bool, +bk: G.Bank, +s: Syn, +ch: U32, +a: U32, +b: U32) -> Syn:
-  match off on cc pc pw:
-    case True{} _ _ _ _:
+def pressed(+s: Syn, +ch: U32, +a: U32) -> Syn:
+  syn.setchan(s, ch, cn.cp.set(syn.chan(s, ch), a))
+
+def ev.go(off: Bool, on: Bool, cc: Bool, pc: Bool, pw: Bool, at: Bool, +bk: G.Bank, +s: Syn, +ch: U32, +a: U32, +b: U32) -> Syn:
+  match off on cc pc pw at:
+    case True{} _ _ _ _ _:
       noteoff(s, ch, a)
-    case False{} True{} _ _ _:
+    case False{} True{} _ _ _ _:
       noteon(bk, s, ch, a, b)
-    case False{} False{} True{} _ _:
+    case False{} False{} True{} _ _ _:
       control(s, ch, a, b)
-    case False{} False{} False{} True{} _:
+    case False{} False{} False{} True{} _ _:
       setprog(bk, s, ch, a)
-    case False{} False{} False{} False{} True{}:
+    case False{} False{} False{} False{} True{} _:
       wheel(s, ch, ((b << 7n) .|. a : U32))
-    case _ _ _ _ _:
+    case False{} False{} False{} False{} False{} True{}:
+      pressed(s, ch, a)
+    case _ _ _ _ _ _:
       s
 
 def ev(+bk: G.Bank, +s: Syn, +x: U32) -> Syn:
@@ -1203,7 +1422,7 @@ def ev(+bk: G.Bank, +s: Syn, +x: U32) -> Syn:
   +ch = (st .&. 15 : U32)
   +a = ((x >> 8n) .&. 255 : U32)
   +b = (x .&. 255 : U32)
-  ev.go(Bool.or(U32.is_eq(hi, 128), Bool.and(U32.is_eq(hi, 144), U32.is_eq(b, 0))), U32.is_eq(hi, 144), U32.is_eq(hi, 176), U32.is_eq(hi, 192), U32.is_eq(hi, 224), bk, s, ch, a, b)
+  ev.go(Bool.or(U32.is_eq(hi, 128), Bool.and(U32.is_eq(hi, 144), U32.is_eq(b, 0))), U32.is_eq(hi, 144), U32.is_eq(hi, 176), U32.is_eq(hi, 192), U32.is_eq(hi, 224), U32.is_eq(hi, 208), bk, s, ch, a, b)
 
 def quickall.go(vs: List<&2, Vc>, acc: List<&2, Vc>) -> List<&2, Vc>:
   match vs:
@@ -1217,11 +1436,14 @@ def quickall(vs: List<&2, Vc>) -> List<&2, Vc>:
 
 def restart(+bk: G.Bank, +s: Syn) -> Syn:
   match s:
-    case Syn{+vs, cs, +play, +vol}:
-      setprog(bk, Syn{quickall(vs), clist(16n), play, vol}, 9, 0)
+    case Syn{+vs, cs, +play, +vol, +fx}:
+      setprog(bk, Syn{quickall(vs), clist(16n), play, vol, fx}, 9, 0)
 
 def new() -> Syn:
-  Syn{vlist(32n), clist(16n), 0, 64}
+  Syn{vlist(32n), clist(16n), 0, 64, X.off()}
+
+def effects(+s: Syn, +base: U32) -> Syn:
+  syn.fx.set(s, X.new(base))
 
 type Q is Data:
   Q{gl: F32, gr: F32, a0: F32, a1: F32, b1: F32, b2: F32, on: U32, ls: U32, le: U32, end: U32, whole: U32, step: U32}
@@ -1278,6 +1500,52 @@ def samp.read?(r: Array<F32> & F32, +pos: U32, +frac: U32, +z1: F32, +z2: F32, +
   (smp, +s0) = r
   samp.mix(Array.get(F32, smp, q.next(q, pos)), s0, pos, frac, z1, z2, q, a, b, t)
 
+def sm.cons4(+a: F32, +b: F32, +c: F32, +d: F32, r: Sm) -> Sm:
+  match r:
+    case Sm{smp, +pos, +frac, +z1, +z2, out}:
+      Sm{smp, pos, frac, z1, z2, a <> b <> c <> d <> out}
+
+def samp4.go?(go: Bool, smp: Array<F32>, +pos: U32, +frac: U32, +z1: F32, +z2: F32, +q: Q, +gv: F32, +gc: F32, +a: F32, +b: F32, +c: F32, +d: F32, t: List<&2, F32>) -> Sm:
+  match go:
+    case False{}:
+      Sm{smp, pos, frac, z1, z2, a <> b <> c <> d <> t}
+    case True{}:
+      samp4.read(Array.get(F32, smp, pos), pos, frac, z1, z2, q, gv, gc, a, b, c, d, t)
+
+def samp4?(smp: Array<F32>, +pos: U32, +frac: U32, +z1: F32, +z2: F32, +q: Q, +gv: F32, +gc: F32, acc: List<&2, F32>) -> Sm:
+  match acc:
+    case +a <> +b <> +c <> +d <> t:
+      samp4.go(U32.is_lt(pos, q.end(q)), smp, pos, frac, z1, z2, q, gv, gc, a, b, c, d, t)
+    case _:
+      Sm{smp, pos, frac, z1, z2, []}
+
+def samp4.mix?(r: Array<F32> & F32, +s0: F32, +pos: U32, +frac: U32, +z1: F32, +z2: F32, +q: Q, +gv: F32, +gc: F32, +a: F32, +b: F32, +c: F32, +d: F32, t: List<&2, F32>) -> Sm:
+  (smp, +s1) = r
+  match q:
+    case Q{+gl, +gr, +a0, +a1, +b1, +b2, +on, +ls, +le, +end, +whole, +step}:
+      +al = (U32.to_f32(frac) / 65536.0 : F32)
+      +v0 = ((s0 * (1.0 - al : F32) : F32) + (s1 * al : F32) : F32)
+      +lpon = U32.is_eq(on, 1)
+      +o = ((v0 * a0 : F32) + z1 : F32)
+      +nz1 = Bool.pick(F32, lpon, (((v0 * a1 : F32) + z2 : F32) - (b1 * o : F32) : F32), z1)
+      +nz2 = Bool.pick(F32, lpon, ((v0 * a0 : F32) - (b2 * o : F32) : F32), z2)
+      +val = Bool.pick(F32, lpon, o, v0)
+      +f1 = (frac + step : U32)
+      +p1 = (pos + whole + (f1 >> 16n) : U32)
+      +p2 = Bool.pick(U32, Bool.and(U32.is_ge(p1, (le + 1 : U32)), U32.is_lt(ls, le)), (p1 - ((le - ls : U32) + 1 : U32) : U32), p1)
+      sm.cons4((a + (val * gl : F32) : F32), (b + (val * gr : F32) : F32), (c + (val * gv : F32) : F32), (d + (val * gc : F32) : F32), samp4(smp, p2, (f1 .&. 65535 : U32), nz1, nz2, Q{gl, gr, a0, a1, b1, b2, on, ls, le, end, whole, step}, gv, gc, t))
+
+def samp4.read?(r: Array<F32> & F32, +pos: U32, +frac: U32, +z1: F32, +z2: F32, +q: Q, +gv: F32, +gc: F32, +a: F32, +b: F32, +c: F32, +d: F32, t: List<&2, F32>) -> Sm:
+  (smp, +s0) = r
+  samp4.mix(Array.get(F32, smp, q.next(q, pos)), s0, pos, frac, z1, z2, q, gv, gc, a, b, c, d, t)
+
+def samp.pick(w4: Bool, smp: Array<F32>, +pos: U32, +frac: U32, +z1: F32, +z2: F32, +q: Q, +gv: F32, +gc: F32, acc: List<&2, F32>) -> Sm:
+  match w4:
+    case True{}:
+      samp4(smp, pos, frac, z1, z2, q, gv, gc, acc)
+    case False{}:
+      samp(smp, pos, frac, z1, z2, q, acc)
+
 type Vo is Type:
   Vo{smp: Array<F32>, v: Vc, out: List<&2, F32>}
 
@@ -1289,21 +1557,21 @@ def vo.cat(+xs: List<&2, F32>, r: Vo) -> Vo:
 def nz(+x: U32) -> Bool:
   U32.is_ne(x, 0)
 
-def vr.next?(dead: Bool, +v: Vc, +n: U32, smp: Array<F32>, +out: List<&2, F32>, rest: List<&2, F32>) -> Vo:
+def vr.next?(dead: Bool, +v: Vc, +n: U32, +w4: Bool, smp: Array<F32>, +out: List<&2, F32>, rest: List<&2, F32>) -> Vo:
   match dead:
     case True{}:
       Vo{smp, vc.pi.set(v, none()), List.append(&2, F32, out, rest)}
     case False{}:
-      vo.cat(out, vr(v, n, smp, rest))
+      vo.cat(out, vr(v, n, w4, smp, rest))
 
-def vr.after?(+v: Vc, +n: U32, +bs: U32, rest: List<&2, F32>, r: Sm) -> Vo:
+def vr.after?(+v: Vc, +n: U32, +w4: Bool, +bs: U32, rest: List<&2, F32>, r: Sm) -> Vo:
   match r:
     case Sm{smp, +pos, +frac, +z1, +z2, +out}:
       +v2 = vc.lp.set(vc.frac.set(vc.pos.set(v, pos), frac), lp.z2.set(lp.z1.set(vc.lp(v), z1), z2))
       +dead = Bool.or(U32.is_ge(pos, rg.end(vc.rg(v))), U32.is_eq(env.seg(vc.amp(v)), 7))
-      vr.next(dead, v2, (n - bs : U32), smp, out, rest)
+      vr.next(dead, v2, (n - bs : U32), w4, smp, out, rest)
 
-def vr.go?(stop: Bool, +v: Vc, +n: U32, smp: Array<F32>, +acc: List<&2, F32>) -> Vo:
+def vr.go?(stop: Bool, +v: Vc, +n: U32, +w4: Bool, smp: Array<F32>, +acc: List<&2, F32>) -> Vo:
   match stop:
     case True{}:
       Vo{smp, v, acc}
@@ -1330,11 +1598,11 @@ def vr.go?(stop: Bool, +v: Vc, +n: U32, smp: Array<F32>, +acc: List<&2, F32>) ->
       +whole = toi(ratio)
       +step = toi(((ratio - U32.to_f32(whole) : F32) * 65536.0 : F32))
       +q : Q = Q{(gm * vc.pl(v) : F32), (gm * vc.pr(v) : F32), lp.a0(lp), lp.a1(lp), lp.b1(lp), lp.b2(lp), lp.on(lp), vc.ls(v), vc.le(v), rg.end(r), whole, step}
-      +k = U32.to_nat((bs * 2 : U32))
-      vr.after(v1, n, bs, List.drop(&2, F32, acc, k), samp(smp, vc.pos(v), vc.frac(v), lp.z1(lp), lp.z2(lp), q, List.take(&2, F32, acc, k)))
+      +k = U32.to_nat((bs * Bool.pick(U32, w4, 4, 2) : U32))
+      vr.after(v1, n, w4, bs, List.drop(&2, F32, acc, k), samp.pick(w4, smp, vc.pos(v), vc.frac(v), lp.z1(lp), lp.z2(lp), q, (gm * rg.sr(r) : F32), (gm * rg.sc(r) : F32), List.take(&2, F32, acc, k)))
 
-def vr?(+v: Vc, +n: U32, smp: Array<F32>, acc: List<&2, F32>) -> Vo:
-  vr.go(U32.is_eq(n, 0), v, n, smp, acc)
+def vr?(+v: Vc, +n: U32, +w4: Bool, smp: Array<F32>, acc: List<&2, F32>) -> Vo:
+  vr.go(U32.is_eq(n, 0), v, n, w4, smp, acc)
 
 type Rv is Type:
   Rv{smp: Array<F32>, vs: List<&2, Vc>, acc: List<&2, F32>}
@@ -1344,22 +1612,22 @@ def rv.cons(+v: Vc, r: Rv) -> Rv:
     case Rv{smp, +vs, acc}:
       Rv{smp, v <> vs, acc}
 
-def voices.on?(+v: Vc, t: List<&2, Vc>, +n: U32, r: Vo) -> Rv:
+def voices.on?(+v: Vc, t: List<&2, Vc>, +n: U32, +w4: Bool, r: Vo) -> Rv:
   match r:
     case Vo{smp, +v2, acc}:
-      rv.cons(v2, voices(t, n, smp, acc))
+      rv.cons(v2, voices(t, n, w4, smp, acc))
 
-def voices.pick?(act: Bool, +v: Vc, t: List<&2, Vc>, +n: U32, smp: Array<F32>, acc: List<&2, F32>) -> Rv:
+def voices.pick?(act: Bool, +v: Vc, t: List<&2, Vc>, +n: U32, +w4: Bool, smp: Array<F32>, acc: List<&2, F32>) -> Rv:
   match act:
     case True{}:
-      voices.on(v, t, n, vr(v, n, smp, acc))
+      voices.on(v, t, n, w4, vr(v, n, w4, smp, acc))
     case False{}:
-      rv.cons(v, voices(t, n, smp, acc))
+      rv.cons(v, voices(t, n, w4, smp, acc))
 
-def voices?(vs: List<&2, Vc>, +n: U32, smp: Array<F32>, acc: List<&2, F32>) -> Rv:
+def voices?(vs: List<&2, Vc>, +n: U32, +w4: Bool, smp: Array<F32>, acc: List<&2, F32>) -> Rv:
   match vs:
     case +v <> t:
-      voices.pick(U32.is_ne(vc.pi(v), none()), v, t, n, smp, acc)
+      voices.pick(U32.is_ne(vc.pi(v), none()), v, t, n, w4, smp, acc)
     case []:
       Rv{smp, [], acc}
 
@@ -1392,5 +1660,22 @@ def rendered(+s: Syn, r: Rv) -> (Array<F32> & Syn) & List<&2, U32>:
     case Rv{smp, +vs, +acc}:
       ((smp, syn.vs.set(s, vs)), shorts(acc, (U32.to_f32(syn.vol(s)) / 127.0 : F32)))
 
+def wet.out(+s: Syn, r: X.Fo) -> (Array<F32> & Syn) & List<&2, U32>:
+  match r:
+    case X.Fo{smp, +f, +out}:
+      ((smp, syn.fx.set(s, f)), shorts(out, (U32.to_f32(syn.vol(s)) / 127.0 : F32)))
+
+def wet(+s: Syn, r: Rv) -> (Array<F32> & Syn) & List<&2, U32>:
+  match r:
+    case Rv{smp, +vs, acc}:
+      wet.out(syn.vs.set(s, vs), X.run(smp, syn.fx(s), acc, []))
+
+def render.pick(w4: Bool, +s: Syn, smp: Array<F32>, +k: U32) -> (Array<F32> & Syn) & List<&2, U32>:
+  match w4:
+    case True{}:
+      wet(s, voices(syn.vs(s), (k * 2 : U32), True{}, smp, zeros(U32.to_nat((k * 8 : U32)))))
+    case False{}:
+      rendered(s, voices(syn.vs(s), (k * 2 : U32), False{}, smp, zeros(U32.to_nat((k * 4 : U32)))))
+
 def render(+s: Syn, smp: Array<F32>, +k: U32) -> (Array<F32> & Syn) & List<&2, U32>:
-  rendered(s, voices(syn.vs(s), (k * 2 : U32), smp, zeros(U32.to_nat((k * 4 : U32)))))
+  render.pick(fxon(s), s, smp, k)

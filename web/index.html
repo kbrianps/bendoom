@@ -26,6 +26,7 @@
     <label for="map">Map</label><input id="map" type="text" placeholder="E1M1 or MAP01" size="8">
     <label for="opl3">OPL3</label><input id="opl3" type="checkbox">
     <label for="comfort">Comfort mode</label><input id="comfort" type="checkbox">
+    <label for="noeffects">No reverb or chorus</label><input id="noeffects" type="checkbox">
     <button type="submit">Start</button>
   </form>
 </main>
@@ -69,6 +70,9 @@
       if ($("comfort").checked) {
         args.push("-comfort");
       }
+      if ($("noeffects").checked) {
+        args.push("-noeffects");
+      }
       const map = $("map").value.trim().toUpperCase();
       if (map !== "") {
         args.push(map);
@@ -94,7 +98,7 @@
   if (query.has("map")) {
     $("map").value = query.get("map");
   }
-  for (const flag of ["opl3", "comfort"]) {
+  for (const flag of ["opl3", "comfort", "noeffects"]) {
     if (query.has(flag)) {
       $(flag).checked = true;
     }

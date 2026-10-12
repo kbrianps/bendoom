@@ -2,6 +2,7 @@ import Base
 import ./tab.bend as T
 import ./mem.bend as M
 import ./wad.bend as W
+import ./fx.bend as X
 
 type Pr is Data:
   Pr{bank: U32, num: U32, rs: List<&2, T.Vec<U32>>}
@@ -54,7 +55,7 @@ def db2g(+db: F32) -> F32:
   Bool.pick(F32, F32.is_gt(db, (0.0 - 100.0 : F32)), F32.pow(10.0, (db * 0.05 : F32)), 0.0)
 
 def metas() -> List<&2, U32>:
-  [115, 131, 147, 163, 116, 4754, 4802, 4658, 8738, 12818, 4690, 4674, 132, 16994, 0, 0, 0, 16641, 0, 0, 0, 4721, 21122, 4769, 21170, 4497, 8609, 4529, 8641, 25041, 8673, 12785, 12801, 4369, 8481, 4401, 8513, 29009, 8545, 12657, 12673, 0, 0, 5, 6, 148, 0, 0, 20721, 0, 164, 178, 194, 0, 7, 0, 226, 104, 217]
+  [115, 131, 147, 163, 116, 4754, 4802, 4658, 8738, 12818, 4690, 4674, 132, 16994, 0, 722, 738, 16641, 0, 0, 0, 4721, 21122, 4769, 21170, 4497, 8609, 4529, 8641, 25041, 8673, 12785, 12801, 4369, 8481, 4401, 8513, 29009, 8545, 12657, 12673, 0, 0, 5, 6, 148, 0, 0, 20721, 0, 164, 178, 194, 0, 7, 0, 226, 104, 217]
 
 def meta(+h: T.Vec<U32>, +op: U32) -> U32:
   Bool.pick(U32, U32.is_lt(op, 59), T.get(U32, h, (op + 16 : U32), 0), 0)
@@ -64,8 +65,8 @@ def tcneg() -> U32:
 
 def clear(+rel: Bool) -> T.Vec<U32>:
   +t = tcneg()
-  +a : List<&2, U32> = [0, 0, 0, 127, 0, 127, 0, 0, 0, 0, 0, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  +b : List<&2, U32> = [0, 0, 0, 127, 0, 127, 0, 0, 0, 0, 0, 0, 0, 4294967295, 100, 0, 0, t, t, t, t, 0, t, 0, 0, t, t, t, t, 0, t, 0, 0, 0, 13500, 0, 0, 0, 0, t, 0, 0, t, 0, 0]
+  +a : List<&2, U32> = [0, 0, 0, 127, 0, 127, 0, 0, 0, 0, 0, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4294967295, 4294967295]
+  +b : List<&2, U32> = [0, 0, 0, 127, 0, 127, 0, 0, 0, 0, 0, 0, 0, 4294967295, 100, 0, 0, t, t, t, t, 0, t, 0, 0, t, t, t, t, 0, t, 0, 0, 0, 13500, 0, 0, 0, 0, t, 0, 0, t, 0, 0, 0, 0, 4294967295, 4294967295]
   T.from_list(U32, Bool.pick(List<&2, U32>, rel, a, b))
 
 def get(+r: T.Vec<U32>, +i: U32) -> U32:
@@ -177,10 +178,84 @@ def fixup(+bs: T.Vec<U32>, +h: T.Vec<U32>, +z: T.Vec<U32>, +s: U32) -> T.Vec<U32
   +a = put(put(put(z, 7, (get(z, 7) + u32(bs, (at + 20 : U32)) : U32)), 9, (get(z, 9) + u32(bs, (at + 28 : U32)) : U32)), 10, le)
   put(put(put(put(a, 13, kc), 12, (get(z, 12) + sx8(by(bs, (at + 41 : U32))) : U32)), 1, u32(bs, (at + 36 : U32))), 8, en2)
 
+type Md is Data:
+  Md{s1: U32, d: U32, amt: U32, s2: U32}
+
+def defmods() -> List<&2, Md>:
+  [Md{1282, 48, 960, 0}, Md{258, 8, 63136, 3074}, Md{13, 6, 50, 0}, Md{129, 6, 50, 0}, Md{1415, 48, 960, 0}, Md{650, 17, 500, 0}, Md{1419, 48, 960, 0}, Md{219, 16, 200, 0}, Md{221, 15, 200, 0}, Md{526, 52, 12700, 16}]
+
+def md.same(+a: Md, +b: Md) -> Bool:
+  match a b:
+    case Md{+s1, +d, amt, +s2} Md{+t1, +e, bmt, +t2}:
+      Bool.and(Bool.and(U32.is_eq(s1, t1), U32.is_eq(d, e)), U32.is_eq(s2, t2))
+
+def md.d(+m: Md) -> U32:
+  match m:
+    case Md{s1, +d, amt, s2}:
+      d
+
+def over.go(xs: List<&2, Md>, +m: Md, +hit: Bool, +acc: List<&2, Md>) -> List<&2, Md>:
+  match xs:
+    case +x <> t:
+      over.go(t, m, Bool.or(hit, md.same(x, m)), Bool.pick(Md, md.same(x, m), m, x) <> acc)
+    case []:
+      List.reverse(&2, Md, Bool.pick(List<&2, Md>, hit, acc, m <> acc))
+
+def over(xs: List<&2, Md>, +m: Md) -> List<&2, Md>:
+  over.go(xs, m, False{}, [])
+
+def resolve(xs: List<&2, Md>, +acc: List<&2, Md>) -> List<&2, Md>:
+  match xs:
+    case +x <> t:
+      resolve(t, over(acc, x))
+    case []:
+      acc
+
+def modrec(+bs: T.Vec<U32>, +at: U32) -> Md:
+  Md{u16(bs, at), u16(bs, (at + 2 : U32)), u16(bs, (at + 4 : U32)), u16(bs, (at + 6 : U32))}
+
+def modlist(+bs: T.Vec<U32>, +base: U32, n: Nat, +i: U32, +acc: List<&2, Md>) -> List<&2, Md>:
+  match n:
+    case 0n:
+      List.reverse(&2, Md, acc)
+    case 1n+k:
+      +m = modrec(bs, (base + i * 10 : U32))
+      modlist(bs, base, k, (i + 1 : U32), Bool.pick(List<&2, Md>, U32.is_ne((md.d(m) .&. 32768 : U32), 0), acc, m <> acc))
+
+def bagmods(+bs: T.Vec<U32>, +bag: U32, +mod: U32, +b: U32) -> List<&2, Md>:
+  +lo = u16(bs, (bag + b * 4 + 2 : U32))
+  +hi = u16(bs, (bag + b * 4 + 6 : U32))
+  Bool.pick(List<&2, Md>, Bool.or(Bool.or(U32.is_eq(b, 4294967295), U32.is_eq(mod, 0)), U32.is_le(hi, lo)), [], modlist(bs, mod, U32.to_nat((hi - lo : U32)), lo, []))
+
+def mwords.one?(+m: Md, t: List<&2, Md>, acc: List<&2, U32>) -> List<&2, U32>:
+  match m:
+    case Md{+s1, +d, +amt, +s2}:
+      mwords(t, s2 <> amt <> d <> s1 <> acc)
+
+def mwords?(xs: List<&2, Md>, acc: List<&2, U32>) -> List<&2, U32>:
+  match xs:
+    case +m <> t:
+      mwords.one(m, t, acc)
+    case []:
+      List.reverse(&2, U32, acc)
+
+def slots(+r: T.Vec<U32>, n: Nat, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
+  match n:
+    case 0n:
+      List.reverse(&2, U32, acc)
+    case 1n+k:
+      slots(r, k, (i + 1 : U32), get(r, i) <> acc)
+
+def withmods(+bs: T.Vec<U32>, +h: T.Vec<U32>, +r: T.Vec<U32>, +p: T.Vec<U32>) -> T.Vec<U32>:
+  +im = resolve(List.append(&2, Md, bagmods(bs, hv(h, 4), hv(h, 11), get(r, 47)), bagmods(bs, hv(h, 4), hv(h, 11), get(r, 48))), defmods())
+  +pm = resolve(List.append(&2, Md, bagmods(bs, hv(h, 1), hv(h, 10), get(p, 47)), bagmods(bs, hv(h, 1), hv(h, 10), get(p, 48))), [])
+  +ws = mwords(List.append(&2, Md, im, pm), [])
+  T.from_list(U32, List.append(&2, U32, slots(r, 49n, 0, []), (T.len(U32, ws) / 4 : U32) <> ws))
+
 def finish(+bs: T.Vec<U32>, +h: T.Vec<U32>, +z: T.Vec<U32>, +p: T.Vec<U32>, +s: U32) -> T.Vec<U32>:
   +m = envsecs(envsecs(merge(ranged(z, p), p), 17, True{}), 25, False{})
   +l = pf(pf(m, 39, secs(gf(m, 39))), 42, secs(gf(m, 42)))
-  fixup(bs, h, l, s)
+  withmods(bs, h, fixup(bs, h, l, s), p)
 
 def gop(+bs: T.Vec<U32>, +base: U32, +g: U32) -> U32:
   u16(bs, (base + g * 4 : U32))
@@ -236,9 +311,9 @@ def izones.go?(stop: Bool, +bs: T.Vec<U32>, +h: T.Vec<U32>, +b: U32, +be: U32, +
     case True{}:
       acc
     case False{}:
-      +x = igens(bs, h, ibag(bs, h, b), ibag(bs, h, (b + 1 : U32)), inst, False{}, p, acc)
+      +x = igens(bs, h, ibag(bs, h, b), ibag(bs, h, (b + 1 : U32)), put(inst, 48, b), False{}, p, acc)
       +keep = Bool.and(U32.is_eq(b, first), Bool.not(zs.had(x)))
-      izones(bs, h, (b + 1 : U32), be, first, Bool.pick(T.Vec<U32>, keep, zs.r(x), inst), p, zs.acc(x))
+      izones(bs, h, (b + 1 : U32), be, first, Bool.pick(T.Vec<U32>, keep, put(put(zs.r(x), 47, b), 48, 4294967295), inst), p, zs.acc(x))
 
 def instbag(+bs: T.Vec<U32>, +h: T.Vec<U32>, +w: U32) -> U32:
   u16(bs, (hv(h, 3) + w * 22 + 20 : U32))
@@ -276,9 +351,9 @@ def pzones.go?(stop: Bool, +bs: T.Vec<U32>, +h: T.Vec<U32>, +b: U32, +be: U32, +
     case True{}:
       acc
     case False{}:
-      +x = pgens(bs, h, pbag(bs, h, b), pbag(bs, h, (b + 1 : U32)), glob, False{}, acc)
+      +x = pgens(bs, h, pbag(bs, h, b), pbag(bs, h, (b + 1 : U32)), put(glob, 48, b), False{}, acc)
       +keep = Bool.and(U32.is_eq(b, first), Bool.not(zs.had(x)))
-      pzones(bs, h, (b + 1 : U32), be, first, Bool.pick(T.Vec<U32>, keep, zs.r(x), glob), zs.acc(x))
+      pzones(bs, h, (b + 1 : U32), be, first, Bool.pick(T.Vec<U32>, keep, put(put(zs.r(x), 47, b), 48, 4294967295), glob), zs.acc(x))
 
 def rev(xs: List<&2, T.Vec<U32>>, acc: List<&2, T.Vec<U32>>) -> List<&2, T.Vec<U32>>:
   match xs:
@@ -344,7 +419,7 @@ def chunks.go?(stop: Bool, +bs: T.Vec<U32>, +q: U32, +n: U32, +h: List<&2, U32>)
       +sz = u32(bs, (q + 4 : U32))
       +at = (q + 8 : U32)
       +ids : List<&2, U32> = [1919182960, 1734435440, 1852139376, 1953721961, 1734435433, 1852139369, 1919182963]
-      chunks(bs, (at + sz + (sz .&. 1) : U32), n, set.ids(ids, h, 0, id, at, sz))
+      chunks(bs, (at + sz + (sz .&. 1) : U32), n, set.ids([1685024112, 1685024105], set.ids(ids, h, 0, id, at, sz), 10, id, at, sz))
 
 def keys.go(ps: List<&2, Pr>, acc: List<&2, U32>) -> List<&2, U32>:
   match ps:
@@ -436,7 +511,7 @@ def loaded(+ck: List<&2, U32>, +pd: List<&2, U32>, q: File & Array<F32>) -> IO(F
 def load.pd(+ck: List<&2, U32>, q: File & List<&2, U32>) -> IO(Font):
   (f, pd) = q
   +n = (lat(ck, 1n) >> 1n : U32)
-  IO.bind(File & Array<F32>, Font, load.fill(f, lat(ck, 0n), lat(ck, 1n), Array.new(F32, M.depth((n + 1 : U32)), 0.0), 0), r => loaded(ck, pd, r))
+  IO.bind(File & Array<F32>, Font, load.fill(f, lat(ck, 0n), lat(ck, 1n), Array.new(F32, M.depth((n + 1 + X.size() : U32)), 0.0), 0), r => loaded(ck, pd, r))
 
 def load.ck(q: File & List<&2, U32>) -> IO(Font):
   (f, +ck) = q

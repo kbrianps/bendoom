@@ -1456,8 +1456,11 @@ def novs(n: Nat) -> List<&2, V>:
 def driver(+cur: U32, +nv: U32) -> Dr:
   Dr{novs(U32.to_nat(nv)), ids(U32.to_nat(nv), 0), [], chans(16n, cur), cur, cur}
 
-def idle(+o3: U32) -> Sq:
-  Sq{driver(64, (9 + 9 * o3 : U32)), [], [], 0, 0, 0, 0, 0, 0, Y.new()}
+def idle(+o3: U32, +gs: Y.Syn) -> Sq:
+  Sq{driver(64, (9 + 9 * o3 : U32)), [], [], 0, 0, 0, 0, 0, 0, gs}
+
+def wetsyn(+on: Bool, +n: U32) -> Y.Syn:
+  Bool.pick(Y.Syn, on, Y.effects(Y.new(), (n + 1 : U32)), Y.new())
 
 def fill(bss: List<&2, List<&2, U32>>, a: Array<U32>, +at: U32, +idx: List<&2, U32>) -> Array<U32> & List<&2, U32>:
   match bss:
@@ -1480,8 +1483,8 @@ def lk(+gm: List<&2, U32>, +ps: G.Bank, +o3: U32) -> Lk:
 def built.font(+gm: List<&2, U32>, lib: Array<U32>, +idx: List<&2, U32>, f: G.Font, +o3: U32) -> Mu:
   match f:
     case G.Font{smp, +bk, n}:
-      +o = Bool.pick(U32, Y.empty(bk), o3, 0)
-      Mu{tables(), lib, T.from_list(U32, idx), lk(gm, bk, o), idle(o), 0, 0, smp}
+      +o = Bool.pick(U32, Y.empty(bk), (o3 .&. 1 : U32), 0)
+      Mu{tables(), lib, T.from_list(U32, idx), lk(gm, bk, o), idle(o, wetsyn(Bool.and(Bool.not(Y.empty(bk)), U32.is_eq((o3 .&. 2 : U32), 0)), n)), 0, 0, smp}
 
 def built(+gm: List<&2, U32>, f: G.Font, +o3: U32, r: Array<U32> & List<&2, U32>) -> Mu:
   (lib, +idx) = r
@@ -1527,10 +1530,10 @@ def load(+path: String) -> IO(Mu):
     w : W.Wad <- W.open(path)
     p : W.Wad & List<&2, List<&2, U32>> <- W.get(w, "GENMIDI" <> names())
     o : Result<&1, &1, U32 & String, String> <- IO.get_env("DMXOPTION")
-    got(f, dmx(o), p)
+    got(f, (dmx(o) + Bool.pick(U32, W.plain(path), 2, 0) : U32), p)
 
 def silent() -> Mu:
-  Mu{tables(), Array.new(U32, 0n, 0), T.from_list(U32, []), lk([], G.bank([]), 0), idle(0), 0, 0, Array.new(F32, 0n, 0.0)}
+  Mu{tables(), Array.new(U32, 0n, 0), T.from_list(U32, []), lk([], G.bank([]), 0), idle(0, Y.new()), 0, 0, Array.new(F32, 0n, 0.0)}
 
 def gm(m: Mu) -> Mu & Bool:
   match m:
