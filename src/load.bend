@@ -8,12 +8,15 @@ import ./gfx.bend as G
 type Texs is Data:
   Texs{names: List<&2, String>, texs: List<&2, G.Tex>, sky: String, flats: List<&2, String>, flatdata: List<&2, List<&2, U32>>, heights: List<&2, U32>, tanims: List<&2, List<&2, String>>, fanims: List<&2, List<&2, String>>, switches: List<&2, String>, tbases: List<&2, U32>, fbases: List<&2, U32>, gtex: List<&2, U32>, gflat: List<&2, U32>}
 
-def has(xs: List<&2, String>, +s: String) -> Bool:
+def has.go(xs: List<&2, String>, +s: String, +acc: Bool) -> Bool:
   match xs:
     case x <> t:
-      Bool.or(String.eq(x, s), has(t, s))
+      has.go(t, s, Bool.or(acc, String.eq(x, s)))
     case []:
-      False{}
+      acc
+
+def has(xs: List<&2, String>, +s: String) -> Bool:
+  has.go(xs, s, False{})
 
 def add(+skip: String, +xs: List<&2, String>, +s: String) -> List<&2, String>:
   Bool.pick(List<&2, String>, Bool.or(Bool.or(has(xs, s), String.eq(s, "-")), Bool.or(String.eq(s, skip), String.is_empty(s))), xs, s <> xs)
@@ -49,12 +52,15 @@ def tdef(ds: List<&2, G.TexDef>, +name: String, z: G.TexDef) -> G.TexDef:
     case []:
       z
 
-def lumpnames(+pn: T.Vec<String>, rs: List<&2, G.PRef>) -> List<&2, String>:
+def lumpnames.go(+pn: T.Vec<String>, rs: List<&2, G.PRef>, acc: List<&2, String>) -> List<&2, String>:
   match rs:
     case G.PRef{x, y, k} <> t:
-      T.get(String, pn, k, "") <> lumpnames(pn, t)
+      lumpnames.go(pn, t, T.get(String, pn, k, "") <> acc)
     case []:
-      []
+      List.reverse(&2, String, acc)
+
+def lumpnames(+pn: T.Vec<String>, rs: List<&2, G.PRef>) -> List<&2, String>:
+  lumpnames.go(pn, rs, [])
 
 def refs(+d: G.TexDef) -> List<&2, G.PRef>:
   match d:
@@ -142,36 +148,48 @@ def switchdefs3() -> List<&2, String>:
 def switchdefs(+commercial: Bool) -> List<&2, String>:
   List.append(&2, String, List.append(&2, String, switchdefs1(), switchdefs2()), Bool.pick(List<&2, String>, commercial, switchdefs3(), []))
 
-def defnames(ds: List<&2, G.TexDef>) -> List<&2, String>:
+def defnames.go(ds: List<&2, G.TexDef>, acc: List<&2, String>) -> List<&2, String>:
   match ds:
     case G.TexDef{n, w, h, ps} <> t:
-      n <> defnames(t)
+      defnames.go(t, n <> acc)
     case []:
-      []
+      List.reverse(&2, String, acc)
 
-def lumpnames.of(ls: List<&2, W.Lump>) -> List<&2, String>:
+def defnames(ds: List<&2, G.TexDef>) -> List<&2, String>:
+  defnames.go(ds, [])
+
+def lumpnames.of.go(ls: List<&2, W.Lump>, acc: List<&2, String>) -> List<&2, String>:
   match ls:
     case W.Lump{n, p, z, k} <> t:
-      n <> lumpnames.of(t)
+      lumpnames.of.go(t, n <> acc)
     case []:
-      []
+      List.reverse(&2, String, acc)
 
-def upto.go(xs: List<&2, String>, stop: Bool, +b: String) -> List<&2, String>:
+def lumpnames.of(ls: List<&2, W.Lump>) -> List<&2, String>:
+  lumpnames.of.go(ls, [])
+
+def upto.go.go(xs: List<&2, String>, stop: Bool, +b: String, acc: List<&2, String>) -> List<&2, String>:
   match xs stop:
     case +x <> +t False{}:
-      x <> upto.go(t, String.eq(x, b), b)
+      upto.go.go(t, String.eq(x, b), b, x <> acc)
     case _ _:
-      []
+      List.reverse(&2, String, acc)
+
+def upto.go(xs: List<&2, String>, stop: Bool, +b: String) -> List<&2, String>:
+  upto.go.go(xs, stop, b, [])
 
 def upto(xs: List<&2, String>, +b: String) -> List<&2, String>:
   upto.go(xs, False{}, b)
 
-def ends(xs: List<&2, String>, +b: String) -> Bool:
+def ends.go(xs: List<&2, String>, +b: String, +acc: Bool) -> Bool:
   match xs:
     case +x <> +t:
-      Bool.pick(Bool, List.is_empty(&2, String, t), String.eq(x, b), ends(t, b))
+      ends.go(t, b, String.eq(x, b))
     case []:
-      False{}
+      acc
+
+def ends(xs: List<&2, String>, +b: String) -> Bool:
+  ends.go(xs, b, False{})
 
 def slice.hit?(hit: Bool, +x: String, t: List<&2, String>, +a: String) -> List<&2, String>:
   match hit:
@@ -195,52 +213,61 @@ def range(+order: List<&2, String>, +a: String, +b: String) -> List<&2, String>:
   +r = slice(order, a, b)
   Bool.pick(List<&2, String>, ends(r, b), r, [])
 
-def any(xs: List<&2, String>, +have: List<&2, String>) -> Bool:
+def any.go(xs: List<&2, String>, +have: List<&2, String>, +acc: Bool) -> Bool:
   match xs:
     case +x <> +t:
-      Bool.or(has(have, x), any(t, have))
+      any.go(t, have, Bool.or(acc, has(have, x)))
     case []:
-      False{}
+      acc
+
+def any(xs: List<&2, String>, +have: List<&2, String>) -> Bool:
+  any.go(xs, have, False{})
+
+def ranges.go(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String>, +acc: List<&2, List<&2, String>>) -> List<&2, List<&2, String>>:
+  match ps:
+    case +a <> +b <> +t:
+      +r = range(order, a, b)
+      ranges.go(t, order, have, Bool.pick(List<&2, List<&2, String>>, Bool.and(U32.is_gt(T.len(String, r), 1), any(r, have)), r <> acc, acc))
+    case _:
+      List.reverse(&2, List<&2, String>, acc)
 
 def ranges(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String>) -> List<&2, List<&2, String>>:
-  match ps:
-    case +a <> +b <> +t:
-      +r = range(order, a, b)
-      +rest = ranges(t, order, have)
-      Bool.pick(List<&2, List<&2, String>>, Bool.and(U32.is_gt(T.len(String, r), 1), any(r, have)), r <> rest, rest)
-    case _:
-      []
+  ranges.go(ps, order, have, [])
 
-def pos(xs: List<&2, String>, +s: String, +i: U32) -> U32:
+def pos.go(xs: List<&2, String>, +s: String, +i: U32, +hit: Bool, +res: U32) -> U32:
   match xs:
     case x <> t:
-      Bool.pick(U32, String.eq(x, s), i, pos(t, s, (i + 1 : U32)))
+      +eq = String.eq(x, s)
+      pos.go(t, s, (i + 1 : U32), Bool.or(hit, eq), Bool.pick(U32, Bool.and(Bool.not(hit), eq), i, res))
     case []:
-      0
+      res
 
-def bases(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String>) -> List<&2, U32>:
+def pos(xs: List<&2, String>, +s: String, +i: U32) -> U32:
+  pos.go(xs, s, i, False{}, 0)
+
+def bases.go(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String>, +acc: List<&2, U32>) -> List<&2, U32>:
   match ps:
     case +a <> +b <> +t:
       +r = range(order, a, b)
-      +rest = bases(t, order, have)
-      Bool.pick(List<&2, U32>, Bool.and(U32.is_gt(T.len(String, r), 1), any(r, have)), pos(order, a, 0) <> rest, rest)
+      bases.go(t, order, have, Bool.pick(List<&2, U32>, Bool.and(U32.is_gt(T.len(String, r), 1), any(r, have)), pos(order, a, 0) <> acc, acc))
     case _:
-      []
+      List.reverse(&2, U32, acc)
 
-def pairs(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String>) -> List<&2, String>:
+def bases(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String>) -> List<&2, U32>:
+  bases.go(ps, order, have, [])
+
+def pairs.go(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String>, +acc: List<&2, String>) -> List<&2, String>:
   match ps:
     case +a <> +b <> +t:
-      +rest = pairs(t, order, have)
-      Bool.pick(List<&2, String>, Bool.and(Bool.and(has(order, a), has(order, b)), Bool.or(has(have, a), has(have, b))), a <> b <> rest, rest)
+      pairs.go(t, order, have, Bool.pick(List<&2, String>, Bool.and(Bool.and(has(order, a), has(order, b)), Bool.or(has(have, a), has(have, b))), b <> a <> acc, acc))
     case _:
-      []
+      List.reverse(&2, String, acc)
+
+def pairs(ps: List<&2, String>, +order: List<&2, String>, +have: List<&2, String>) -> List<&2, String>:
+  pairs.go(ps, order, have, [])
 
 def concat(xss: List<&2, List<&2, String>>) -> List<&2, String>:
-  match xss:
-    case xs <> t:
-      List.append(&2, String, xs, concat(t))
-    case []:
-      []
+  T.flat(String, xss)
 
 def extend.go(+skip: String, xs: List<&2, String>, acc: List<&2, String>) -> List<&2, String>:
   match xs:
@@ -257,12 +284,15 @@ def tdef.height(+d: G.TexDef) -> U32:
     case G.TexDef{n, w, h, ps}:
       h
 
-def heights(+defs: List<&2, G.TexDef>, names: List<&2, String>) -> List<&2, U32>:
+def heights.go(+defs: List<&2, G.TexDef>, names: List<&2, String>, acc: List<&2, U32>) -> List<&2, U32>:
   match names:
     case +n <> t:
-      (tdef.height(tdef(defs, n, G.TexDef{"", 0, 0, []})) << 16n : U32) <> heights(defs, t)
+      heights.go(defs, t, (tdef.height(tdef(defs, n, G.TexDef{"", 0, 0, []})) << 16n : U32) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def heights(+defs: List<&2, G.TexDef>, names: List<&2, String>) -> List<&2, U32>:
+  heights.go(defs, names, [])
 
 def textures.flats(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, +hs: List<&2, U32>, +tr: List<&2, List<&2, String>>, +fr: List<&2, List<&2, String>>, +sw: List<&2, String>, +tb: List<&2, U32>, +fb: List<&2, U32>, +gt: List<&2, U32>, +gf: List<&2, U32>, ts: List<&2, G.Tex>, p: W.Wad & List<&2, List<&2, U32>>) -> IO(W.Wad & Texs):
   (w, fds) = p
@@ -272,12 +302,15 @@ def textures.fin(+names: List<&2, String>, +sky: String, +fl: List<&2, String>, 
   (w, ts) = r
   IO.bind(W.Wad & List<&2, List<&2, U32>>, W.Wad & Texs, W.get(w, fl), p => textures.flats(names, sky, fl, hs, tr, fr, sw, tb, fb, gt, gf, ts, p))
 
-def gnums(xs: List<&2, String>, +order: List<&2, String>) -> List<&2, U32>:
+def gnums.go(xs: List<&2, String>, +order: List<&2, String>, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +x <> t:
-      pos(order, x, 0) <> gnums(t, order)
+      gnums.go(t, order, pos(order, x, 0) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def gnums(xs: List<&2, String>, +order: List<&2, String>) -> List<&2, U32>:
+  gnums.go(xs, order, [])
 
 def textures.with(+sides: T.Vec<L.Side>, +mk: List<&2, String>, +sky: String, +fl: List<&2, String>, +fr: List<&2, List<&2, String>>, +fb: List<&2, U32>, +com: Bool, +gf: List<&2, U32>, w: W.Wad, +pn: T.Vec<String>, +defs: List<&2, G.TexDef>) -> IO(W.Wad & Texs):
   +skip = first(defs)

@@ -149,6 +149,9 @@ def ui(+g: S.Sim, +i: U32) -> U32:
   T.get(U32, S.sim.ui(g), i, 0)
 
 
+def comfort(+g: S.Sim) -> Bool:
+  U32.is_ne(ui(g, 225), 0)
+
 def ui.set(+g: S.Sim, +i: U32, +v: U32) -> S.Sim:
   S.sim.ui.set(g, T.set(U32, S.sim.ui(g), i, v))
 
@@ -437,9 +440,17 @@ def draw.late(late: Bool, fr: V.Frame, +g: S.Sim, +wn: U32) -> V.Frame:
     case False{}:
       message(border(fr, g, wn), g)
 
+def dot(fr: V.Frame, +wn: U32) -> V.Frame:
+  match fr:
+    case V.Frame{fb, rom, ram, sd}:
+      +x = (V.wx(wn) + V.svw(wn) / 2 - 1 : U32)
+      +y = (V.wy(wn) + V.vh(wn) / 2 - 1 : U32)
+      V.Frame{put(True{}, put(True{}, put(True{}, put(True{}, fb, x, y, 4), (x + 1 : U32), y, 4), x, (y + 1 : U32), 4), (x + 1 : U32), (y + 1 : U32), 4), rom, ram, sd}
+
 def draw.framed(r: V.Frame & U32, +g: S.Sim) -> V.Frame:
   (fr, +wn) = r
-  draw.late(U32.is_ne(ui(g, 238), 0), fwhen(U32.is_lt(V.blocks(wn), 11), fr, f => statusbar(f, g)), g, wn)
+  f1 = fwhen(Bool.and(comfort(g), U32.is_eq(ui(g, 140), 0)), fr, f => dot(f, wn))
+  draw.late(U32.is_ne(ui(g, 238), 0), fwhen(U32.is_lt(V.blocks(wn), 11), f1, f => statusbar(f, g)), g, wn)
 
 def draw.view(fr: V.Frame, +g: S.Sim) -> V.Frame:
   draw.framed(D.window(fr), g)
@@ -453,18 +464,25 @@ def psp.cm(+g: S.Sim, +frm: U32) -> U32:
     Bool.pick(U32, U32.is_ne(fx, 0), (fx * 256 : U32),
       Bool.pick(U32, U32.is_ne((frm .&. 32768 : U32), 0), 0, (V.lightmap(V.svw(V.win(S.mp.tb(g))), ll, 192512) * 256 : U32))))
 
+def psp.sx(+g: S.Sim, +sx: U32) -> U32:
+  Bool.pick(U32, comfort(g), 65536, sx)
+
+def psp.sy(+g: S.Sim, +sy: U32) -> U32:
+  Bool.pick(U32, Bool.and(comfort(g), U32.is_le((sy - 2097152 : U32), 1048576)), 2097152, sy)
+
 def psp.of(+g: S.Sim, +pos: U32, +rest: List<&2, D.PSp>) -> List<&2, D.PSp>:
   +b = (53 + pos * 4 : U32)
   +st = S.pget(g, b)
   +frm = C.state(g, st, 1)
-  Bool.pick(List<&2, D.PSp>, U32.is_eq(st, 0), rest, D.PSp{C.state(g, st, 0), frm, S.pget(g, (b + 2 : U32)), S.pget(g, (b + 3 : U32)), psp.cm(g, frm)} <> rest)
+  Bool.pick(List<&2, D.PSp>, U32.is_eq(st, 0), rest, D.PSp{C.state(g, st, 0), frm, psp.sx(g, S.pget(g, (b + 2 : U32))), psp.sy(g, S.pget(g, (b + 3 : U32))), psp.cm(g, frm)} <> rest)
 
 def psps(+g: S.Sim) -> List<&2, D.PSp>:
   psp.of(g, 0, psp.of(g, 1, []))
 
 def view(+g: S.Sim) -> V.View:
   +m = S.p.mo(g)
-  V.View{S.m.x(g, m), S.m.y(g, m), S.p.viewz(g), S.m.angle(g, m), S.p.extralight(g), S.p.fixedcm(g)}
+  +cz = S.p.cviewz(g)
+  V.View{S.m.x(g, m), S.m.y(g, m), Bool.pick(U32, Bool.and(comfort(g), U32.is_ne(cz, 0)), cz, S.p.viewz(g)), S.m.angle(g, m), S.p.extralight(g), S.p.fixedcm(g)}
 
 def scene(+g: S.Sim, rom: Array<U32>) -> V.Frame:
   D.render.with(S.mp.tb(g), S.sim.w(g), view(g), psps(g), rom)

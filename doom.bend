@@ -44,22 +44,49 @@ def audio(+path: String) -> IO(P.Au):
     r : Result<&1, &1, U32 & String, Audio> <- Audio.open(N.rate())
     device(m, r)
 
-def play(+path: String, +title: Bool, p: M.Sim & Array<U32>) -> IO(Unit):
-  (+s, rom) = p
+def play(+path: String, +title: Bool, +comfort: Bool, p: M.Sim & Array<U32>) -> IO(Unit):
+  (+s0, rom) = p
+  +s = Bool.pick(M.Sim, comfort, Q.comfort.on(s0), s0)
   do IO<Unit>:
     au : P.Au <- audio(path)
     IO.bind(Nat, Unit, IO.now(), now => timed(path, au, (Bool.pick(M.Sim, title, Q.boot.title(s), Q.boot.warp(s)), rom), now))
 
-def args(xs: List<String>) -> IO(Unit):
+def args(xs: List<String>, +comfort: Bool) -> IO(Unit):
   match xs:
     case prog <> +path <> name <> t:
-      IO.bind(M.Sim & Array<U32>, Unit, B.new(path, name), s => play(path, False{}, s))
+      IO.bind(M.Sim & Array<U32>, Unit, B.new(path, name), s => play(path, False{}, comfort, s))
     case prog <> +path <> t:
-      IO.bind(M.Sim & Array<U32>, Unit, B.first(path), s => play(path, True{}, s))
+      IO.bind(M.Sim & Array<U32>, Unit, B.first(path), s => play(path, True{}, comfort, s))
     case _:
-      IO.die(Unit, 2, "usage: doom FILE.wad [-file PWAD.wad ...] [-soundfont FONT.sf2] [MAP]")
+      IO.die(Unit, 2, "usage: doom FILE.wad [-file PWAD.wad ...] [-soundfont FONT.sf2] [-comfort] [MAP]")
+
+def strip.keep(x: String, r: List<String> & Bool) -> List<String> & Bool:
+  (ys, on) = r
+  (x <> ys, on)
+
+def strip.drop(r: List<String> & Bool) -> List<String> & Bool:
+  (ys, on) = r
+  (ys, True{})
+
+def strip.put(hit: Bool, x: String, r: List<String> & Bool) -> List<String> & Bool:
+  match hit:
+    case True{}:
+      strip.drop(r)
+    case False{}:
+      strip.keep(x, r)
+
+def strip(xs: List<String>) -> List<String> & Bool:
+  match xs:
+    case +x <> t:
+      strip.put(String.eq(x, "-comfort"), x, strip(t))
+    case []:
+      ([], False{})
+
+def args.of(r: List<String> & Bool) -> IO(Unit):
+  (xs, +on) = r
+  args(xs, on)
 
 def main() -> IO(Unit):
   do IO<Unit>:
     xs : List<String> <- IO.args()
-    args(W.cli(xs))
+    args.of(strip(W.cli(xs)))

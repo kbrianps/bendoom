@@ -50,64 +50,88 @@ type Level is Data:
 def s(+w: U32) -> U32:
   B.s16(w)
 
-def things(ws: List<&2, U32>) -> List<&2, Thing>:
+def things.go(ws: List<&2, U32>, acc: List<&2, Thing>) -> List<&2, Thing>:
   match ws:
     case x <> y <> a <> k <> f <> t:
-      Thing{s(x), s(y), a, k, f} <> things(t)
+      things.go(t, Thing{s(x), s(y), a, k, f} <> acc)
     case _:
-      []
+      List.reverse(&2, Thing, acc)
 
-def lines(ws: List<&2, U32>) -> List<&2, Line>:
+def things(ws: List<&2, U32>) -> List<&2, Thing>:
+  things.go(ws, [])
+
+def lines.go(ws: List<&2, U32>, acc: List<&2, Line>) -> List<&2, Line>:
   match ws:
     case a <> b <> f <> sp <> tg <> fr <> bk <> t:
-      Line{a, b, f, sp, tg, fr, bk} <> lines(t)
+      lines.go(t, Line{a, b, f, sp, tg, fr, bk} <> acc)
     case _:
-      []
+      List.reverse(&2, Line, acc)
 
-def sides(ws: List<&2, U32>) -> List<&2, Side>:
+def lines(ws: List<&2, U32>) -> List<&2, Line>:
+  lines.go(ws, [])
+
+def sides.go(ws: List<&2, U32>, acc: List<&2, Side>) -> List<&2, Side>:
   match ws:
     case x <> y <> u0 <> u1 <> u2 <> u3 <> l0 <> l1 <> l2 <> l3 <> m0 <> m1 <> m2 <> m3 <> sc <> t:
-      Side{s(x), s(y), B.name(u0, u1, u2, u3), B.name(l0, l1, l2, l3), B.name(m0, m1, m2, m3), sc} <> sides(t)
+      sides.go(t, Side{s(x), s(y), B.name(u0, u1, u2, u3), B.name(l0, l1, l2, l3), B.name(m0, m1, m2, m3), sc} <> acc)
     case _:
-      []
+      List.reverse(&2, Side, acc)
 
-def verts(ws: List<&2, U32>) -> List<&2, Vertex>:
+def sides(ws: List<&2, U32>) -> List<&2, Side>:
+  sides.go(ws, [])
+
+def verts.go(ws: List<&2, U32>, acc: List<&2, Vertex>) -> List<&2, Vertex>:
   match ws:
     case x <> y <> t:
-      Vertex{(s(x) << 16n : U32), (s(y) << 16n : U32)} <> verts(t)
+      verts.go(t, Vertex{(s(x) << 16n : U32), (s(y) << 16n : U32)} <> acc)
     case _:
-      []
+      List.reverse(&2, Vertex, acc)
 
-def segs(ws: List<&2, U32>) -> List<&2, Seg>:
+def verts(ws: List<&2, U32>) -> List<&2, Vertex>:
+  verts.go(ws, [])
+
+def segs.go(ws: List<&2, U32>, acc: List<&2, Seg>) -> List<&2, Seg>:
   match ws:
     case a <> b <> an <> li <> sd <> of <> t:
-      Seg{a, b, (an << 16n : U32), li, sd, (s(of) << 16n : U32)} <> segs(t)
+      segs.go(t, Seg{a, b, (an << 16n : U32), li, sd, (s(of) << 16n : U32)} <> acc)
     case _:
-      []
+      List.reverse(&2, Seg, acc)
 
-def subs(ws: List<&2, U32>) -> List<&2, Sub>:
+def segs(ws: List<&2, U32>) -> List<&2, Seg>:
+  segs.go(ws, [])
+
+def subs.go(ws: List<&2, U32>, acc: List<&2, Sub>) -> List<&2, Sub>:
   match ws:
     case c <> f <> t:
-      Sub{c, f} <> subs(t)
+      subs.go(t, Sub{c, f} <> acc)
     case _:
-      []
+      List.reverse(&2, Sub, acc)
+
+def subs(ws: List<&2, U32>) -> List<&2, Sub>:
+  subs.go(ws, [])
 
 def child(+c: U32) -> U32:
   Bool.pick(U32, U32.is_eq((c .&. 32768 : U32), 0), c, (2147483648 .|. (c .&. 32767) : U32))
 
-def nodes(ws: List<&2, U32>) -> List<&2, Node>:
+def nodes.go(ws: List<&2, U32>, acc: List<&2, Node>) -> List<&2, Node>:
   match ws:
     case x <> y <> dx <> dy <> a0 <> a1 <> a2 <> a3 <> b0 <> b1 <> b2 <> b3 <> r <> l <> t:
-      Node{s(x), s(y), s(dx), s(dy), Box{s(a0), s(a1), s(a2), s(a3)}, Box{s(b0), s(b1), s(b2), s(b3)}, child(r), child(l)} <> nodes(t)
+      nodes.go(t, Node{s(x), s(y), s(dx), s(dy), Box{s(a0), s(a1), s(a2), s(a3)}, Box{s(b0), s(b1), s(b2), s(b3)}, child(r), child(l)} <> acc)
     case _:
-      []
+      List.reverse(&2, Node, acc)
 
-def sectors(ws: List<&2, U32>) -> List<&2, Sector>:
+def nodes(ws: List<&2, U32>) -> List<&2, Node>:
+  nodes.go(ws, [])
+
+def sectors.go(ws: List<&2, U32>, acc: List<&2, Sector>) -> List<&2, Sector>:
   match ws:
     case f <> c <> p0 <> p1 <> p2 <> p3 <> q0 <> q1 <> q2 <> q3 <> li <> sp <> tg <> t:
-      Sector{s(f), s(c), B.name(p0, p1, p2, p3), B.name(q0, q1, q2, q3), li, sp, tg} <> sectors(t)
+      sectors.go(t, Sector{s(f), s(c), B.name(p0, p1, p2, p3), B.name(q0, q1, q2, q3), li, sp, tg} <> acc)
     case _:
-      []
+      List.reverse(&2, Sector, acc)
+
+def sectors(ws: List<&2, U32>) -> List<&2, Sector>:
+  sectors.go(ws, [])
 
 def parts() -> List<&2, String>:
   ["THINGS", "LINEDEFS", "SIDEDEFS", "VERTEXES", "SEGS", "SSECTORS", "NODES", "SECTORS", "REJECT", "BLOCKMAP"]
@@ -131,35 +155,45 @@ def word(+bs: List<&2, U32>) -> U32:
 def at(+bs: List<&2, U32>, +n: U32) -> List<&2, U32>:
   List.drop(&2, U32, bs, U32.to_nat(n))
 
-def xverts(n: Nat, bs: List<&2, U32>) -> List<&2, Vertex>:
+def xverts.go(n: Nat, bs: List<&2, U32>, acc: List<&2, Vertex>) -> List<&2, Vertex>:
   match n bs:
     case 1n+p a <> b <> c <> d <> e <> f <> g <> h <> t:
-      Vertex{le4(a, b, c, d), le4(e, f, g, h)} <> xverts(p, t)
+      xverts.go(p, t, Vertex{le4(a, b, c, d), le4(e, f, g, h)} <> acc)
     case _ _:
-      []
+      List.reverse(&2, Vertex, acc)
 
-def xsubs(n: Nat, bs: List<&2, U32>, +first: U32) -> List<&2, Sub>:
+def xverts(n: Nat, bs: List<&2, U32>) -> List<&2, Vertex>:
+  xverts.go(n, bs, [])
+
+def xsubs.go(n: Nat, bs: List<&2, U32>, +first: U32, acc: List<&2, Sub>) -> List<&2, Sub>:
   match n bs:
     case 1n+p +a <> +b <> +c <> +d <> t:
-      Sub{le4(a, b, c, d), first} <> xsubs(p, t, (first + le4(a, b, c, d) : U32))
+      xsubs.go(p, t, (first + le4(a, b, c, d) : U32), Sub{le4(a, b, c, d), first} <> acc)
     case _ _:
-      []
+      List.reverse(&2, Sub, acc)
 
-def xsegs(n: Nat, bs: List<&2, U32>) -> List<&2, Seg>:
+def xsubs(n: Nat, bs: List<&2, U32>, +first: U32) -> List<&2, Sub>:
+  xsubs.go(n, bs, first, [])
+
+def xsegs.go(n: Nat, bs: List<&2, U32>, acc: List<&2, Seg>) -> List<&2, Seg>:
   match n bs:
     case 1n+p a0 <> a1 <> a2 <> a3 <> b0 <> b1 <> b2 <> b3 <> l0 <> l1 <> sd <> t:
-      Seg{le4(a0, a1, a2, a3), le4(b0, b1, b2, b3), 0, (l0 .|. (l1 << 8n) : U32), sd, 0} <> xsegs(p, t)
+      xsegs.go(p, t, Seg{le4(a0, a1, a2, a3), le4(b0, b1, b2, b3), 0, (l0 .|. (l1 << 8n) : U32), sd, 0} <> acc)
     case _ _:
-      []
+      List.reverse(&2, Seg, acc)
 
-def xnodes(n: Nat, bs: List<&2, U32>) -> List<&2, Node>:
+def xsegs(n: Nat, bs: List<&2, U32>) -> List<&2, Seg>:
+  xsegs.go(n, bs, [])
+
+def xnodes.go(n: Nat, bs: List<&2, U32>, acc: List<&2, Node>) -> List<&2, Node>:
   match n bs:
     case 1n+p x0 <> x1 <> y0 <> y1 <> u0 <> u1 <> v0 <> v1 <> a0 <> a1 <> a2 <> a3 <> a4 <> a5 <> a6 <> a7 <> b0 <> b1 <> b2 <> b3 <> b4 <> b5 <> b6 <> b7 <> r0 <> r1 <> r2 <> r3 <> q0 <> q1 <> q2 <> q3 <> t:
-      Node{le2(x0, x1), le2(y0, y1), le2(u0, u1), le2(v0, v1),
-        Box{le2(a0, a1), le2(a2, a3), le2(a4, a5), le2(a6, a7)}, Box{le2(b0, b1), le2(b2, b3), le2(b4, b5), le2(b6, b7)},
-        le4(r0, r1, r2, r3), le4(q0, q1, q2, q3)} <> xnodes(p, t)
+      xnodes.go(p, t, Node{le2(x0, x1), le2(y0, y1), le2(u0, u1), le2(v0, v1), Box{le2(a0, a1), le2(a2, a3), le2(a4, a5), le2(a6, a7)}, Box{le2(b0, b1), le2(b2, b3), le2(b4, b5), le2(b6, b7)}, le4(r0, r1, r2, r3), le4(q0, q1, q2, q3)} <> acc)
     case _ _:
-      []
+      List.reverse(&2, Node, acc)
+
+def xnodes(n: Nat, bs: List<&2, U32>) -> List<&2, Node>:
+  xnodes.go(n, bs, [])
 
 def slope(+num: U32, +den: U32) -> U32:
   Bool.pick(U32, U32.is_lt(den, 512), 2048, U32.min(((num << 3n) / U32.max((den >> 8n : U32), 1) : U32), 2048))
@@ -216,12 +250,15 @@ def xseg(+ta: T.Vec<U32>, +vs: T.Vec<Vertex>, +ls: T.Vec<Line>, s: Seg) -> Seg:
       Seg{a, b, angle(ta, (vx(vb) - vx(va) : U32), (vy(vb) - vy(va) : U32)), li, sd,
         offset(F.sar((vx(va) - vx(vn) : U32), 16n), F.sar((vy(va) - vy(vn) : U32), 16n))}
 
-def xsegs.fix(xs: List<&2, Seg>, +ta: T.Vec<U32>, +vs: T.Vec<Vertex>, +ls: T.Vec<Line>) -> List<&2, Seg>:
+def xsegs.fix.go(xs: List<&2, Seg>, +ta: T.Vec<U32>, +vs: T.Vec<Vertex>, +ls: T.Vec<Line>, acc: List<&2, Seg>) -> List<&2, Seg>:
   match xs:
     case s <> t:
-      xseg(ta, vs, ls, s) <> xsegs.fix(t, ta, vs, ls)
+      xsegs.fix.go(t, ta, vs, ls, xseg(ta, vs, ls, s) <> acc)
     case []:
-      []
+      List.reverse(&2, Seg, acc)
+
+def xsegs.fix(xs: List<&2, Seg>, +ta: T.Vec<U32>, +vs: T.Vec<Vertex>, +ls: T.Vec<Line>) -> List<&2, Seg>:
+  xsegs.fix.go(xs, ta, vs, ls, [])
 
 def magic(+bs: List<&2, U32>) -> U32:
   match bs:

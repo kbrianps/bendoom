@@ -12,13 +12,16 @@ def s16(+x: U32) -> U32:
   +c = Bool.pick(U32, U32.is_lt((v + 32768 : U32), 65536), v, Bool.pick(U32, U32.is_ge(v, 2147483648), 32768, 32767))
   (c .&. 65535 : U32)
 
-def bytes(xs: List<&2, U32>) -> List<&2, U32>:
+def bytes.go(xs: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +x <> t:
       +v = s16(x)
-      (v .&. 255 : U32) <> (v >> 8n : U32) <> bytes(t)
+      bytes.go(t, (v >> 8n : U32) <> (v .&. 255 : U32) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def bytes(xs: List<&2, U32>) -> List<&2, U32>:
+  bytes.go(xs, [])
 
 def le(+v: U32) -> List<&2, U32>:
   [(v .&. 255 : U32), ((v >> 8n) .&. 255 : U32), ((v >> 16n) .&. 255 : U32), (v >> 24n : U32)]

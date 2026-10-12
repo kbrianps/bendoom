@@ -1241,10 +1241,13 @@ def tele.find(n: Nat, more: Bool, +g: S.Sim, +s: U32, +t: U32) -> U32:
     case _ _:
       0
 
+def setvz(+g: S.Sim, +v: U32) -> S.Sim:
+  S.p.cviewz.set(S.p.viewz.set(g, v), v)
+
 def tele.done(+g: S.Sim, +th: U32, +d: U32, +ox: U32, +oy: U32, +oz: U32) -> S.Sim:
   +g1 = S.m.z.set(g, th, S.m.floorz(g, th))
   +pl = U32.is_ne(S.m.player(g1, th), 0)
-  +g2 = C.when(pl, g1, +h => S.p.viewz.set(h, (S.m.z(h, th) + S.p.viewheight(h) : U32)))
+  +g2 = C.when(pl, g1, +h => setvz(h, (S.m.z(h, th) + S.p.viewheight(h) : U32)))
   +f1 = C.newid(g2)
   +g3 = sound(spawn(g2, ox, oy, oz, 39), f1, 35)
   +an = (S.m.angle(g3, d) >> 19n : U32)
@@ -1880,8 +1883,9 @@ def calcheight.ground(+g: S.Sim, +m: U32) -> S.Sim:
   +bob = F.mul(F.quot(S.p.bob(g), 2), V.sine(tb, ang))
   +g1 = C.when(U32.is_eq(S.p.state(g), 0), g, +h => bobview(h))
   +vz = (S.m.z(g1, m) + S.p.viewheight(g1) + bob : U32)
+  +cz = (S.m.z(g1, m) + S.p.viewheight(g1) : U32)
   +top = (S.m.ceilz(g1, m) - 262144 : U32)
-  S.p.viewz.set(g1, Bool.pick(U32, F.gt(vz, top), top, vz))
+  S.p.cviewz.set(S.p.viewz.set(g1, Bool.pick(U32, F.gt(vz, top), top, vz)), Bool.pick(U32, F.gt(cz, top), top, cz))
 
 def calcheight(+g: S.Sim) -> S.Sim:
   +m = S.p.mo(g)
@@ -1890,7 +1894,7 @@ def calcheight(+g: S.Sim) -> S.Sim:
   +b = F.sar((F.mul(mx, mx) + F.mul(my, my) : U32), 2n)
   +g1 = S.p.bob.set(g, Bool.pick(U32, F.gt(b, 1048576), 1048576, b))
   C.br(Bool.or(C.has(S.p.cheats(g1), 4), U32.is_eq(S.p.onground(g1), 0)), g1,
-    +h => S.p.viewz.set(h, (S.m.z(h, m) + S.p.viewheight(h) : U32)),
+    +h => setvz(h, (S.m.z(h, m) + S.p.viewheight(h) : U32)),
     +h => calcheight.ground(h, m))
 
 def moveplayer(+g: S.Sim) -> S.Sim:

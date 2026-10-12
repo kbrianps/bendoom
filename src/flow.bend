@@ -573,6 +573,9 @@ def fuzz.put(+g: S.Sim, rom: Array<U32>) -> Array<U32>:
 def boot.title(+g: S.Sim) -> S.Sim:
   Mn.title(page(g, 0, 247))
 
+def comfort.on(+g: S.Sim) -> S.Sim:
+  U.ui.set(g, 225, 1)
+
 def boot.warp(+g: S.Sim) -> S.Sim:
   U.ui.set(g, 118, 1)
 

@@ -731,19 +731,25 @@ def nov() -> Vc:
 def chan() -> Cn:
   Cn{0, 0, 8192, 8192, 16383, 16383, 65535, 0, 0, 0.0, 0.0, 2.0, 0.0}
 
-def vlist(n: Nat) -> List<&2, Vc>:
+def vlist.go(n: Nat, acc: List<&2, Vc>) -> List<&2, Vc>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, Vc, acc)
     case 1n+k:
-      nov() <> vlist(k)
+      vlist.go(k, nov() <> acc)
+
+def vlist(n: Nat) -> List<&2, Vc>:
+  vlist.go(n, [])
+
+def clist.go(n: Nat, acc: List<&2, Cn>) -> List<&2, Cn>:
+  match n:
+    case 0n:
+      List.reverse(&2, Cn, acc)
+    case 1n+k:
+      clist.go(k, chan() <> acc)
 
 def clist(n: Nat) -> List<&2, Cn>:
-  match n:
-    case 0n:
-      []
-    case 1n+k:
-      chan() <> clist(k)
+  clist.go(n, [])
 
 def cget(+cs: List<&2, Cn>, +i: U32) -> Cn:
   Maybe.default(&2, Cn, List.get(&2, Cn, cs, U32.to_nat(i)), chan())
@@ -771,34 +777,43 @@ def syn.chan(+s: Syn, +ch: U32) -> Cn:
 def syn.setchan(+s: Syn, +ch: U32, +c: Cn) -> Syn:
   syn.cs.set(s, cset(syn.cs(s), ch, c))
 
-def pitched(vs: List<&2, Vc>, +ch: U32, +sh: F32) -> List<&2, Vc>:
+def pitched.go(vs: List<&2, Vc>, +ch: U32, +sh: F32, acc: List<&2, Vc>) -> List<&2, Vc>:
   match vs:
     case +v <> t:
-      Bool.pick(Vc, on(v, ch), pitch(v, sh), v) <> pitched(t, ch, sh)
+      pitched.go(t, ch, sh, Bool.pick(Vc, on(v, ch), pitch(v, sh), v) <> acc)
     case []:
-      []
+      List.reverse(&2, Vc, acc)
+
+def pitched(vs: List<&2, Vc>, +ch: U32, +sh: F32) -> List<&2, Vc>:
+  pitched.go(vs, ch, sh, [])
 
 def applypitch(+s: Syn, +ch: U32) -> Syn:
   syn.vs.set(s, pitched(syn.vs(s), ch, shift(syn.chan(s, ch))))
 
-def gained(vs: List<&2, Vc>, +ch: U32, +d: F32) -> List<&2, Vc>:
+def gained.go(vs: List<&2, Vc>, +ch: U32, +d: F32, acc: List<&2, Vc>) -> List<&2, Vc>:
   match vs:
     case +v <> t:
-      Bool.pick(Vc, on(v, ch), vc.gdb.set(v, (vc.gdb(v) + d : F32)), v) <> gained(t, ch, d)
+      gained.go(t, ch, d, Bool.pick(Vc, on(v, ch), vc.gdb.set(v, (vc.gdb(v) + d : F32)), v) <> acc)
     case []:
-      []
+      List.reverse(&2, Vc, acc)
+
+def gained(vs: List<&2, Vc>, +ch: U32, +d: F32) -> List<&2, Vc>:
+  gained.go(vs, ch, d, [])
 
 def setvolume(+s: Syn, +ch: U32, +vol: F32) -> Syn:
   +c = syn.chan(s, ch)
   +db = g2db(vol)
   Bool.pick(Syn, F32.is_eq(db, cn.gdb(c)), s, syn.setchan(syn.vs.set(s, gained(syn.vs(s), ch, (db - cn.gdb(c) : F32))), ch, cn.gdb.set(c, db)))
 
-def panned(vs: List<&2, Vc>, +ch: U32, +pan: F32) -> List<&2, Vc>:
+def panned.go(vs: List<&2, Vc>, +ch: U32, +pan: F32, acc: List<&2, Vc>) -> List<&2, Vc>:
   match vs:
     case +v <> t:
-      Bool.pick(Vc, on(v, ch), setpan(v, ((rg.pan(vc.rg(v)) + pan : F32) - 0.5 : F32)), v) <> panned(t, ch, pan)
+      panned.go(t, ch, pan, Bool.pick(Vc, on(v, ch), setpan(v, ((rg.pan(vc.rg(v)) + pan : F32) - 0.5 : F32)), v) <> acc)
     case []:
-      []
+      List.reverse(&2, Vc, acc)
+
+def panned(vs: List<&2, Vc>, +ch: U32, +pan: F32) -> List<&2, Vc>:
+  panned.go(vs, ch, pan, [])
 
 def setpanc(+s: Syn, +ch: U32, +pan: F32) -> Syn:
   +c = syn.chan(s, ch)
@@ -813,24 +828,30 @@ def settuning(+s: Syn, +ch: U32, +t: F32) -> Syn:
   +c = syn.chan(s, ch)
   Bool.pick(Syn, F32.is_eq(cn.tun(c), t), s, applypitch(syn.setchan(s, ch, cn.tun.set(c, t)), ch))
 
-def ended(vs: List<&2, Vc>, +ch: U32, +held: Bool) -> List<&2, Vc>:
+def ended.go(vs: List<&2, Vc>, +ch: U32, +held: Bool, acc: List<&2, Vc>) -> List<&2, Vc>:
   match vs:
     case +v <> t:
-      Bool.pick(Vc, Bool.and(Bool.and(on(v, ch), U32.is_lt(env.seg(vc.amp(v)), 6)), Bool.or(Bool.not(held), U32.is_ne(vc.held(v), 0))), vend(v), v) <> ended(t, ch, held)
+      ended.go(t, ch, held, Bool.pick(Vc, Bool.and(Bool.and(on(v, ch), U32.is_lt(env.seg(vc.amp(v)), 6)), Bool.or(Bool.not(held), U32.is_ne(vc.held(v), 0))), vend(v), v) <> acc)
     case []:
-      []
+      List.reverse(&2, Vc, acc)
+
+def ended(vs: List<&2, Vc>, +ch: U32, +held: Bool) -> List<&2, Vc>:
+  ended.go(vs, ch, held, [])
 
 def setsustain(+s: Syn, +ch: U32, +x: U32) -> Syn:
   +c = syn.chan(s, ch)
   +s2 = syn.setchan(s, ch, cn.sus.set(c, x))
   Bool.pick(Syn, U32.is_eq(cn.sus(c), x), s, Bool.pick(Syn, U32.is_eq(x, 1), s2, syn.vs.set(s2, ended(syn.vs(s2), ch, True{}))))
 
-def quicked(vs: List<&2, Vc>, +ch: U32) -> List<&2, Vc>:
+def quicked.go(vs: List<&2, Vc>, +ch: U32, acc: List<&2, Vc>) -> List<&2, Vc>:
   match vs:
     case +v <> t:
-      Bool.pick(Vc, Bool.and(on(v, ch), Bool.or(U32.is_lt(env.seg(vc.amp(v)), 6), F32.is_ne(env.re(vc.amp(v)), 0.0))), vquick(v), v) <> quicked(t, ch)
+      quicked.go(t, ch, Bool.pick(Vc, Bool.and(on(v, ch), Bool.or(U32.is_lt(env.seg(vc.amp(v)), 6), F32.is_ne(env.re(vc.amp(v)), 0.0))), vquick(v), v) <> acc)
     case []:
-      []
+      List.reverse(&2, Vc, acc)
+
+def quicked(vs: List<&2, Vc>, +ch: U32) -> List<&2, Vc>:
+  quicked.go(vs, ch, [])
 
 def kidx(ks: List<&2, U32>, +i: U32, +key: U32) -> U32:
   match ks:
@@ -1036,16 +1057,19 @@ def offscan?(vs: List<&2, Vc>, +i: U32, +ch: U32, +key: U32, +first: U32, +last:
     case []:
       Tr{first, last, fp}
 
-def offed(vs: List<&2, Vc>, +i: U32, +ch: U32, +key: U32, +first: U32, +last: U32, +fp: U32, +sus: U32) -> List<&2, Vc>:
+def offed.go(vs: List<&2, Vc>, +i: U32, +ch: U32, +key: U32, +first: U32, +last: U32, +fp: U32, +sus: U32, acc: List<&2, Vc>) -> List<&2, Vc>:
   match vs:
     case +v <> t:
       +inr = Bool.and(U32.is_ge(i, first), U32.is_le(i, last))
       +edge = Bool.or(U32.is_eq(i, first), U32.is_eq(i, last))
       +bad = Bool.or(Bool.or(U32.is_ne(vc.play(v), fp), U32.is_eq(vc.pi(v), none())), Bool.or(Bool.or(U32.is_ne(vc.ch(v), ch), U32.is_ne(vc.key(v), key)), U32.is_ge(env.seg(vc.amp(v)), 6)))
       +hit = Bool.and(inr, Bool.or(edge, Bool.not(bad)))
-      Bool.pick(Vc, hit, Bool.pick(Vc, U32.is_ne(sus, 0), vc.held.set(v, 1), vend(v)), v) <> offed(t, (i + 1 : U32), ch, key, first, last, fp, sus)
+      offed.go(t, (i + 1 : U32), ch, key, first, last, fp, sus, Bool.pick(Vc, hit, Bool.pick(Vc, U32.is_ne(sus, 0), vc.held.set(v, 1), vend(v)), v) <> acc)
     case []:
-      []
+      List.reverse(&2, Vc, acc)
+
+def offed(vs: List<&2, Vc>, +i: U32, +ch: U32, +key: U32, +first: U32, +last: U32, +fp: U32, +sus: U32) -> List<&2, Vc>:
+  offed.go(vs, i, ch, key, first, last, fp, sus, [])
 
 def noteoff.do(+s: Syn, +ch: U32, +key: U32, +first: U32, +last: U32, +fp: U32) -> Syn:
   Bool.pick(Syn, U32.is_eq(first, none()), s, syn.vs.set(s, offed(syn.vs(s), 0, ch, key, first, last, fp, cn.sus(syn.chan(s, ch)))))
@@ -1058,12 +1082,15 @@ def noteoff.go(+s: Syn, +ch: U32, +key: U32, +r: Tr) -> Syn:
 def noteoff(+s: Syn, +ch: U32, +key: U32) -> Syn:
   noteoff.go(s, ch, key, offscan(syn.vs(s), 0, ch, key, none(), none(), 0))
 
-def grouped(vs: List<&2, Vc>, +pi: U32, +grp: U32) -> List<&2, Vc>:
+def grouped.go(vs: List<&2, Vc>, +pi: U32, +grp: U32, acc: List<&2, Vc>) -> List<&2, Vc>:
   match vs:
     case +v <> t:
-      Bool.pick(Vc, Bool.and(U32.is_eq(vc.pi(v), pi), U32.is_eq(rg.group(vc.rg(v)), grp)), vquick(v), v) <> grouped(t, pi, grp)
+      grouped.go(t, pi, grp, Bool.pick(Vc, Bool.and(U32.is_eq(vc.pi(v), pi), U32.is_eq(rg.group(vc.rg(v)), grp)), vquick(v), v) <> acc)
     case []:
-      []
+      List.reverse(&2, Vc, acc)
+
+def grouped(vs: List<&2, Vc>, +pi: U32, +grp: U32) -> List<&2, Vc>:
+  grouped.go(vs, pi, grp, [])
 
 def free(vs: List<&2, Vc>, +i: U32) -> U32:
   match vs:
@@ -1178,12 +1205,15 @@ def ev(+bk: G.Bank, +s: Syn, +x: U32) -> Syn:
   +b = (x .&. 255 : U32)
   ev.go(Bool.or(U32.is_eq(hi, 128), Bool.and(U32.is_eq(hi, 144), U32.is_eq(b, 0))), U32.is_eq(hi, 144), U32.is_eq(hi, 176), U32.is_eq(hi, 192), U32.is_eq(hi, 224), bk, s, ch, a, b)
 
-def quickall(vs: List<&2, Vc>) -> List<&2, Vc>:
+def quickall.go(vs: List<&2, Vc>, acc: List<&2, Vc>) -> List<&2, Vc>:
   match vs:
     case +v <> t:
-      Bool.pick(Vc, Bool.and(U32.is_ne(vc.pi(v), none()), Bool.or(U32.is_lt(env.seg(vc.amp(v)), 6), F32.is_ne(env.re(vc.amp(v)), 0.0))), vquick(v), v) <> quickall(t)
+      quickall.go(t, Bool.pick(Vc, Bool.and(U32.is_ne(vc.pi(v), none()), Bool.or(U32.is_lt(env.seg(vc.amp(v)), 6), F32.is_ne(env.re(vc.amp(v)), 0.0))), vquick(v), v) <> acc)
     case []:
-      []
+      List.reverse(&2, Vc, acc)
+
+def quickall(vs: List<&2, Vc>) -> List<&2, Vc>:
+  quickall.go(vs, [])
 
 def restart(+bk: G.Bank, +s: Syn) -> Syn:
   match s:
@@ -1337,19 +1367,25 @@ def toshort(+x: F32) -> U32:
   +t = (G.fs((x * 32767.5 : F32)) .&. 65535 : U32)
   Bool.pick(U32, F32.is_lt(x, (0.0 - 1.00004566 : F32)), 4294934528, Bool.pick(U32, F32.is_gt(x, 1.00001514), 32767, Bool.pick(U32, U32.is_ge(t, 32768), (t - 65536 : U32), t)))
 
-def shorts(xs: List<&2, F32>, +mv: F32) -> List<&2, U32>:
+def shorts.go(xs: List<&2, F32>, +mv: F32, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +x <> t:
-      toshort((x * mv : F32)) <> shorts(t, mv)
+      shorts.go(t, mv, toshort((x * mv : F32)) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
 
-def zeros(n: Nat) -> List<&2, F32>:
+def shorts(xs: List<&2, F32>, +mv: F32) -> List<&2, U32>:
+  shorts.go(xs, mv, [])
+
+def zeros.go(n: Nat, acc: List<&2, F32>) -> List<&2, F32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, F32, acc)
     case 1n+k:
-      0.0 <> zeros(k)
+      zeros.go(k, 0.0 <> acc)
+
+def zeros(n: Nat) -> List<&2, F32>:
+  zeros.go(n, [])
 
 def rendered(+s: Syn, r: Rv) -> (Array<F32> & Syn) & List<&2, U32>:
   match r:

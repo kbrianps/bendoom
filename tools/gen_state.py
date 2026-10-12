@@ -144,7 +144,7 @@ for i, n in enumerate(mo):
 pl = ("mo state viewz viewheight dvh bob health armor armortype cards usedown attacker damagecount bonuscount "
       "extralight fixedcm cheats secrets kills items fwd side turn buttons pw0 pw1 pw2 pw3 pw4 pw5 refire ready "
       "pending own0 own1 own2 own3 own4 own5 own6 own7 own8 ammo0 ammo1 ammo2 ammo3 max0 max1 max2 max3 backpack "
-      "attackdown message psp0st psp0tics psp0sx psp0sy psp1st psp1tics psp1sx psp1sy onground didsecret").split()
+      "attackdown message psp0st psp0tics psp0sx psp0sy psp1st psp1tics psp1sx psp1sy onground didsecret cviewz").split()
 assert len(pl) <= 64
 for i, n in enumerate(pl):
     out.append("def p.%s(+g: Sim) -> U32:\n  pget(g, %d)\n" % (n, i))

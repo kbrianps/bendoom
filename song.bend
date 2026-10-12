@@ -2,23 +2,29 @@ import Base
 import ./src/music.bend as M
 import ./src/wad.bend as W
 
-def le(n: Nat, +v: U32) -> List<&2, U32>:
+def le.go(n: Nat, +v: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      (v .&. 255 : U32) <> le(p, (v >> 8n : U32))
+      le.go(p, (v >> 8n : U32), (v .&. 255 : U32) <> acc)
+
+def le(n: Nat, +v: U32) -> List<&2, U32>:
+  le.go(n, v, [])
 
 def header(+ch: U32, +rate: U32) -> List<&2, U32>:
   List.append(&2, U32, [82, 73, 70, 70], List.append(&2, U32, le(4n, 2147483647), List.append(&2, U32, [87, 65, 86, 69, 102, 109, 116, 32, 16, 0, 0, 0, 1, 0, ch, 0],
     List.append(&2, U32, le(4n, rate), List.append(&2, U32, le(4n, (rate * ch * 2 : U32)), List.append(&2, U32, [(ch * 2 : U32), 0, 16, 0, 100, 97, 116, 97], le(4n, 2147483647)))))))
 
-def bytes(xs: List<&2, U32>) -> List<&2, U32>:
+def bytes.go(xs: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +v <> t:
-      (v .&. 255 : U32) <> ((v >> 8n) .&. 255 : U32) <> bytes(t)
+      bytes.go(t, ((v >> 8n) .&. 255 : U32) <> (v .&. 255 : U32) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def bytes(xs: List<&2, U32>) -> List<&2, U32>:
+  bytes.go(xs, [])
 
 def wrote(p: File & Result<&1, &1, U32 & String, Unit>) -> IO(File):
   (f, r) = p

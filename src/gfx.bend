@@ -22,19 +22,25 @@ type Cover is Data:
 def s(+w: U32) -> U32:
   B.s16(w)
 
-def pnames(ws: List<&2, U32>) -> List<&2, String>:
+def pnames.go(ws: List<&2, U32>, acc: List<&2, String>) -> List<&2, String>:
   match ws:
     case a <> b <> c <> d <> t:
-      B.name(a, b, c, d) <> pnames(t)
+      pnames.go(t, B.name(a, b, c, d) <> acc)
     case _:
-      []
+      List.reverse(&2, String, acc)
 
-def prefs(n: Nat, ws: List<&2, U32>) -> List<&2, PRef>:
+def pnames(ws: List<&2, U32>) -> List<&2, String>:
+  pnames.go(ws, [])
+
+def prefs.go(n: Nat, ws: List<&2, U32>, acc: List<&2, PRef>) -> List<&2, PRef>:
   match n ws:
     case 1n+p x <> y <> k <> sd <> cm <> t:
-      PRef{s(x), s(y), k} <> prefs(p, t)
+      prefs.go(p, t, PRef{s(x), s(y), k} <> acc)
     case _ _:
-      []
+      List.reverse(&2, PRef, acc)
+
+def prefs(n: Nat, ws: List<&2, U32>) -> List<&2, PRef>:
+  prefs.go(n, ws, [])
 
 def texdef(ws: List<&2, U32>) -> TexDef:
   match ws:
@@ -43,19 +49,25 @@ def texdef(ws: List<&2, U32>) -> TexDef:
     case _:
       TexDef{"", 0, 0, []}
 
-def offsets(n: Nat, ws: List<&2, U32>) -> List<&2, U32>:
+def offsets.go(n: Nat, ws: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match n ws:
     case 1n+p lo <> hi <> t:
-      B.u32(lo, hi) <> offsets(p, t)
+      offsets.go(p, t, B.u32(lo, hi) <> acc)
     case _ _:
-      []
+      List.reverse(&2, U32, acc)
 
-def texdefs.go(+ws: List<&2, U32>, os: List<&2, U32>) -> List<&2, TexDef>:
+def offsets(n: Nat, ws: List<&2, U32>) -> List<&2, U32>:
+  offsets.go(n, ws, [])
+
+def texdefs.go.go(+ws: List<&2, U32>, os: List<&2, U32>, acc: List<&2, TexDef>) -> List<&2, TexDef>:
   match os:
     case +o <> t:
-      texdef(List.drop(&2, U32, ws, U32.to_nat((o >> 1n : U32)))) <> texdefs.go(ws, t)
+      texdefs.go.go(ws, t, texdef(List.drop(&2, U32, ws, U32.to_nat((o >> 1n : U32)))) <> acc)
     case []:
-      []
+      List.reverse(&2, TexDef, acc)
+
+def texdefs.go(+ws: List<&2, U32>, os: List<&2, U32>) -> List<&2, TexDef>:
+  texdefs.go.go(ws, os, [])
 
 def texdefs.of(+ws: List<&2, U32>) -> List<&2, TexDef>:
   match ws:
@@ -81,12 +93,15 @@ def patch(r: PRef, bs: List<&2, U32>, +at: U32) -> Patch:
     case PRef{x, y, k}:
       patch.of(x, y, T.from_list(U32, bs), at)
 
-def patches(rs: List<&2, PRef>, bss: List<&2, List<&2, U32>>, +at: U32) -> List<&2, Patch>:
+def patches.go(rs: List<&2, PRef>, bss: List<&2, List<&2, U32>>, +at: U32, acc: List<&2, Patch>) -> List<&2, Patch>:
   match rs bss:
     case r <> rt +bs <> bt:
-      patch(r, bs, at) <> patches(rt, bt, (at + T.len(U32, bs) : U32))
+      patches.go(rt, bt, (at + T.len(U32, bs) : U32), patch(r, bs, at) <> acc)
     case _ _:
-      []
+      List.reverse(&2, Patch, acc)
+
+def patches(rs: List<&2, PRef>, bss: List<&2, List<&2, U32>>, +at: U32) -> List<&2, Patch>:
+  patches.go(rs, bss, at, [])
 
 def covers(+x: U32, +p: Patch) -> Bool:
   match p:
@@ -108,29 +123,38 @@ def cover(ps: List<&2, Patch>, +x: U32, c: Cover) -> Cover:
 def empty() -> Patch:
   Patch{0, 0, 0, T.from_list(U32, []), 0}
 
-def cover.all(n: Nat, +ps: List<&2, Patch>, +x: U32) -> List<&2, Cover>:
+def cover.all.go(n: Nat, +ps: List<&2, Patch>, +x: U32, acc: List<&2, Cover>) -> List<&2, Cover>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, Cover, acc)
     case 1n+p:
-      cover(ps, x, Cover{0, empty()}) <> cover.all(p, ps, (x + 1 : U32))
+      cover.all.go(p, ps, (x + 1 : U32), cover(ps, x, Cover{0, empty()}) <> acc)
+
+def cover.all(n: Nat, +ps: List<&2, Patch>, +x: U32) -> List<&2, Cover>:
+  cover.all.go(n, ps, x, [])
 
 def none() -> U32:
   4294967295
 
-def place(cs: List<&2, Cover>, +h: U32, +at: U32) -> List<&2, U32>:
+def place.go(cs: List<&2, Cover>, +h: U32, +at: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match cs:
     case Cover{+n, q} <> t:
-      Bool.pick(U32, U32.is_gt(n, 1), at, none()) <> place(t, h, Bool.pick(U32, U32.is_gt(n, 1), (at + h : U32), at))
+      place.go(t, h, Bool.pick(U32, U32.is_gt(n, 1), (at + h : U32), at), Bool.pick(U32, U32.is_gt(n, 1), at, none()) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def place(cs: List<&2, Cover>, +h: U32, +at: U32) -> List<&2, U32>:
+  place.go(cs, h, at, [])
+
+def multi.go(cs: List<&2, Cover>, +acc: U32) -> U32:
+  match cs:
+    case Cover{+n, q} <> t:
+      multi.go(t, (Bool.pick(U32, U32.is_gt(n, 1), 1, 0) + acc : U32))
+    case []:
+      acc
 
 def multi(cs: List<&2, Cover>) -> U32:
-  match cs:
-    case Cover{+n, q} <> t:
-      (Bool.pick(U32, U32.is_gt(n, 1), 1, 0) + multi(t) : U32)
-    case []:
-      0
+  multi.go(cs, 0)
 
 def copy(n: Nat, blk: Array<U32>, +bs: T.Vec<U32>, +src: U32, +dst: U32) -> Array<U32>:
   match n:
@@ -196,12 +220,15 @@ def composite(ps: List<&2, Patch>, blk: Array<U32>, +tw: U32, +cofs: T.Vec<U32>,
     case []:
       blk
 
-def take128.go(n: Nat, +v: T.Vec<U32>, +at: U32, rest: List<&2, U32>) -> List<&2, U32>:
+def take128.go.go(n: Nat, +v: T.Vec<U32>, +at: U32, rest: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      rest
+      T.onto(U32, acc, rest)
     case 1n+p:
-      byte(v, at) <> take128.go(p, v, (at + 1 : U32), rest)
+      take128.go.go(p, v, (at + 1 : U32), rest, byte(v, at) <> acc)
+
+def take128.go(n: Nat, +v: T.Vec<U32>, +at: U32, rest: List<&2, U32>) -> List<&2, U32>:
+  take128.go.go(n, v, at, rest, [])
 
 def source.of(single: Bool, +bs: T.Vec<U32>, +at: U32, +blk: T.Vec<U32>, +co: U32, rest: List<&2, U32>) -> List<&2, U32>:
   match single:
@@ -237,19 +264,18 @@ def post(+c: Cover, +x: U32) -> U32:
     case Cover{n, Patch{px, py, w, bs, at}}:
       Bool.pick(U32, U32.is_eq(n, 1), (at + u32at(bs, (8 + 4 * (x - px) : U32)) : U32), none())
 
-def postcols(n: Nat, cs: List<&2, Cover>, +x: U32) -> List<&2, U32>:
+def postcols.go(n: Nat, cs: List<&2, Cover>, +x: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n cs:
     case 1n+p +c <> t:
-      post(c, x) <> postcols(p, t, (x + 1 : U32))
+      postcols.go(p, t, (x + 1 : U32), post(c, x) <> acc)
     case _ _:
-      []
+      List.reverse(&2, U32, acc)
+
+def postcols(n: Nat, cs: List<&2, Cover>, +x: U32) -> List<&2, U32>:
+  postcols.go(n, cs, x, [])
 
 def blob(bss: List<&2, List<&2, U32>>) -> List<&2, U32>:
-  match bss:
-    case bs <> t:
-      List.append(&2, U32, bs, blob(t))
-    case []:
-      []
+  T.flat(U32, bss)
 
 def extra(masked: Bool, +n: Nat, +cs: List<&2, Cover>, bss: List<&2, List<&2, U32>>) -> List<&2, U32> & List<&2, U32>:
   match masked:

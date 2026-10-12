@@ -2867,6 +2867,18 @@ def pi.didsecret(+g: Sim, +j: U32) -> U32:
 def pi.didsecret.set(+g: Sim, +j: U32, +v: U32) -> Sim:
   piput(g, j, 62, v)
 
+def p.cviewz(+g: Sim) -> U32:
+  pget(g, 63)
+
+def p.cviewz.set(+g: Sim, +v: U32) -> Sim:
+  pput(g, 63, v)
+
+def pi.cviewz(+g: Sim, +j: U32) -> U32:
+  piget(g, j, 63)
+
+def pi.cviewz.set(+g: Sim, +j: U32, +v: U32) -> Sim:
+  piput(g, j, 63, v)
+
 def sc.floor(+r: R.RSector) -> U32:
   match r:
     case R.RSector{x0, x1, x2, x3, x4, x5, x6, x7, x8}:

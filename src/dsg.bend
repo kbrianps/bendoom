@@ -18,26 +18,35 @@ def b4(+v: U32) -> List<&2, U32>:
 def b2(+v: U32) -> List<&2, U32>:
   [(v .&. 255 : U32), ((v >> 8n) .&. 255 : U32)]
 
-def ws(xs: List<&2, U32>) -> List<&2, U32>:
+def ws.go(xs: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +x <> t:
-      List.append(&2, U32, b4(x), ws(t))
+      ws.go(t, T.onto(U32, b4(x), acc))
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def ws(xs: List<&2, U32>) -> List<&2, U32>:
+  ws.go(xs, [])
+
+def hs.go(xs: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
+  match xs:
+    case +x <> t:
+      hs.go(t, T.onto(U32, b2(x), acc))
+    case []:
+      List.reverse(&2, U32, acc)
 
 def hs(xs: List<&2, U32>) -> List<&2, U32>:
-  match xs:
-    case +x <> t:
-      List.append(&2, U32, b2(x), hs(t))
-    case []:
-      []
+  hs.go(xs, [])
 
-def zeros(n: Nat) -> List<&2, U32>:
+def zeros.go(n: Nat, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      0 <> zeros(p)
+      zeros.go(p, 0 <> acc)
+
+def zeros(n: Nat) -> List<&2, U32>:
+  zeros.go(n, [])
 
 def padn(+pos: U32) -> U32:
   ((4 - (pos .&. 3)) .&. 3 : U32)
@@ -85,19 +94,25 @@ def header(+g: S.Sim, +desc: List<&2, U32>) -> List<&2, U32>:
 def pf(+g: S.Sim, +i: U32, +f: U32) -> U32:
   S.piget(g, i, f)
 
-def pfs(n: Nat, +g: S.Sim, +i: U32, +f: U32) -> List<&2, U32>:
+def pfs.go(n: Nat, +g: S.Sim, +i: U32, +f: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      pf(g, i, f) <> pfs(p, g, i, (f + 1 : U32))
+      pfs.go(p, g, i, (f + 1 : U32), pf(g, i, f) <> acc)
+
+def pfs(n: Nat, +g: S.Sim, +i: U32, +f: U32) -> List<&2, U32>:
+  pfs.go(n, g, i, f, [])
+
+def cardbits.go(n: Nat, +c: U32, +k: U32, acc: List<&2, U32>) -> List<&2, U32>:
+  match n:
+    case 0n:
+      List.reverse(&2, U32, acc)
+    case 1n+p:
+      cardbits.go(p, c, (k + 1 : U32), ((c >> U32.to_nat(k)) .&. 1 : U32) <> acc)
 
 def cardbits(n: Nat, +c: U32, +k: U32) -> List<&2, U32>:
-  match n:
-    case 0n:
-      []
-    case 1n+p:
-      ((c >> U32.to_nat(k)) .&. 1 : U32) <> cardbits(p, c, (k + 1 : U32))
+  cardbits.go(n, c, k, [])
 
 def player(+g: S.Sim, +i: U32) -> List<&2, U32>:
   +cmd : List<&2, U32> = [(pf(g, i, 20) .&. 255 : U32), (pf(g, i, 21) .&. 255 : U32), (pf(g, i, 22) .&. 255 : U32), ((pf(g, i, 22) >> 8n) .&. 255 : U32), 0, 0, 0, (pf(g, i, 23) .&. 255 : U32)]
@@ -108,24 +123,30 @@ def player(+g: S.Sim, +i: U32) -> List<&2, U32>:
   +d = ws(List.append(&2, U32, pfs(8n, g, i, 53), [pf(g, i, 62)]))
   List.append(&2, U32, a, List.append(&2, U32, cmd, List.append(&2, U32, b, List.append(&2, U32, c, d))))
 
-def players(n: Nat, +g: S.Sim, +i: U32, +pos: U32) -> List<&2, U32>:
+def players.go(n: Nat, +g: S.Sim, +i: U32, +pos: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
       +on = C.ingame(g, i)
       +rec = Bool.pick(List<&2, U32>, on, List.append(&2, U32, pad(pos), player(g, i)), [])
-      List.append(&2, U32, rec, players(p, g, (i + 1 : U32), (pos + len(rec) : U32)))
+      players.go(p, g, (i + 1 : U32), (pos + len(rec) : U32), T.onto(U32, rec, acc))
+
+def players(n: Nat, +g: S.Sim, +i: U32, +pos: U32) -> List<&2, U32>:
+  players.go(n, g, i, pos, [])
 
 def sector(+g: S.Sim, +s: U32) -> List<&2, U32>:
   hs([sar16(S.s.floor(g, s)), sar16(S.s.ceil(g, s)), gflat(g, S.s.fpic(g, s)), gflat(g, S.s.cpic(g, s)), S.s.light(g, s), S.s.special(g, s), S.s.tag(g, s)])
 
-def sectors(n: Nat, +g: S.Sim, +s: U32) -> List<&2, U32>:
+def sectors.go(n: Nat, +g: S.Sim, +s: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      List.append(&2, U32, sector(g, s), sectors(p, g, (s + 1 : U32)))
+      sectors.go(p, g, (s + 1 : U32), T.onto(U32, sector(g, s), acc))
+
+def sectors(n: Nat, +g: S.Sim, +s: U32) -> List<&2, U32>:
+  sectors.go(n, g, s, [])
 
 def side(+g: S.Sim, +d: U32) -> List<&2, U32>:
   Bool.pick(List<&2, U32>, U32.is_eq(d, 65535), [],
@@ -138,12 +159,15 @@ def line(+g: S.Sim, +l: U32) -> List<&2, U32>:
   +ln = S.line(g, l)
   List.append(&2, U32, hs([lflags(g, l), C.lspec(g, l), S.ln.tag(ln)]), List.append(&2, U32, side(g, S.ln.side0(ln)), side(g, S.ln.side1(ln))))
 
-def lines(n: Nat, +g: S.Sim, +l: U32) -> List<&2, U32>:
+def lines.go(n: Nat, +g: S.Sim, +l: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      List.append(&2, U32, line(g, l), lines(p, g, (l + 1 : U32)))
+      lines.go(p, g, (l + 1 : U32), T.onto(U32, line(g, l), acc))
+
+def lines(n: Nat, +g: S.Sim, +l: U32) -> List<&2, U32>:
+  lines.go(n, g, l, [])
 
 def world(+g: S.Sim) -> List<&2, U32>:
   List.append(&2, U32, sectors(U32.to_nat(S.mp.nsec(g)), g, 0), lines(U32.to_nat(S.mp.nlines(g)), g, 0))
@@ -243,22 +267,28 @@ def r16(+v: T.Vec<U32>, +p: U32) -> U32:
 def r32(+v: T.Vec<U32>, +p: U32) -> U32:
   (r8(v, p) .|. (r8(v, (p + 1 : U32)) << 8n) .|. (r8(v, (p + 2 : U32)) << 16n) .|. (r8(v, (p + 3 : U32)) << 24n) : U32)
 
-def same(n: Nat, +v: T.Vec<U32>, +p: U32, xs: List<&2, U32>) -> Bool:
+def same.go(n: Nat, +v: T.Vec<U32>, +p: U32, xs: List<&2, U32>, +acc: Bool) -> Bool:
   match n xs:
     case 1n+q +x <> t:
-      Bool.and(U32.is_eq(r8(v, p), x), same(q, v, (p + 1 : U32), t))
+      same.go(q, v, (p + 1 : U32), t, Bool.and(acc, U32.is_eq(r8(v, p), x)))
     case _ _:
-      True{}
+      acc
+
+def same(n: Nat, +v: T.Vec<U32>, +p: U32, xs: List<&2, U32>) -> Bool:
+  same.go(n, v, p, xs, True{})
 
 def ok(+v: T.Vec<U32>) -> Bool:
   Bool.and(U32.is_ge(T.size(U32, v), 51), same(16n, v, 24, version()))
 
-def desc.go(n: Nat, +v: T.Vec<U32>, +p: U32) -> List<&2, U32>:
+def desc.go.go(n: Nat, +v: T.Vec<U32>, +p: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+q:
-      r8(v, p) <> desc.go(q, v, (p + 1 : U32))
+      desc.go.go(q, v, (p + 1 : U32), r8(v, p) <> acc)
+
+def desc.go(n: Nat, +v: T.Vec<U32>, +p: U32) -> List<&2, U32>:
+  desc.go.go(n, v, p, [])
 
 def desc(+v: T.Vec<U32>) -> List<&2, U32>:
   desc.go(24n, v, 0)

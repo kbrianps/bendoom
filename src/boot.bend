@@ -27,15 +27,19 @@ def frames(+sp: P.Sprites) -> T.Vec<P.SFrame>:
       fs
 
 def eyes(+g: S.Sim) -> S.Sim:
-  S.p.viewz.set(g, (S.m.z(g, S.p.mo(g)) + S.p.viewheight(g) : U32))
+  +v = (S.m.z(g, S.p.mo(g)) + S.p.viewheight(g) : U32)
+  S.p.cviewz.set(S.p.viewz.set(g, v), v)
 
-def hudaddrs(hbs: List<&2, List<&2, U32>>, +at: U32) -> List<&2, U32>:
+def hudaddrs.go(hbs: List<&2, List<&2, U32>>, +at: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match hbs:
     case bs <> t:
       +n = T.len(U32, bs)
-      Bool.pick(U32, U32.is_eq(n, 0), 0, at) <> hudaddrs(t, (at + n : U32))
+      hudaddrs.go(t, (at + n : U32), Bool.pick(U32, U32.is_eq(n, 0), 0, at) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def hudaddrs(hbs: List<&2, List<&2, U32>>, +at: U32) -> List<&2, U32>:
+  hudaddrs.go(hbs, at, [])
 
 def assemble(+lv: L.Level, +pal: List<&2, U32>, cm: List<&2, U32>, +t: D.Texs, +sp: P.Sprites, +base: U32, sbs: List<&2, List<&2, U32>>, +hbs: List<&2, List<&2, U32>>, +mode: U32, +pl: T.Vec<U32>, +cv: T.Vec<U32>) -> S.Sim & Array<U32>:
   match t:

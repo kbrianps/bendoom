@@ -47,12 +47,15 @@ def rline(+vs: T.Vec<L.Vertex>, +sides: T.Vec<L.Side>, l: L.Line) -> S.RLine:
       +bs = Bool.pick(U32, U32.is_eq(bk, 65535), 65535, R.side.sector(sides, bk))
       S.RLine{x1, y1, x2, y2, dx, dy, fl, slope(dx, dy), smax(y1, y2), smin(y1, y2), smin(x1, x2), smax(x1, x2), fr, bk, R.side.sector(sides, fr), bs, tg}
 
-def rlines(n: Nat, +ls: T.Vec<L.Line>, +vs: T.Vec<L.Vertex>, +sides: T.Vec<L.Side>, +i: U32) -> List<&2, S.RLine>:
+def rlines.go(n: Nat, +ls: T.Vec<L.Line>, +vs: T.Vec<L.Vertex>, +sides: T.Vec<L.Side>, +i: U32, acc: List<&2, S.RLine>) -> List<&2, S.RLine>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, S.RLine, acc)
     case 1n+p:
-      rline(vs, sides, R.line(ls, i)) <> rlines(p, ls, vs, sides, (i + 1 : U32))
+      rlines.go(p, ls, vs, sides, (i + 1 : U32), rline(vs, sides, R.line(ls, i)) <> acc)
+
+def rlines(n: Nat, +ls: T.Vec<L.Line>, +vs: T.Vec<L.Vertex>, +sides: T.Vec<L.Side>, +i: U32) -> List<&2, S.RLine>:
+  rlines.go(n, ls, vs, sides, i, [])
 
 def nullline() -> S.RLine:
   S.RLine{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65535, 0, 65535, 0}
@@ -62,20 +65,25 @@ def special(+l: L.Line) -> U32:
     case L.Line{a, b, fl, +sp, tg, fr, bk}:
       sp
 
-def specials(n: Nat, +ls: T.Vec<L.Line>, +i: U32) -> List<&2, U32>:
+def specials.go(n: Nat, +ls: T.Vec<L.Line>, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      special(R.line(ls, i)) <> specials(p, ls, (i + 1 : U32))
+      specials.go(p, ls, (i + 1 : U32), special(R.line(ls, i)) <> acc)
+
+def specials(n: Nat, +ls: T.Vec<L.Line>, +i: U32) -> List<&2, U32>:
+  specials.go(n, ls, i, [])
+
+def scrollers.go(n: Nat, +ls: T.Vec<L.Line>, +i: U32, +acc: List<&2, U32>) -> List<&2, U32>:
+  match n:
+    case 0n:
+      List.reverse(&2, U32, acc)
+    case 1n+p:
+      scrollers.go(p, ls, (i + 1 : U32), Bool.pick(List<&2, U32>, U32.is_eq(special(R.line(ls, i)), 48), i <> acc, acc))
 
 def scrollers(n: Nat, +ls: T.Vec<L.Line>, +i: U32) -> List<&2, U32>:
-  match n:
-    case 0n:
-      []
-    case 1n+p:
-      +rest = scrollers(p, ls, (i + 1 : U32))
-      Bool.pick(List<&2, U32>, U32.is_eq(special(R.line(ls, i)), 48), i <> rest, rest)
+  scrollers.go(n, ls, i, [])
 
 def push(+v: T.Vec<List<&2, U32>>, +s: U32, +i: U32) -> T.Vec<List<&2, U32>>:
   T.set(List<&2, U32>, v, s, i <> T.get(List<&2, U32>, v, s, []))
@@ -122,48 +130,66 @@ def blocks(+b: BB, +ox: U32, +oy: U32, +bw: U32, +bh: U32) -> List<&2, U32>:
     case BB{+t, +bo, +l, +r}:
       [blk.hi(t, oy, bh), blk.lo(bo, oy), blk.lo(l, ox), blk.hi(r, ox, bw), F.sar((l + r : U32), 1n), F.sar((t + bo : U32), 1n)]
 
-def secboxes(n: Nat, +ls: T.Vec<S.RLine>, +sl: T.Vec<List<&2, U32>>, +ox: U32, +oy: U32, +bw: U32, +bh: U32, +i: U32) -> List<&2, U32>:
+def secboxes.go(n: Nat, +ls: T.Vec<S.RLine>, +sl: T.Vec<List<&2, U32>>, +ox: U32, +oy: U32, +bw: U32, +bh: U32, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
       +b = boxof(ls, T.get(List<&2, U32>, sl, i, []), BB{2147483648, 2147483647, 2147483647, 2147483648})
-      List.append(&2, U32, blocks(b, ox, oy, bw, bh), secboxes(p, ls, sl, ox, oy, bw, bh, (i + 1 : U32)))
+      secboxes.go(p, ls, sl, ox, oy, bw, bh, (i + 1 : U32), T.onto(U32, blocks(b, ox, oy, bw, bh), acc))
 
-def subsecs(n: Nat, +w: R.World, +i: U32) -> List<&2, U32>:
+def secboxes(n: Nat, +ls: T.Vec<S.RLine>, +sl: T.Vec<List<&2, U32>>, +ox: U32, +oy: U32, +bw: U32, +bh: U32, +i: U32) -> List<&2, U32>:
+  secboxes.go(n, ls, sl, ox, oy, bw, bh, i, [])
+
+def subsecs.go(n: Nat, +w: R.World, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      R.side.of.seg(w, R.sub(w, i)) <> subsecs(p, w, (i + 1 : U32))
+      subsecs.go(p, w, (i + 1 : U32), R.side.of.seg(w, R.sub(w, i)) <> acc)
+
+def subsecs(n: Nat, +w: R.World, +i: U32) -> List<&2, U32>:
+  subsecs.go(n, w, i, [])
+
+def texid.go(+names: List<&2, String>, xs: List<&2, String>, acc: List<&2, U32>) -> List<&2, U32>:
+  match xs:
+    case +x <> t:
+      texid.go(names, t, R.tex(names, x) <> acc)
+    case []:
+      List.reverse(&2, U32, acc)
 
 def texid(+names: List<&2, String>, xs: List<&2, String>) -> List<&2, U32>:
+  texid.go(names, xs, [])
+
+def flatid.go(+fl: List<&2, String>, xs: List<&2, String>, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +x <> t:
-      R.tex(names, x) <> texid(names, t)
+      flatid.go(fl, t, R.flat(fl, x, 0) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
 
 def flatid(+fl: List<&2, String>, xs: List<&2, String>) -> List<&2, U32>:
-  match xs:
-    case +x <> t:
-      R.flat(fl, x, 0) <> flatid(fl, t)
-    case []:
-      []
+  flatid.go(fl, xs, [])
+
+def tanims.go(+names: List<&2, String>, xss: List<&2, List<&2, String>>, bs: List<&2, U32>, acc: List<&2, S.Anim>) -> List<&2, S.Anim>:
+  match xss bs:
+    case xs <> t b <> u:
+      tanims.go(names, t, u, S.Anim{True{}, texid(names, xs), b, 8} <> acc)
+    case _ _:
+      List.reverse(&2, S.Anim, acc)
 
 def tanims(+names: List<&2, String>, xss: List<&2, List<&2, String>>, bs: List<&2, U32>) -> List<&2, S.Anim>:
+  tanims.go(names, xss, bs, [])
+
+def fanims.go(+fl: List<&2, String>, xss: List<&2, List<&2, String>>, bs: List<&2, U32>, acc: List<&2, S.Anim>) -> List<&2, S.Anim>:
   match xss bs:
     case xs <> t b <> u:
-      S.Anim{True{}, texid(names, xs), b, 8} <> tanims(names, t, u)
+      fanims.go(fl, t, u, S.Anim{False{}, flatid(fl, xs), b, 8} <> acc)
     case _ _:
-      []
+      List.reverse(&2, S.Anim, acc)
 
 def fanims(+fl: List<&2, String>, xss: List<&2, List<&2, String>>, bs: List<&2, U32>) -> List<&2, S.Anim>:
-  match xss bs:
-    case xs <> t b <> u:
-      S.Anim{False{}, flatid(fl, xs), b, 8} <> fanims(fl, t, u)
-    case _ _:
-      []
+  fanims.go(fl, xss, bs, [])
 
 def digit(+s: String, n: Nat) -> U32:
   (P.at(s, n) - 48 : U32)
@@ -182,12 +208,15 @@ def segline(+s: L.Seg) -> U32:
     case L.Seg{v1, v2, a, li, sd, of}:
       li
 
-def seglines(n: Nat, +se: T.Vec<L.Seg>, +i: U32) -> List<&2, U32>:
+def seglines.go(n: Nat, +se: T.Vec<L.Seg>, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      segline(T.get(L.Seg, se, i, L.Seg{0, 0, 0, 0, 0, 0})) <> seglines(p, se, (i + 1 : U32))
+      seglines.go(p, se, (i + 1 : U32), segline(T.get(L.Seg, se, i, L.Seg{0, 0, 0, 0, 0, 0})) <> acc)
+
+def seglines(n: Nat, +se: T.Vec<L.Seg>, +i: U32) -> List<&2, U32>:
+  seglines.go(n, se, i, [])
 
 def halve(n: Nat, +st: T.Vec<U32>, +i: U32) -> T.Vec<U32>:
   match n:

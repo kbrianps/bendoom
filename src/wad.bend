@@ -7,12 +7,15 @@ type Lump is Data:
 type Wad is Type:
   Wad{file: File, more: List<&2, String>, dir: List<&2, Lump>}
 
-def dir(ws: List<&2, U32>, +src: U32) -> List<&2, Lump>:
+def dir.go(ws: List<&2, U32>, +src: U32, acc: List<&2, Lump>) -> List<&2, Lump>:
   match ws:
     case a <> b <> c <> d <> e <> f <> g <> h <> t:
-      Lump{B.name(e, f, g, h), B.u32(a, b), B.u32(c, d), src} <> dir(t, src)
+      dir.go(t, src, Lump{B.name(e, f, g, h), B.u32(a, b), B.u32(c, d), src} <> acc)
     case _:
-      []
+      List.reverse(&2, Lump, acc)
+
+def dir(ws: List<&2, U32>, +src: U32) -> List<&2, Lump>:
+  dir.go(ws, src, [])
 
 def magic(+a: U32, +b: U32) -> Bool:
   Bool.and(Bool.or(U32.is_eq(a, 22345), U32.is_eq(a, 22352)), U32.is_eq(b, 17473))
@@ -152,12 +155,15 @@ def iwad(+l: Lump) -> Bool:
     case Lump{n, at, size, k}:
       U32.is_eq(k, 0)
 
-def has.in(ls: List<&2, Lump>, +name: String) -> Bool:
+def has.in.go(ls: List<&2, Lump>, +name: String, +acc: Bool) -> Bool:
   match ls:
     case +l <> t:
-      Bool.or(Bool.and(iwad(l), named(name, l)), has.in(t, name))
+      has.in.go(t, name, Bool.or(acc, Bool.and(iwad(l), named(name, l))))
     case []:
-      False{}
+      acc
+
+def has.in(ls: List<&2, Lump>, +name: String) -> Bool:
+  has.in.go(ls, name, False{})
 
 def has(w: Wad, +name: String) -> Wad & Bool:
   match w:
@@ -236,31 +242,47 @@ def maps.put(hit: Bool, l: Lump, rest: List<&2, Lump>) -> List<&2, Lump>:
     case False{}:
       rest
 
-def maps(ls: List<&2, Lump>) -> List<&2, Lump>:
+def maps.go(ls: List<&2, Lump>, acc: List<&2, Lump>) -> List<&2, Lump>:
   match ls:
     case l <> +t:
-      maps.put(heads("THINGS", t), l, maps(t))
+      maps.go(t, maps.put(heads("THINGS", t), l, acc))
     case []:
-      []
+      List.reverse(&2, Lump, acc)
 
-def parts(+ls: List<&2, Lump>, names: List<&2, String>) -> List<&2, Lump>:
+def maps(ls: List<&2, Lump>) -> List<&2, Lump>:
+  maps.go(ls, [])
+
+def parts.go(+ls: List<&2, Lump>, names: List<&2, String>, acc: List<&2, Lump>) -> List<&2, Lump>:
   match names:
     case n <> t:
-      part(ls, n) <> parts(ls, t)
+      parts.go(ls, t, part(ls, n) <> acc)
     case []:
-      []
+      List.reverse(&2, Lump, acc)
+
+def parts(+ls: List<&2, Lump>, names: List<&2, String>) -> List<&2, Lump>:
+  parts.go(ls, names, [])
 
 def get(w: Wad, names: List<&2, String>) -> IO(Wad & List<&2, List<&2, U32>>):
   match w:
     case Wad{file, m, +d}:
       lumps(parts(d, names), Wad{file, m, d})
 
-def until(ls: List<&2, Lump>, +stop: String) -> List<&2, Lump>:
+def until.head(+ls: List<&2, Lump>, +stop: String) -> Bool:
   match ls:
     case +l <> t:
-      Bool.pick(List<&2, Lump>, named(stop, l), [], l <> until(t, stop))
+      named(stop, l)
     case []:
-      []
+      False{}
+
+def until.go(ls: List<&2, Lump>, +stop: String, acc: List<&2, Lump>, hit: Bool) -> List<&2, Lump>:
+  match ls hit:
+    case +l <> +t False{}:
+      until.go(t, stop, l <> acc, until.head(t, stop))
+    case _ _:
+      List.reverse(&2, Lump, acc)
+
+def until(+ls: List<&2, Lump>, +stop: String) -> List<&2, Lump>:
+  until.go(ls, stop, [], until.head(ls, stop))
 
 def lname(+l: Lump) -> String:
   match l:
@@ -272,51 +294,71 @@ def lsize(+l: Lump) -> U32:
     case Lump{n, at, size, k}:
       size
 
-def iwads(ls: List<&2, Lump>) -> List<&2, Lump>:
+def iwads.head(+ls: List<&2, Lump>) -> Bool:
   match ls:
     case +l <> t:
-      Bool.pick(List<&2, Lump>, iwad(l), l <> iwads(t), [])
+      iwad(l)
     case []:
-      []
+      False{}
+
+def iwads.go(ls: List<&2, Lump>, acc: List<&2, Lump>, keep: Bool) -> List<&2, Lump>:
+  match ls keep:
+    case +l <> +t True{}:
+      iwads.go(t, l <> acc, iwads.head(t))
+    case _ _:
+      List.reverse(&2, Lump, acc)
+
+def iwads(+ls: List<&2, Lump>) -> List<&2, Lump>:
+  iwads.go(ls, [], iwads.head(ls))
 
 def marks(+n: String, +a: String, +b: String) -> Bool:
   Bool.or(String.eq(n, a), String.eq(n, b))
 
-def inside(ls: List<&2, Lump>, +on: Bool, +a: String, +b: String, +a2: String, +b2: String) -> List<&2, Lump>:
+def inside.go(ls: List<&2, Lump>, +on: Bool, +a: String, +b: String, +a2: String, +b2: String, +acc: List<&2, Lump>) -> List<&2, Lump>:
   match ls:
     case +l <> t:
       +start = marks(lname(l), a, a2)
       +stop = marks(lname(l), b, b2)
       +keep = Bool.and(Bool.and(on, Bool.not(Bool.or(start, stop))), Bool.and(Bool.not(iwad(l)), U32.is_ne(lsize(l), 0)))
-      +rest = inside(t, Bool.pick(Bool, start, True{}, Bool.pick(Bool, stop, False{}, on)), a, b, a2, b2)
-      Bool.pick(List<&2, Lump>, keep, l <> rest, rest)
+      inside.go(t, Bool.pick(Bool, start, True{}, Bool.pick(Bool, stop, False{}, on)), a, b, a2, b2, Bool.pick(List<&2, Lump>, keep, l <> acc, acc))
     case []:
-      []
+      List.reverse(&2, Lump, acc)
+
+def inside(ls: List<&2, Lump>, +on: Bool, +a: String, +b: String, +a2: String, +b2: String) -> List<&2, Lump>:
+  inside.go(ls, on, a, b, a2, b2, [])
 
 def latest(ls: List<&2, Lump>, +name: String, +l: Lump) -> Lump:
   find(ls, name, l)
 
-def swap(iw: List<&2, Lump>, +pw: List<&2, Lump>) -> List<&2, Lump>:
+def swap.go(iw: List<&2, Lump>, +pw: List<&2, Lump>, acc: List<&2, Lump>) -> List<&2, Lump>:
   match iw:
     case +l <> t:
-      latest(pw, lname(l), l) <> swap(t, pw)
+      swap.go(t, pw, latest(pw, lname(l), l) <> acc)
     case []:
-      []
+      List.reverse(&2, Lump, acc)
 
-def known(ls: List<&2, Lump>, +name: String) -> Bool:
+def swap(iw: List<&2, Lump>, +pw: List<&2, Lump>) -> List<&2, Lump>:
+  swap.go(iw, pw, [])
+
+def known.go(ls: List<&2, Lump>, +name: String, +acc: Bool) -> Bool:
   match ls:
     case +l <> t:
-      Bool.or(named(name, l), known(t, name))
+      known.go(t, name, Bool.or(acc, named(name, l)))
     case []:
-      False{}
+      acc
 
-def fresh(pw: List<&2, Lump>, +iw: List<&2, Lump>) -> List<&2, Lump>:
+def known(ls: List<&2, Lump>, +name: String) -> Bool:
+  known.go(ls, name, False{})
+
+def fresh.go(pw: List<&2, Lump>, +iw: List<&2, Lump>, +acc: List<&2, Lump>) -> List<&2, Lump>:
   match pw:
     case +l <> +t:
-      +rest = fresh(t, iw)
-      Bool.pick(List<&2, Lump>, Bool.or(known(iw, lname(l)), known(t, lname(l))), rest, l <> rest)
+      fresh.go(t, iw, Bool.pick(List<&2, Lump>, Bool.or(known(iw, lname(l)), known(t, lname(l))), acc, l <> acc))
     case []:
-      []
+      List.reverse(&2, Lump, acc)
+
+def fresh(pw: List<&2, Lump>, +iw: List<&2, Lump>) -> List<&2, Lump>:
+  fresh.go(pw, iw, [])
 
 def section(w: Wad, +a: String, +b: String, +a2: String, +b2: String) -> Wad & List<&2, Lump>:
   match w:

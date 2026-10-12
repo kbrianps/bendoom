@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bendoom</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #111; color: #ddd; font: 14px/1.4 system-ui, sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 16px; }
+  canvas { display: block; width: 100%; max-width: 640px; aspect-ratio: 8 / 5; background: #000; image-rendering: pixelated; outline: none; }
+  form { display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; align-items: center; margin-top: 16px; }
+  form button { grid-column: 1 / 3; justify-self: start; padding: 6px 18px; }
+  #log { white-space: pre-wrap; font-family: ui-monospace, monospace; color: #e88; min-height: 1.4em; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <canvas id="screen" width="320" height="200" tabindex="0"></canvas>
+  <div id="log"></div>
+  <form id="setup">
+    <label for="iwad">IWAD</label><input id="iwad" type="file" accept=".wad,.WAD">
+    <label for="pwads">PWADs</label><input id="pwads" type="file" accept=".wad,.WAD" multiple>
+    <label for="font">SoundFont</label><input id="font" type="file" accept=".sf2,.SF2">
+    <label for="map">Map</label><input id="map" type="text" placeholder="E1M1 or MAP01" size="8">
+    <label for="opl3">OPL3</label><input id="opl3" type="checkbox">
+    <label for="comfort">Comfort mode</label><input id="comfort" type="checkbox">
+    <button type="submit">Start</button>
+  </form>
+</main>
+<script src="doom.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const log = (text) => { $("log").textContent += text + "\n"; };
+  const query = new URLSearchParams(location.search);
+
+  async function read(file) {
+    return [file.name, new Uint8Array(await file.arrayBuffer())];
+  }
+
+  async function fetched(url) {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error("could not fetch " + url + ": " + res.status);
+    }
+    return [new URL(url, location.href).pathname.replace(/^.*\//, ""), new Uint8Array(await res.arrayBuffer())];
+  }
+
+  async function start(event) {
+    event.preventDefault();
+    $("log").textContent = "";
+    try {
+      const iwad = $("iwad").files[0] ? await read($("iwad").files[0])
+        : query.has("wad") ? await fetched(query.get("wad")) : null;
+      if (iwad === null) {
+        log("Pick an IWAD first.");
+        return;
+      }
+      const pwads = await Promise.all([...$("pwads").files].map(read));
+      const font = $("font").files[0] ? await read($("font").files[0]) : null;
+      const args = [iwad[0]];
+      if (pwads.length > 0) {
+        args.push("-file", ...pwads.map(([name]) => name));
+      }
+      if (font !== null) {
+        args.push("-soundfont", font[0]);
+      }
+      if ($("comfort").checked) {
+        args.push("-comfort");
+      }
+      const map = $("map").value.trim().toUpperCase();
+      if (map !== "") {
+        args.push(map);
+      }
+      $("setup").classList.add("hidden");
+      log("Loading " + iwad[0] + "...");
+      await new Promise((done) => setTimeout(done, 50));
+      $("log").textContent = "";
+      $("screen").focus();
+      web_start({
+        canvas: $("screen"),
+        report: log,
+        args,
+        env: $("opl3").checked ? { DMXOPTION: "-opl3" } : {},
+        files: [iwad, ...pwads, ...(font === null ? [] : [font])],
+      });
+    } catch (e) {
+      log(String(e));
+    }
+  }
+
+  $("setup").addEventListener("submit", start);
+  if (query.has("map")) {
+    $("map").value = query.get("map");
+  }
+  for (const flag of ["opl3", "comfort"]) {
+    if (query.has(flag)) {
+      $(flag).checked = true;
+    }
+  }
+</script>
+</body>
+</html>

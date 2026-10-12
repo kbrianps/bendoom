@@ -37,12 +37,16 @@ def maxmobjs() -> U32:
 def stride() -> U32:
   32
 
-def index(xs: List<&2, String>, +s: String, +i: U32) -> U32:
+def index.go(xs: List<&2, String>, +s: String, +i: U32, +hit: Bool, +res: U32) -> U32:
   match xs:
     case x <> t:
-      Bool.pick(U32, String.eq(x, s), i, index(t, s, (i + 1 : U32)))
+      +eq = String.eq(x, s)
+      index.go(t, s, (i + 1 : U32), Bool.or(hit, eq), Bool.pick(U32, Bool.and(Bool.not(hit), eq), i, res))
     case []:
-      0
+      res
+
+def index(xs: List<&2, String>, +s: String, +i: U32) -> U32:
+  index.go(xs, s, i, False{}, 0)
 
 def tex(+names: List<&2, String>, +s: String) -> U32:
   index(names, s, 1)
@@ -52,12 +56,15 @@ def rside(+names: List<&2, String>, d: L.Side) -> RSide:
     case L.Side{x, y, u, l, m, s}:
       RSide{(x << 16n : U32), (y << 16n : U32), tex(names, u), tex(names, l), tex(names, m), s}
 
-def rsides(n: Nat, +sides: T.Vec<L.Side>, +names: List<&2, String>, +i: U32) -> List<&2, RSide>:
+def rsides.go(n: Nat, +sides: T.Vec<L.Side>, +names: List<&2, String>, +i: U32, acc: List<&2, RSide>) -> List<&2, RSide>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, RSide, acc)
     case 1n+p:
-      rside(names, T.get(L.Side, sides, i, L.Side{0, 0, "", "", "", 0})) <> rsides(p, sides, names, (i + 1 : U32))
+      rsides.go(p, sides, names, (i + 1 : U32), rside(names, T.get(L.Side, sides, i, L.Side{0, 0, "", "", "", 0})) <> acc)
+
+def rsides(n: Nat, +sides: T.Vec<L.Side>, +names: List<&2, String>, +i: U32) -> List<&2, RSide>:
+  rsides.go(n, sides, names, i, [])
 
 def vert(+vs: T.Vec<L.Vertex>, +i: U32) -> L.Vertex:
   T.get(L.Vertex, vs, i, L.Vertex{0, 0})
@@ -85,31 +92,41 @@ def rseg(+vs: T.Vec<L.Vertex>, +ls: T.Vec<L.Line>, +sides: T.Vec<L.Side>, s: L.S
     case L.Seg{a, b, an, li, +sd, of}:
       rseg.of(sides, vert(vs, a), vert(vs, b), an, of, sd, line(ls, li))
 
-def rsegs(n: Nat, +segs: T.Vec<L.Seg>, +vs: T.Vec<L.Vertex>, +ls: T.Vec<L.Line>, +sides: T.Vec<L.Side>, +i: U32) -> List<&2, RSeg>:
+def rsegs.go(n: Nat, +segs: T.Vec<L.Seg>, +vs: T.Vec<L.Vertex>, +ls: T.Vec<L.Line>, +sides: T.Vec<L.Side>, +i: U32, acc: List<&2, RSeg>) -> List<&2, RSeg>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, RSeg, acc)
     case 1n+p:
-      rseg(vs, ls, sides, T.get(L.Seg, segs, i, L.Seg{0, 0, 0, 0, 0, 0})) <> rsegs(p, segs, vs, ls, sides, (i + 1 : U32))
+      rsegs.go(p, segs, vs, ls, sides, (i + 1 : U32), rseg(vs, ls, sides, T.get(L.Seg, segs, i, L.Seg{0, 0, 0, 0, 0, 0})) <> acc)
 
-def flat(fs: List<&2, String>, +s: String, +i: U32) -> U32:
+def rsegs(n: Nat, +segs: T.Vec<L.Seg>, +vs: T.Vec<L.Vertex>, +ls: T.Vec<L.Line>, +sides: T.Vec<L.Side>, +i: U32) -> List<&2, RSeg>:
+  rsegs.go(n, segs, vs, ls, sides, i, [])
+
+def flat.go(fs: List<&2, String>, +s: String, +i: U32, +hit: Bool, +res: U32) -> U32:
   match fs:
     case f <> t:
-      Bool.pick(U32, String.eq(f, s), i, flat(t, s, (i + 1 : U32)))
+      +eq = String.eq(f, s)
+      flat.go(t, s, (i + 1 : U32), Bool.or(hit, eq), Bool.pick(U32, Bool.and(Bool.not(hit), eq), i, res))
     case []:
-      M.sky()
+      Bool.pick(U32, hit, res, M.sky())
+
+def flat(fs: List<&2, String>, +s: String, +i: U32) -> U32:
+  flat.go(fs, s, i, False{}, 0)
 
 def rsector(+fs: List<&2, String>, d: L.Sector) -> RSector:
   match d:
     case L.Sector{f, c, fp, cp, li, sp, tg}:
       RSector{(f << 16n : U32), (c << 16n : U32), flat(fs, fp, 0), flat(fs, cp, 0), li, sp, tg, 0, 0}
 
-def rsectors(n: Nat, +secs: T.Vec<L.Sector>, +fs: List<&2, String>, +i: U32) -> List<&2, RSector>:
+def rsectors.go(n: Nat, +secs: T.Vec<L.Sector>, +fs: List<&2, String>, +i: U32, acc: List<&2, RSector>) -> List<&2, RSector>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, RSector, acc)
     case 1n+p:
-      rsector(fs, T.get(L.Sector, secs, i, L.Sector{0, 0, "", "", 0, 0, 0})) <> rsectors(p, secs, fs, (i + 1 : U32))
+      rsectors.go(p, secs, fs, (i + 1 : U32), rsector(fs, T.get(L.Sector, secs, i, L.Sector{0, 0, "", "", 0, 0, 0})) <> acc)
+
+def rsectors(n: Nat, +secs: T.Vec<L.Sector>, +fs: List<&2, String>, +i: U32) -> List<&2, RSector>:
+  rsectors.go(n, secs, fs, i, [])
 
 def build(lv: L.Level, t: D.Texs, ly: M.Layout, +fm: T.Vec<P.SFrame>) -> World:
   match lv t ly:
@@ -206,13 +223,16 @@ def mo(+w: World, +m: U32, +f: U32) -> U32:
 def thing(+w: World, +m: U32) -> RThing:
   RThing{mo(w, m, 0), mo(w, m, 1), mo(w, m, 2), mo(w, m, 3), mo(w, m, 4), mo(w, m, 5), mo(w, m, 6)}
 
-def chain(n: Nat, stop: Bool, +w: World, +m: U32) -> List<&2, U32>:
+def chain.go(n: Nat, stop: Bool, +w: World, +m: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n stop:
     case 1n+p False{}:
       +nx = mo(w, m, 26)
-      m <> chain(p, U32.is_eq(nx, 0), w, nx)
+      chain.go(p, U32.is_eq(nx, 0), w, nx, m <> acc)
     case _ _:
-      []
+      List.reverse(&2, U32, acc)
+
+def chain(n: Nat, stop: Bool, +w: World, +m: U32) -> List<&2, U32>:
+  chain.go(n, stop, w, m, [])
 
 def sec.things(+s: RSector) -> U32:
   match s:

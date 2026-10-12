@@ -5,19 +5,25 @@ import ./gfx.bend as G
 import ./render.bend as V
 import ./mem.bend as M
 
-def lit(+pal: T.Vec<U32>, bs: List<&2, U32>) -> List<&2, U32>:
+def lit.go(+pal: T.Vec<U32>, bs: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match bs:
     case b <> t:
-      T.get(U32, pal, b, 0) <> lit(pal, t)
+      lit.go(pal, t, T.get(U32, pal, b, 0) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
 
-def pal.list(n: Nat, +pal: T.Vec<U32>, +i: U32) -> List<&2, U32>:
+def lit(+pal: T.Vec<U32>, bs: List<&2, U32>) -> List<&2, U32>:
+  lit.go(pal, bs, [])
+
+def pal.list.go(n: Nat, +pal: T.Vec<U32>, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      T.get(U32, pal, i, 0) <> pal.list(p, pal, (i + 1 : U32))
+      pal.list.go(p, pal, (i + 1 : U32), T.get(U32, pal, i, 0) <> acc)
+
+def pal.list(n: Nat, +pal: T.Vec<U32>, +i: U32) -> List<&2, U32>:
+  pal.list.go(n, pal, i, [])
 
 def fuzztab() -> List<&2, U32>:
   [1, 4294967295, 1, 4294967295, 1, 1, 4294967295, 1, 1, 4294967295, 1, 1, 1, 4294967295, 1, 1, 1, 4294967295, 4294967295, 4294967295, 4294967295, 1, 4294967295, 4294967295, 1, 1, 1, 1, 4294967295, 1, 4294967295, 1, 1, 4294967295, 4294967295, 1, 1, 4294967295, 4294967295, 4294967295, 4294967295, 1, 1, 1, 1, 4294967295, 1, 1, 4294967295, 1]
@@ -26,12 +32,15 @@ def zlevel(+i: U32, +j: U32) -> U32:
   +lv = ((15 - i) * 4 - ((655360 / (j + 1) : U32) >> 12n) / 2 : U32)
   (Bool.pick(U32, F.lt(lv, 0), 0, Bool.pick(U32, F.gt(lv, 31), 31, lv)) * 256 : U32)
 
-def zrow(n: Nat, +i: U32, +j: U32) -> List<&2, U32>:
+def zrow.go(n: Nat, +i: U32, +j: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      zlevel(i, j) <> zrow(p, i, (j + 1 : U32))
+      zrow.go(p, i, (j + 1 : U32), zlevel(i, j) <> acc)
+
+def zrow(n: Nat, +i: U32, +j: U32) -> List<&2, U32>:
+  zrow.go(n, i, j, [])
 
 def zlights(n: Nat, +i: U32) -> List<&2, U32>:
   match n:
@@ -50,12 +59,15 @@ def tex.size(+t: G.Tex) -> U32:
     case G.Tex{m, h, xs, +ps, +bl}:
       ((m + 1) * 128 + T.len(U32, ps) + T.len(U32, bl) : U32)
 
-def infos(ts: List<&2, G.Tex>, +at: U32) -> List<&2, M.Info>:
+def infos.go(ts: List<&2, G.Tex>, +at: U32, acc: List<&2, M.Info>) -> List<&2, M.Info>:
   match ts:
     case +t <> r:
-      tex.info(at, t) <> infos(r, (at + tex.size(t) : U32))
+      infos.go(r, (at + tex.size(t) : U32), tex.info(at, t) <> acc)
     case []:
-      []
+      List.reverse(&2, M.Info, acc)
+
+def infos(ts: List<&2, G.Tex>, +at: U32) -> List<&2, M.Info>:
+  infos.go(ts, at, [])
 
 def texs.end(ts: List<&2, G.Tex>, +at: U32) -> U32:
   match ts:
@@ -64,23 +76,29 @@ def texs.end(ts: List<&2, G.Tex>, +at: U32) -> U32:
     case []:
       at
 
-def flat.bases(fs: List<&2, List<&2, U32>>, +at: U32) -> List<&2, U32>:
+def flat.bases.go(fs: List<&2, List<&2, U32>>, +at: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match fs:
     case f <> r:
-      at <> flat.bases(r, (at + 4096 : U32))
+      flat.bases.go(r, (at + 4096 : U32), at <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def flat.bases(fs: List<&2, List<&2, U32>>, +at: U32) -> List<&2, U32>:
+  flat.bases.go(fs, at, [])
 
 def layout(+ts: List<&2, G.Tex>, +fs: List<&2, List<&2, U32>>) -> M.Layout:
   +fb = texs.end(ts, M.texbase())
   M.Layout{infos(ts, M.texbase()), flat.bases(fs, fb), (fb + 4096 * T.len(List<&2, U32>, fs) : U32)}
 
-def rebase(xs: List<&2, U32>, +b: U32) -> List<&2, U32>:
+def rebase.go(xs: List<&2, U32>, +b: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +x <> t:
-      Bool.pick(U32, U32.is_eq(x, 4294967295), x, (x + b : U32)) <> rebase(t, b)
+      rebase.go(t, b, Bool.pick(U32, U32.is_eq(x, 4294967295), x, (x + b : U32)) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def rebase(xs: List<&2, U32>, +b: U32) -> List<&2, U32>:
+  rebase.go(xs, b, [])
 
 def put.tex(+t: G.Tex, a: Array<U32>, +at: U32) -> Array<U32>:
   match t:

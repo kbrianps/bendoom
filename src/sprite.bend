@@ -40,24 +40,30 @@ def spawns.one(+mi: T.Vec<U32>, +st: T.Vec<U32>, +t: L.Thing, +rest: List<&2, Sp
       +k = kind(U32.to_nat(I.ntypes()), mi, ty, 0)
       Bool.pick(List<&2, Spawn>, skip(ty, opt, k), rest, spawn(mi, st, x, y, a, k, opt) <> rest)
 
-def spawns(n: Nat, +mi: T.Vec<U32>, +st: T.Vec<U32>, +ths: T.Vec<L.Thing>, +i: U32) -> List<&2, Spawn>:
+def spawns.go(n: Nat, +mi: T.Vec<U32>, +st: T.Vec<U32>, +ths: T.Vec<L.Thing>, +i: U32, acc: List<&2, Spawn>) -> List<&2, Spawn>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, Spawn, acc)
     case 1n+p:
-      spawns.one(mi, st, T.get(L.Thing, ths, i, L.Thing{0, 0, 0, 0, 0}), spawns(p, mi, st, ths, (i + 1 : U32)))
+      spawns.go(p, mi, st, ths, (i + 1 : U32), spawns.one(mi, st, T.get(L.Thing, ths, i, L.Thing{0, 0, 0, 0, 0}), acc))
+
+def spawns(n: Nat, +mi: T.Vec<U32>, +st: T.Vec<U32>, +ths: T.Vec<L.Thing>, +i: U32) -> List<&2, Spawn>:
+  spawns.go(n, mi, st, ths, i, [])
 
 def code(+s: Spawn) -> U32:
   match s:
     case Spawn{x, y, a, k, spr, fr, fl, h}:
       (spr * 32 + (fr .&. 31) : U32)
 
-def has(xs: List<&2, U32>, +c: U32) -> Bool:
+def has.go(xs: List<&2, U32>, +c: U32, +acc: Bool) -> Bool:
   match xs:
     case x <> t:
-      Bool.or(U32.is_eq(x, c), has(t, c))
+      has.go(t, c, Bool.or(acc, U32.is_eq(x, c)))
     case []:
-      False{}
+      acc
+
+def has(xs: List<&2, U32>, +c: U32) -> Bool:
+  has.go(xs, c, False{})
 
 def codes(ss: List<&2, Spawn>, +acc: List<&2, U32>) -> List<&2, U32>:
   match ss:
@@ -85,12 +91,15 @@ def matches(+names: T.Vec<String>, +c: U32, +l: W.Lump) -> Bool:
       Bool.and(String.eq(String.take(n, 4n), prefix(names, c)),
         Bool.or(U32.is_eq(at(n, 4n), (65 + (c .&. 31) : U32)), U32.is_eq(at(n, 6n), (65 + (c .&. 31) : U32))))
 
-def wanted(+names: T.Vec<String>, +cs: List<&2, U32>, +l: W.Lump) -> Bool:
+def wanted.go(+names: T.Vec<String>, +cs: List<&2, U32>, +l: W.Lump, +acc: Bool) -> Bool:
   match cs:
     case +c <> t:
-      Bool.or(matches(names, c, l), wanted(names, t, l))
+      wanted.go(names, t, l, Bool.or(acc, matches(names, c, l)))
     case []:
-      False{}
+      acc
+
+def wanted(+names: T.Vec<String>, +cs: List<&2, U32>, +l: W.Lump) -> Bool:
+  wanted.go(names, cs, l, False{})
 
 def keep.if(hit: Bool, l: W.Lump, rest: List<&2, W.Lump>) -> List<&2, W.Lump>:
   match hit:
@@ -99,12 +108,15 @@ def keep.if(hit: Bool, l: W.Lump, rest: List<&2, W.Lump>) -> List<&2, W.Lump>:
     case False{}:
       rest
 
-def keep(ls: List<&2, W.Lump>, +names: T.Vec<String>, +cs: List<&2, U32>) -> List<&2, W.Lump>:
+def keep.go(ls: List<&2, W.Lump>, +names: T.Vec<String>, +cs: List<&2, U32>, acc: List<&2, W.Lump>) -> List<&2, W.Lump>:
   match ls:
     case +l <> t:
-      keep.if(wanted(names, cs, l), l, keep(t, names, cs))
+      keep.go(t, names, cs, keep.if(wanted(names, cs, l), l, acc))
     case []:
-      []
+      List.reverse(&2, W.Lump, acc)
+
+def keep(ls: List<&2, W.Lump>, +names: T.Vec<String>, +cs: List<&2, U32>) -> List<&2, W.Lump>:
+  keep.go(ls, names, cs, [])
 
 def slot(+f: SFrame, +r: U32, +lump: U32, +fl: Bool) -> SFrame:
   match f:
@@ -153,12 +165,15 @@ def frame.of(hit: Bool, +ls: List<&2, W.Lump>, +names: T.Vec<String>, +c: U32, +
     case False{}:
       blank()
 
-def table(n: Nat, +ls: List<&2, W.Lump>, +names: T.Vec<String>, +cs: List<&2, U32>, +c: U32, +base: U32) -> List<&2, SFrame>:
+def table.go(n: Nat, +ls: List<&2, W.Lump>, +names: T.Vec<String>, +cs: List<&2, U32>, +c: U32, +base: U32, acc: List<&2, SFrame>) -> List<&2, SFrame>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, SFrame, acc)
     case 1n+p:
-      frame.of(has(cs, c), ls, names, c, base) <> table(p, ls, names, cs, (c + 1 : U32), base)
+      table.go(p, ls, names, cs, (c + 1 : U32), base, frame.of(has(cs, c), ls, names, c, base) <> acc)
+
+def table(n: Nat, +ls: List<&2, W.Lump>, +names: T.Vec<String>, +cs: List<&2, U32>, +c: U32, +base: U32) -> List<&2, SFrame>:
+  table.go(n, ls, names, cs, c, base, [])
 
 def sprites(+all: List<&2, W.Lump>, +ss: List<&2, Spawn>, +base: U32) -> Sprites:
   +names = T.from_list(String, I.sprnames())
@@ -207,12 +222,15 @@ def thing.kind(+mi: T.Vec<U32>, +t: L.Thing) -> U32:
     case L.Thing{x, y, a, +ty, opt}:
       kind(U32.to_nat(I.ntypes()), mi, ty, 0)
 
-def thingkinds(n: Nat, +mi: T.Vec<U32>, +ths: T.Vec<L.Thing>, +i: U32) -> List<&2, U32>:
+def thingkinds.go(n: Nat, +mi: T.Vec<U32>, +ths: T.Vec<L.Thing>, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      thing.kind(mi, T.get(L.Thing, ths, i, L.Thing{0, 0, 0, 0, 0})) <> thingkinds(p, mi, ths, (i + 1 : U32))
+      thingkinds.go(p, mi, ths, (i + 1 : U32), thing.kind(mi, T.get(L.Thing, ths, i, L.Thing{0, 0, 0, 0, 0})) <> acc)
+
+def thingkinds(n: Nat, +mi: T.Vec<U32>, +ths: T.Vec<L.Thing>, +i: U32) -> List<&2, U32>:
+  thingkinds.go(n, mi, ths, i, [])
 
 def weapons(ss: List<&2, U32>, +st: T.Vec<U32>, +acc: List<&2, U32>) -> List<&2, U32>:
   match ss:
@@ -233,12 +251,15 @@ def spawned(+k: U32) -> List<&2, U32>:
                   Bool.pick(List<&2, U32>, Bool.or(U32.is_eq(k, 25), Bool.or(U32.is_eq(k, 26), U32.is_eq(k, 27))), [28, 29, 11, 12, 13, 22, 14, 3, 5, 20, 8, 17, 15],
                     [])))))))))
 
-def spawns.of(ks: List<&2, U32>) -> List<&2, U32>:
+def spawns.of.go(ks: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match ks:
     case +k <> t:
-      List.append(&2, U32, spawned(k), spawns.of(t))
+      spawns.of.go(t, T.onto(U32, spawned(k), acc))
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def spawns.of(ks: List<&2, U32>) -> List<&2, U32>:
+  spawns.of.go(ks, [])
 
 def needed(+mi: T.Vec<U32>, +st: T.Vec<U32>, +ths: T.Vec<L.Thing>, +extra: List<&2, U32>) -> List<&2, U32>:
   +ks0 = List.append(&2, U32, List.append(&2, U32, [0, 33, 34, 35, 37, 38, 39, 40, 42, 63, 73, 77], extra), thingkinds(U32.to_nat(T.size(L.Thing, ths)), mi, ths, 0))

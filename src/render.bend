@@ -129,33 +129,45 @@ def raw(+t: U32, +focal: U32, +cx: U32, +w: U32) -> U32:
     Bool.pick(U32, F.lt(t, 4294836224), (w + 1 : U32),
       F.max(F.min(F.sar((cx - F.mul(t, focal) + 65535 : U32), 16n), (w + 1 : U32)), 4294967295)))
 
-def raws(+n: Nat, +tan: T.Vec<U32>, +i: U32, +focal: U32, +cx: U32, +w: U32) -> List<&2, U32>:
+def raws.go(+n: Nat, +tan: T.Vec<U32>, +i: U32, +focal: U32, +cx: U32, +w: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      raw(T.get(U32, tan, i, 0), focal, cx, w) <> raws(p, tan, (i + 1 : U32), focal, cx, w)
+      raws.go(p, tan, (i + 1 : U32), focal, cx, w, raw(T.get(U32, tan, i, 0), focal, cx, w) <> acc)
 
-def above(+xs: List<&2, U32>, +x: U32) -> U32:
+def raws(+n: Nat, +tan: T.Vec<U32>, +i: U32, +focal: U32, +cx: U32, +w: U32) -> List<&2, U32>:
+  raws.go(n, tan, i, focal, cx, w, [])
+
+def above.go(+xs: List<&2, U32>, +x: U32, +n: U32) -> U32:
   match xs:
     case +r <> t:
-      (Bool.pick(U32, F.gt(r, x), 1, 0) + above(t, x) : U32)
+      above.go(t, x, (Bool.pick(U32, F.gt(r, x), 1, 0) + n : U32))
     case []:
-      0
+      n
 
-def x2as(+n: Nat, +rs: List<&2, U32>, +x: U32) -> List<&2, U32>:
+def above(+xs: List<&2, U32>, +x: U32) -> U32:
+  above.go(xs, x, 0)
+
+def x2as.go(+n: Nat, +rs: List<&2, U32>, +x: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      ((above(rs, x) << 19n) - ang90() : U32) <> x2as(p, rs, (x + 1 : U32))
+      x2as.go(p, rs, (x + 1 : U32), ((above(rs, x) << 19n) - ang90() : U32) <> acc)
 
-def v2xs(+rs: List<&2, U32>, +w: U32) -> List<&2, U32>:
+def x2as(+n: Nat, +rs: List<&2, U32>, +x: U32) -> List<&2, U32>:
+  x2as.go(n, rs, x, [])
+
+def v2xs.go(+rs: List<&2, U32>, +w: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match rs:
     case +r <> t:
-      Bool.pick(U32, U32.is_eq(r, 4294967295), 0, Bool.pick(U32, U32.is_eq(r, (w + 1 : U32)), w, r)) <> v2xs(t, w)
+      v2xs.go(t, w, Bool.pick(U32, U32.is_eq(r, 4294967295), 0, Bool.pick(U32, U32.is_eq(r, (w + 1 : U32)), w, r)) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def v2xs(+rs: List<&2, U32>, +w: U32) -> List<&2, U32>:
+  v2xs.go(rs, w, [])
 
 def tabs.rs(+sine: T.Vec<U32>, +tan: T.Vec<U32>, +ta: T.Vec<U32>, +wn: U32, +rs: List<&2, U32>) -> Tabs:
   +x2 = T.from_list(U32, x2as(U32.to_nat((vw(wn) + 1 : U32)), rs, 0))
@@ -259,15 +271,16 @@ def coord(+b: L.Box, +k: U32) -> U32:
     case L.Box{t, bo, le, r}:
       (Bool.pick(U32, U32.is_eq(k, 0), t, Bool.pick(U32, U32.is_eq(k, 1), bo, Bool.pick(U32, U32.is_eq(k, 2), le, r))) << 16n : U32)
 
-def checkcoord() -> T.Vec<U32>:
-  T.from_list(U32, [3, 0, 2, 1, 3, 0, 2, 0, 3, 1, 2, 0, 0, 0, 0, 0, 2, 0, 2, 1, 0, 0, 0, 0, 3, 1, 3, 0, 0, 0, 0, 0, 2, 0, 3, 1, 2, 1, 3, 1, 2, 1, 3, 0])
+def checkcoord(+i: U32) -> U32:
+  +w = Bool.pick(U32, U32.is_lt(i, 16), 2564963, Bool.pick(U32, U32.is_lt(i, 32), 3604578, 3569266))
+  ((w >> U32.to_nat(((i % 16) * 2 : U32))) .&. 3 : U32)
 
 def bbox.at(+tb: Tabs, +v: View, +rs: List<&2, Range>, +b: L.Box, +pos: U32) -> Bool:
   match v:
     case View{x, y, z, a, e, fx}:
       bbox.angles(tb, rs,
-        (angle(tb, (coord(b, T.get(U32, checkcoord(), (pos * 4 : U32), 0)) - x : U32), (coord(b, T.get(U32, checkcoord(), (pos * 4 + 1 : U32), 0)) - y : U32)) - a : U32),
-        (angle(tb, (coord(b, T.get(U32, checkcoord(), (pos * 4 + 2 : U32), 0)) - x : U32), (coord(b, T.get(U32, checkcoord(), (pos * 4 + 3 : U32), 0)) - y : U32)) - a : U32))
+        (angle(tb, (coord(b, checkcoord((pos * 4 : U32))) - x : U32), (coord(b, checkcoord((pos * 4 + 1 : U32))) - y : U32)) - a : U32),
+        (angle(tb, (coord(b, checkcoord((pos * 4 + 2 : U32))) - x : U32), (coord(b, checkcoord((pos * 4 + 3 : U32))) - y : U32)) - a : U32))
 
 def bbox.pos(+v: View, +b: L.Box) -> U32:
   match v b:
@@ -309,16 +322,19 @@ def right(+rs: List<&2, Range>, +l: U32) -> Bool:
     case []:
       True{}
 
-def merge.go(+rs: List<&2, Range>, +lt: Bool, +gt: Bool, +f: U32, +l: U32) -> List<&2, Range>:
+def merge.go.go(+rs: List<&2, Range>, +lt: Bool, +gt: Bool, +f: U32, +l: U32, acc: List<&2, Range>) -> List<&2, Range>:
   match rs lt gt:
     case h <> +t True{} _:
-      h <> merge.go(t, left(t, f), right(t, l), f, l)
+      merge.go.go(t, left(t, f), right(t, l), f, l, h <> acc)
     case +h <> t False{} True{}:
-      Range{f, l} <> h <> t
+      T.onto(Range, acc, Range{f, l} <> h <> t)
     case Range{+hf, +hl} <> +t False{} False{}:
-      merge.go(t, left(t, F.min(f, hf)), right(t, F.max(l, hl)), F.min(f, hf), F.max(l, hl))
+      merge.go.go(t, left(t, F.min(f, hf)), right(t, F.max(l, hl)), F.min(f, hf), F.max(l, hl), acc)
     case [] _ _:
-      [Range{f, l}]
+      T.onto(Range, acc, [Range{f, l}])
+
+def merge.go(+rs: List<&2, Range>, +lt: Bool, +gt: Bool, +f: U32, +l: U32) -> List<&2, Range>:
+  merge.go.go(rs, lt, gt, f, l, [])
 
 def merge(+rs: List<&2, Range>, +f: U32, +l: U32) -> List<&2, Range>:
   merge.go(rs, left(rs, f), right(rs, l), f, l)
@@ -1086,19 +1102,25 @@ def fresh(+wn: U32) -> Array<U32>:
   r4 = setn(320n, r3, M.screenh(), vh(wn))
   M.wr(M.wr(r4, M.lastopening(), M.openings()), M.geo(), wn)
 
-def yslopes(n: Nat, +wn: U32, +i: U32) -> List<&2, U32>:
+def yslopes.go(n: Nat, +wn: U32, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      F.div(((svw(wn) / 2) << 16n : U32), F.abs((((i - cy(wn)) << 16n) + 32768 : U32))) <> yslopes(p, wn, (i + 1 : U32))
+      yslopes.go(p, wn, (i + 1 : U32), F.div(((svw(wn) / 2) << 16n : U32), F.abs((((i - cy(wn)) << 16n) + 32768 : U32))) <> acc)
+
+def yslopes(n: Nat, +wn: U32, +i: U32) -> List<&2, U32>:
+  yslopes.go(n, wn, i, [])
+
+def distscales.go(n: Nat, +tb: Tabs, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
+  match n:
+    case 0n:
+      List.reverse(&2, U32, acc)
+    case 1n+p:
+      distscales.go(p, tb, (i + 1 : U32), F.div(65536, F.abs(sine(tb, ((x2a(tb, i) >> 19n) + 2048 : U32)))) <> acc)
 
 def distscales(n: Nat, +tb: Tabs, +i: U32) -> List<&2, U32>:
-  match n:
-    case 0n:
-      []
-    case 1n+p:
-      F.div(65536, F.abs(sine(tb, ((x2a(tb, i) >> 19n) + 2048 : U32)))) <> distscales(p, tb, (i + 1 : U32))
+  distscales.go(n, tb, i, [])
 
 def prep.go(same: Bool, rom: Array<U32>, +tb: Tabs) -> Array<U32>:
   match same:

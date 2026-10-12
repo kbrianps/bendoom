@@ -34,12 +34,15 @@ def read.opened(r: Result<&1, &1, U32 & String, File>, +max: U32) -> IO(List<&2,
 def read(+path: String, +max: U32) -> IO(List<&2, U32>):
   IO.bind(Result<&1, &1, U32 & String, File>, List<&2, U32>, File.open(path, "r"), r => read.opened(r, max))
 
-def slot.flat(n: Nat, +v: T.Vec<U32>, +i: U32) -> List<&2, U32>:
+def slot.flat.go(n: Nat, +v: T.Vec<U32>, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      T.get(U32, v, i, 0) <> slot.flat(p, v, (i + 1 : U32))
+      slot.flat.go(p, v, (i + 1 : U32), T.get(U32, v, i, 0) <> acc)
+
+def slot.flat(n: Nat, +v: T.Vec<U32>, +i: U32) -> List<&2, U32>:
+  slot.flat.go(n, v, i, [])
 
 def slot.put(n: Nat, +v: T.Vec<U32>, +b: U32, cs: List<&2, U32>) -> T.Vec<U32>:
   match n cs:

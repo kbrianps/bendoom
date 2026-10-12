@@ -181,6 +181,14 @@ frame "MAP01 screen sizes and detail, status bar back from full screen" freedoom
 frame "E1M1 low detail small view with fuzz, help and automap" freedoom1 1 1 E1M1 lw_96.bmp a008e24724b21a315d12cf33e705db430382b57e4b24e5c39208de83b95a14b9 "60,25,0,0,1 80,30,0,4,1" \
   keys 3 105 1 4 105 0 5 100 1 6 100 0 7 98 1 8 98 0 9 101 1 10 101 0 11 104 1 12 104 0 13 111 1 14 111 0 15 108 1 16 108 0 17 100 1 18 100 0 19 105 1 20 105 0 25 63240 1 26 63240 0 30 45 1 31 45 0 32 45 1 33 45 0 40 63236 1 41 63236 0 50 27 1 51 27 0 60 9 1 61 9 0 70 45 1 71 45 0 80 9 1 81 9 0 90 61 1 91 61 0 100 63236 1 101 63236 0 102 63236 1 103 63236 0 110 27 1 111 27 0 120 61 1 121 61 0 122 61 1 123 61 0 124 61 1 125 61 0 end every 96 "$TMP/lw"
 
+COMFORT="keys 10 27 1 11 27 0 20 63233 1 21 63233 0 30 13 1 31 13 0 40 63232 1 41 63232 0 50 13 1 51 13 0 60 27 1 61 27 0 end"
+python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 100,50,0,0,0 40,0,0,8,0 200,50,20,0,2 100,-30,0,248,0 300,50,0,4,2 &&
+  "$TMP/demo" "$WADS/freedoom1.wad" E1M1 "$TMP/demo.lmp" $COMFORT | sha256sum | grep -q "^5dbd1d26138f59f00f5f332a6d8e3741a92c0a373a333c02ef51e8f1f05386aa " &&
+  ok "comfort: E1M1 run with comfort mode on stays in sync with the reference engine" || bad "comfort: E1M1 run in sync"
+"$TMP/demo" "$WADS/freedoom1.wad" E1M1 "$TMP/demo.lmp" $COMFORT 300 "$TMP/cf300.bmp" >/dev/null &&
+  echo "bd1d2b4d74555eb84f7f87afa596088c61358289011e208291982280697a0a46  $TMP/cf300.bmp" | sha256sum -c --quiet &&
+  ok "comfort: E1M1 frame 300 without bob or sway, with a center dot" || bad "comfort: E1M1 frame 300"
+
 for wad in freedoom1 freedoom2; do
   $BEND wadinfo.bend "$WADS/$wad.wad" > "$TMP/$wad.js" 2>&1 && diff -q "$TMP/$wad.want" "$TMP/$wad.js" >/dev/null &&
     ok "js: $wad.wad read under bend wadinfo.bend as the reference reads it" || bad "js: $wad.wad maps"
@@ -194,5 +202,14 @@ python3 tests/mklmp.py "$TMP/demo.lmp" 1 1 300,50,0,0,0 &&
 $BEND song.bend -- "$WADS/freedoom1.wad" -soundfont "$SOUNDFONT" D_E1M1 10 "$TMP/js-gm.wav" >/dev/null 2>&1 &&
   echo "71a5dcb2aec6d334f233fe6d6c8e167d4993088b114953de7fd73b47b4e30931  $TMP/js-gm.wav" | sha256sum -c --quiet &&
   ok "js: General MIDI D_E1M1 under bend song.bend" || bad "js: General MIDI D_E1M1"
+
+if command -v node >/dev/null; then
+  WEBKEYS=30:63232:1,200:63232:0,200:63234:1,260:63234:0,260:63232:1,300:63232:0
+  BEND=$BEND web/build.sh "$TMP/doom.js" >/dev/null 2>&1 || bad "web: build"
+  [ "$(node --stack-size=500 tests/web.js "$TMP/doom.js" 300 $WEBKEYS "$WADS/freedoom1.wad" E1M1)" = 2990da37be0284d5895569fab50fc5304866d5d41aef08f7f3a330a42b79c222 ] &&
+    ok "web: E1M1 in the browser shell, 300 frames on half the stack" || bad "web: E1M1"
+  [ "$(node --stack-size=500 tests/web.js "$TMP/doom.js" 300 $WEBKEYS "$WADS/freedoom2.wad" -comfort MAP01)" = f1d0bde0ca8d7dd593951350fb0f1ffe904e7a172940586312a7403dc9e346ed ] &&
+    ok "web: MAP01 in the browser shell with -comfort" || bad "web: MAP01 with -comfort"
+fi
 
 [ "$FAILS" -eq 0 ] && echo "ALL TESTS PASS" || { echo "$FAILS FAILED"; exit 1; }

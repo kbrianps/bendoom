@@ -258,14 +258,17 @@ def headle(+ys: List<&2, S.Icpt>, +x: S.Icpt) -> Bool:
     case []:
       False{}
 
-def insert(+x: S.Icpt, ys: List<&2, S.Icpt>, le: Bool) -> List<&2, S.Icpt>:
+def insert.go(+x: S.Icpt, ys: List<&2, S.Icpt>, le: Bool, acc: List<&2, S.Icpt>) -> List<&2, S.Icpt>:
   match ys le:
     case +y <> +t True{}:
-      y <> insert(x, t, headle(t, x))
+      insert.go(x, t, headle(t, x), y <> acc)
     case +y <> +t False{}:
-      x <> y <> t
+      T.onto(S.Icpt, acc, x <> y <> t)
     case [] _:
-      [x]
+      T.onto(S.Icpt, acc, [x])
+
+def insert(+x: S.Icpt, ys: List<&2, S.Icpt>, le: Bool) -> List<&2, S.Icpt>:
+  insert.go(x, ys, le, [])
 
 def sort(xs: List<&2, S.Icpt>, +acc: List<&2, S.Icpt>) -> List<&2, S.Icpt>:
   match xs:

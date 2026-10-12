@@ -130,12 +130,15 @@ def things(n: Nat, a: Array<U32>, +i: U32, +th: T.Vec<L.Thing>, +v: View, +pal: 
     case 1n+p:
       things(p, thing(a, v, pal, T.get(L.Thing, th, i, L.Thing{0, 0, 0, 0, 0})), (i + 1 : U32), th, v, pal)
 
-def rgb(bs: List<&2, U32>) -> List<&2, U32>:
+def rgb.go(bs: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match bs:
     case r <> g <> b <> t:
-      ((r << 16n) .|. (g << 8n) .|. b : U32) <> rgb(t)
+      rgb.go(t, ((r << 16n) .|. (g << 8n) .|. b : U32) <> acc)
     case _:
-      []
+      List.reverse(&2, U32, acc)
+
+def rgb(bs: List<&2, U32>) -> List<&2, U32>:
+  rgb.go(bs, [])
 
 def palette(bs: List<&2, U32>) -> T.Vec<U32>:
   T.from_list(U32, List.take(&2, U32, rgb(bs), 256n))

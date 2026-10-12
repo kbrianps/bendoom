@@ -346,12 +346,15 @@ def chunks.go?(stop: Bool, +bs: T.Vec<U32>, +q: U32, +n: U32, +h: List<&2, U32>)
       +ids : List<&2, U32> = [1919182960, 1734435440, 1852139376, 1953721961, 1734435433, 1852139369, 1919182963]
       chunks(bs, (at + sz + (sz .&. 1) : U32), n, set.ids(ids, h, 0, id, at, sz))
 
-def keys(ps: List<&2, Pr>) -> List<&2, U32>:
+def keys.go(ps: List<&2, Pr>, acc: List<&2, U32>) -> List<&2, U32>:
   match ps:
     case +p <> t:
-      pr.key(p) <> keys(t)
+      keys.go(t, pr.key(p) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def keys(ps: List<&2, Pr>) -> List<&2, U32>:
+  keys.go(ps, [])
 
 def bank(+ps: List<&2, Pr>) -> Bank:
   Bank{T.from_list(Pr, ps), keys(ps)}

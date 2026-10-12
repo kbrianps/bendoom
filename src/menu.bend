@@ -32,16 +32,16 @@ def tm(+g: S.Sim, +m: U32) -> U32:
   Bool.pick(U32, Bool.and(U32.is_eq(m, 0), U.com(g)), 9, m)
 
 def item(+g: S.Sim, +m: U32, +i: U32, +f: U32) -> U32:
-  T.get(U32, items(), ((tm(g, m) * 8 + i) * 4 + f : U32), 0)
+  Bool.pick(U32, Bool.and(U32.is_eq(m, 3), U32.is_eq(i, 8)), T.get(U32, T.from_list(U32, [1, 0, 21, 99]), f, 0), T.get(U32, items(), ((tm(g, m) * 8 + i) * 4 + f : U32), 0))
 
 def count(+g: S.Sim, +m: U32) -> U32:
-  T.get(U32, T.from_list(U32, [Bool.pick(U32, U.com(g), 5, 6), Bool.pick(U32, retail(g), 4, 3), 5, 8, 1, 1, 4, 6, 6]), m, 1)
+  T.get(U32, T.from_list(U32, [Bool.pick(U32, U.com(g), 5, 6), Bool.pick(U32, retail(g), 4, 3), 5, 9, 1, 1, 4, 6, 6]), m, 1)
 
 def mx(+g: S.Sim, +m: U32) -> U32:
   T.get(U32, T.from_list(U32, [97, 48, 48, 60, Bool.pick(U32, Bool.or(U.com(g), retail(g)), 330, 280), 330, 80, 80, 80]), m, 0)
 
 def my(+g: S.Sim, +m: U32) -> U32:
-  T.get(U32, T.from_list(U32, [Bool.pick(U32, U.com(g), 72, 64), 63, 63, 37, Bool.pick(U32, U.com(g), 165, Bool.pick(U32, retail(g), 175, 185)), 175, 64, 54, 54]), m, 0)
+  T.get(U32, T.from_list(U32, [Bool.pick(U32, U.com(g), 72, 64), 63, 63, 24, Bool.pick(U32, U.com(g), 165, Bool.pick(U32, retail(g), 175, 185)), 175, 64, 54, 54]), m, 0)
 
 def prev(+g: S.Sim, +m: U32) -> U32:
   T.get(U32, T.from_list(U32, [none(), 0, Bool.pick(U32, U.com(g), 0, 1), 0, 0, 4, 3, 0, 0]), m, none())
@@ -85,6 +85,9 @@ def endgame(+g: S.Sim) -> S.Sim:
 def messages(+g: S.Sim) -> S.Sim:
   +off = (ui(g, 115) .^. 1 : U32)
   set(set(S.p.message.set(g, Bool.pick(U32, U32.is_ne(off, 0), 44, 45)), 115, off), 116, 1)
+
+def comfort(+g: S.Sim) -> S.Sim:
+  set(g, 225, (ui(g, 225) .^. 1 : U32))
 
 def detail(+g: S.Sim) -> S.Sim:
   +d = (ui(g, 110) .^. 1 : U32)
@@ -170,7 +173,7 @@ def route(+g: S.Sim, +r: U32, +choice: U32) -> S.Sim:
   +h => C.br(U32.is_eq(r, 17), h, +k => slider(k, 113, choice, 15),
   +h => C.br(U32.is_eq(r, 18), h, +k => slider(k, 114, choice, 15),
   +h => C.br(U32.is_eq(r, 19), h, +k => doload(k, choice),
-  +h => C.when(U32.is_eq(r, 20), h, +k => saveselect(k, choice)))))))))))))))))))))
+  +h => C.br(U32.is_eq(r, 20), h, +k => saveselect(k, choice), +k => C.when(U32.is_eq(r, 21), k, +q => comfort(q))))))))))))))))))))))
 
 def msg.route(+g: S.Sim, +r: U32, +key: U32) -> S.Sim:
   +yes = U32.is_eq(key, 121)
@@ -319,8 +322,9 @@ def cursor(fr: V.Frame, +g: S.Sim) -> V.Frame:
   U.fwhen(U32.is_ne(ui(g, 89), 0), fr, f => U.fr.let(U.strwidth(str(g, i), f, g, 0), q => +w => U.write([95], 2n, q, g, (80 + w : U32), (80 + w : U32), (54 + 16 * i : U32))))
 
 def options(fr: V.Frame, +g: S.Sim) -> V.Frame:
-  f1 = U.patch(U.patch(U.patch(fr, g, 108, 15, 274), g, 235, 69, (280 + ui(g, 110) : U32)), g, 180, 53, Bool.pick(U32, U32.is_ne(ui(g, 115), 0), 277, 278))
-  thermo(thermo(f1, g, 60, 133, 10, ui(g, 111)), g, 60, 101, 9, ui(g, 112))
+  f1 = U.patch(U.patch(U.patch(fr, g, 108, 2, 274), g, 235, 56, (280 + ui(g, 110) : U32)), g, 180, 40, Bool.pick(U32, U32.is_ne(ui(g, 115), 0), 277, 278))
+  f2 = thermo(thermo(f1, g, 60, 120, 10, ui(g, 111)), g, 60, 88, 9, ui(g, 112))
+  U.patch(U.write([67, 79, 77, 70, 79, 82, 84, 32, 77, 79, 68, 69], 12n, f2, g, 60, 60, 157), g, 180, 152, Bool.pick(U32, U32.is_ne(ui(g, 225), 0), 278, 277))
 
 def routine(fr: V.Frame, +g: S.Sim, +m: U32) -> V.Frame:
   U.fsel(U32.is_eq(m, 0), fr, f => U.patch(f, g, 94, 2, 252),

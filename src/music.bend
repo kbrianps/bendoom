@@ -206,16 +206,19 @@ def vcar2?(r: Array<U32> & St, +x: U32, +y: U32, t: List<&2, U32>, kt: List<&2, 
   +o = (sx(st.out(sc1)) + Bool.pick(U32, U32.is_eq(con, 1), sx(mo), 0) : U32)
   vcons2((x + o * ca : U32), (y + o * cb : U32), vrun2(t, tb, kt, pm, pc, key, fb, con, ca, cb, sm1, sc1, npr))
 
-def clocks(n: Nat, +clk: U32, +cfr: U32) -> List<&2, U32>:
+def clocks.go(n: Nat, +clk: U32, +cfr: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
       +f = (cfr + 33381 : U32)
       +c = (clk + 4 + (f >> 16n) : U32)
       +tp = ((c >> 6n) % 210 : U32)
       +tr = (Bool.pick(U32, U32.is_lt(tp, 105), tp, (210 - tp : U32)) >> 4n : U32)
-      (tr * 8 + ((c >> 10n) .&. 7) : U32) <> clocks(p, c, (f .&. 65535 : U32))
+      clocks.go(p, c, (f .&. 65535 : U32), (tr * 8 + ((c >> 10n) .&. 7) : U32) <> acc)
+
+def clocks(n: Nat, +clk: U32, +cfr: U32) -> List<&2, U32>:
+  clocks.go(n, clk, cfr, [])
 
 def clock.at(n: Nat, +clk: U32, +cfr: U32) -> U32 & U32:
   match n:
@@ -225,12 +228,15 @@ def clock.at(n: Nat, +clk: U32, +cfr: U32) -> U32 & U32:
       +f = (cfr + 33381 : U32)
       clock.at(p, (clk + 4 + (f >> 16n) : U32), (f .&. 65535 : U32))
 
-def zeros(n: Nat) -> List<&2, U32>:
+def zeros.go(n: Nat, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      bias() <> zeros(p)
+      zeros.go(p, bias() <> acc)
+
+def zeros(n: Nat) -> List<&2, U32>:
+  zeros.go(n, [])
 
 def v.idle(+v: V) -> Bool:
   match v:
@@ -611,12 +617,15 @@ def note.on(ok: Bool, +lk: Lk, +d: Dr, +ch: U32, +ins: U32, +note: U32, +mk: U32
     case False{}:
       d
 
-def vols(vs: List<&2, V>, +lk: Lk, +ch: U32, +vol: U32) -> List<&2, V>:
+def vols.go(vs: List<&2, V>, +lk: Lk, +ch: U32, +vol: U32, acc: List<&2, V>) -> List<&2, V>:
   match vs:
     case +v <> t:
-      Bool.pick(V, U32.is_eq(v.ch(v), ch), volume(lk, v, v.nvol(v), vol), v) <> vols(t, lk, ch, vol)
+      vols.go(t, lk, ch, vol, Bool.pick(V, U32.is_eq(v.ch(v), ch), volume(lk, v, v.nvol(v), vol), v) <> acc)
     case []:
-      []
+      List.reverse(&2, V, acc)
+
+def vols(vs: List<&2, V>, +lk: Lk, +ch: U32, +vol: U32) -> List<&2, V>:
+  vols.go(vs, lk, ch, vol, [])
 
 def chvol(+lk: Lk, +d: Dr, +ch: U32, +b: U32, +clip: Bool) -> Dr:
   match d:
@@ -652,12 +661,15 @@ def v.pan(+lk: Lk, +v: V, +ch: U32, +pan: U32) -> V:
       +nc = (gb(lk, ins, (4 + iv * 16 + 6 : U32)) .|. pan : U32)
       V{ins, iv, vch, mk, note, freq, nvol, carv, modv, a0, b0, Bool.pick(U32, U32.is_eq(vch, ch), nc, c0), m, c, sm, sc, pr}
 
-def pans(vs: List<&2, V>, +lk: Lk, +ch: U32, +pan: U32) -> List<&2, V>:
+def pans.go(vs: List<&2, V>, +lk: Lk, +ch: U32, +pan: U32, acc: List<&2, V>) -> List<&2, V>:
   match vs:
     case +v <> t:
-      v.pan(lk, v, ch, pan) <> pans(t, lk, ch, pan)
+      pans.go(t, lk, ch, pan, v.pan(lk, v, ch, pan) <> acc)
     case []:
-      []
+      List.reverse(&2, V, acc)
+
+def pans(vs: List<&2, V>, +lk: Lk, +ch: U32, +pan: U32) -> List<&2, V>:
+  pans.go(vs, lk, ch, pan, [])
 
 def regpan(+b: U32) -> U32:
   Bool.pick(U32, U32.is_ge(b, 96), 16, Bool.pick(U32, U32.is_le(b, 48), 32, 48))
@@ -674,12 +686,15 @@ def chpan(+lk: Lk, +d: Dr, +ch: U32, +b: U32) -> Dr:
   +rp = regpan(b)
   chpan.go(Bool.or(U32.is_eq(o3(lk), 0), U32.is_eq(cn.pan(dr.cn(d, ch)), rp)), lk, d, ch, rp)
 
-def chans(n: Nat, +cur: U32) -> List<&2, Cn>:
+def chans.go(n: Nat, +cur: U32, acc: List<&2, Cn>) -> List<&2, Cn>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, Cn, acc)
     case 1n+p:
-      Cn{0, U32.min(cur, 100), 100, 0, 48} <> chans(p, cur)
+      chans.go(p, cur, Cn{0, U32.min(cur, 100), 100, 0, 48} <> acc)
+
+def chans(n: Nat, +cur: U32) -> List<&2, Cn>:
+  chans.go(n, cur, [])
 
 def restart(+d: Dr) -> Dr:
   match d:
@@ -930,42 +945,48 @@ def tp.due(+tps: List<&2, E>, +tick: U32) -> Bool:
     case []:
       False{}
 
-def conv?(evs: List<&2, E>, +tps: List<&2, E>, +div: U32, +t: Tm, +last: U32, +upb: U32) -> List<&2, E>:
+def conv.run?(evs: List<&2, E>, +tps: List<&2, E>, +div: U32, +t: Tm, +last: U32, +upb: U32, acc: List<&2, E>) -> List<&2, E>:
   match evs:
     case E{+tick, +v} <> rest:
-      conv.go(tp.due(tps, tick), tick, v, rest, tps, div, t, last, upb)
+      conv.go(tp.due(tps, tick), tick, v, rest, tps, div, t, last, upb, acc)
     case []:
-      []
+      List.reverse(&2, E, acc)
 
-def conv.go?(due: Bool, +tick: U32, +v: U32, rest: List<&2, E>, +tps: List<&2, E>, +div: U32, +t: Tm, +last: U32, +upb: U32) -> List<&2, E>:
+def conv.go?(due: Bool, +tick: U32, +v: U32, rest: List<&2, E>, +tps: List<&2, E>, +div: U32, +t: Tm, +last: U32, +upb: U32, acc: List<&2, E>) -> List<&2, E>:
   match due:
     case True{}:
-      conv.adv(tps, tick, v, rest, div, t, last, upb)
+      conv.adv(tps, tick, v, rest, div, t, last, upb, acc)
     case False{}:
-      E{tm.w(addt(t, (tick - last : U32), spt(upb, div))), v} <> conv(rest, tps, div, t, last, upb)
+      conv.run(rest, tps, div, t, last, upb, E{tm.w(addt(t, (tick - last : U32), spt(upb, div))), v} <> acc)
 
-def conv.adv?(+tps: List<&2, E>, +tick: U32, +v: U32, rest: List<&2, E>, +div: U32, +t: Tm, +last: U32, +upb: U32) -> List<&2, E>:
+def conv.adv?(+tps: List<&2, E>, +tick: U32, +v: U32, rest: List<&2, E>, +div: U32, +t: Tm, +last: U32, +upb: U32, acc: List<&2, E>) -> List<&2, E>:
   match tps:
     case +x <> tt:
-      conv(E{tick, v} <> rest, tt, div, addt(t, (e.t(x) - last : U32), spt(upb, div)), e.t(x), e.v(x))
+      conv.run(E{tick, v} <> rest, tt, div, addt(t, (e.t(x) - last : U32), spt(upb, div)), e.t(x), e.v(x), acc)
     case []:
-      conv(E{tick, v} <> rest, [], div, t, last, upb)
+      conv.run(E{tick, v} <> rest, [], div, t, last, upb, acc)
 
-def merge?(xs: List<&2, E>, ys: List<&2, E>) -> List<&2, E>:
+def conv(evs: List<&2, E>, +tps: List<&2, E>, +div: U32, +t: Tm, +last: U32, +upb: U32) -> List<&2, E>:
+  conv.run(evs, tps, div, t, last, upb, [])
+
+def merge.run?(xs: List<&2, E>, ys: List<&2, E>, acc: List<&2, E>) -> List<&2, E>:
   match xs ys:
     case +x <> xt +y <> yt:
-      merge.pick(U32.is_lt(e.t(y), e.t(x)), x, xt, y, yt)
+      merge.pick(U32.is_lt(e.t(y), e.t(x)), x, xt, y, yt, acc)
     case [] b:
-      b
+      T.onto(E, acc, b)
     case a _:
-      a
+      T.onto(E, acc, a)
 
-def merge.pick?(ylt: Bool, +x: E, xt: List<&2, E>, +y: E, yt: List<&2, E>) -> List<&2, E>:
+def merge.pick?(ylt: Bool, +x: E, xt: List<&2, E>, +y: E, yt: List<&2, E>, acc: List<&2, E>) -> List<&2, E>:
   match ylt:
     case True{}:
-      y <> merge(x <> xt, yt)
+      merge.run(x <> xt, yt, y <> acc)
     case False{}:
-      x <> merge(xt, y <> yt)
+      merge.run(xt, y <> yt, x <> acc)
+
+def merge(xs: List<&2, E>, ys: List<&2, E>) -> List<&2, E>:
+  merge.run(xs, ys, [])
 
 def merges?(ks: List<&2, List<&2, E>>, +tps: List<&2, E>, +div: U32, acc: List<&2, E>) -> List<&2, E>:
   match ks:
@@ -1016,12 +1037,15 @@ def lmax(xs: List<&2, U32>, +m: U32) -> U32:
     case []:
       m
 
-def nones(n: Nat, +v: U32) -> List<&2, U32>:
+def nones.go(n: Nat, +v: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      v <> nones(p, v)
+      nones.go(p, v, v <> acc)
+
+def nones(n: Nat, +v: U32) -> List<&2, U32>:
+  nones.go(n, v, [])
 
 def mus.alloc(+map: List<&2, U32>) -> U32:
   +r = (lmax(map, none()) + 1 : U32)
@@ -1320,14 +1344,17 @@ def clip(+x: U32) -> U32:
   +v = (x - bias() : U32)
   Bool.pick(U32, neg(v), U32.max(v, 4294934528), U32.min(v, 32767))
 
-def frames(xs: List<&2, U32>, +last: U32) -> List<&2, U32>:
+def frames.go(xs: List<&2, U32>, +last: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +x <> t:
       +m = clip(x)
       +a = F.sar((last + m : U32), 1n)
-      a <> a <> m <> m <> frames(t, m)
+      frames.go(t, m, m <> m <> a <> a <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def frames(xs: List<&2, U32>, +last: U32) -> List<&2, U32>:
+  frames.go(xs, last, [])
 
 def final(xs: List<&2, U32>, +last: U32) -> U32:
   match xs:
@@ -1336,14 +1363,17 @@ def final(xs: List<&2, U32>, +last: U32) -> U32:
     case []:
       last
 
-def frames2(xs: List<&2, U32>, +ll: U32, +lr: U32) -> List<&2, U32>:
+def frames2.go(xs: List<&2, U32>, +ll: U32, +lr: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +x <> +y <> t:
       +ml = clip(x)
       +mr = clip(y)
-      F.sar((ll + ml : U32), 1n) <> F.sar((lr + mr : U32), 1n) <> ml <> mr <> frames2(t, ml, mr)
+      frames2.go(t, ml, mr, mr <> ml <> F.sar((lr + mr : U32), 1n) <> F.sar((ll + ml : U32), 1n) <> acc)
     case _:
-      []
+      List.reverse(&2, U32, acc)
+
+def frames2(xs: List<&2, U32>, +ll: U32, +lr: U32) -> List<&2, U32>:
+  frames2.go(xs, ll, lr, [])
 
 def final2(xs: List<&2, U32>, +last: U32) -> U32:
   match xs:
@@ -1403,19 +1433,25 @@ def kslrom() -> List<&2, U32>:
 def tables() -> Array<U32>:
   M.fill(T.flat(U32, [O.wave(), O.expo(), O.dec(), O.att(), kslrom(), mt(), O.wave2()]), Array.new(U32, 14n, 0), 0)
 
-def ids(n: Nat, +i: U32) -> List<&2, U32>:
+def ids.go(n: Nat, +i: U32, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      i <> ids(p, (i + 1 : U32))
+      ids.go(p, (i + 1 : U32), i <> acc)
+
+def ids(n: Nat, +i: U32) -> List<&2, U32>:
+  ids.go(n, i, [])
+
+def novs.go(n: Nat, acc: List<&2, V>) -> List<&2, V>:
+  match n:
+    case 0n:
+      List.reverse(&2, V, acc)
+    case 1n+p:
+      novs.go(p, nov() <> acc)
 
 def novs(n: Nat) -> List<&2, V>:
-  match n:
-    case 0n:
-      []
-    case 1n+p:
-      nov() <> novs(p)
+  novs.go(n, [])
 
 def driver(+cur: U32, +nv: U32) -> Dr:
   Dr{novs(U32.to_nat(nv)), ids(U32.to_nat(nv), 0), [], chans(16n, cur), cur, cur}
@@ -1506,12 +1542,15 @@ def form(m: Mu) -> Mu & U32:
     case Mu{tb, lib, +ix, +lk, +sq, +song, +last, smp}:
       (Mu{tb, lib, ix, lk, sq, song, last, smp}, Bool.pick(U32, isgm(lk), 2, o3(lk)))
 
-def clips(xs: List<&2, U32>) -> List<&2, U32>:
+def clips.go(xs: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match xs:
     case +x <> t:
-      clip(x) <> clips(t)
+      clips.go(t, clip(x) <> acc)
     case []:
-      []
+      List.reverse(&2, U32, acc)
+
+def clips(xs: List<&2, U32>) -> List<&2, U32>:
+  clips.go(xs, [])
 
 def raw.out(+ix: T.Vec<U32>, +lk: Lk, lib: Array<U32>, smp: Array<F32>, +song: U32, +last: U32, p: Array<U32> & Sq, +out: List<&2, U32>) -> Mu & List<&2, U32>:
   (tb, +sq) = p

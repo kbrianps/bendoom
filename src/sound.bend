@@ -59,12 +59,15 @@ def fill(bss: List<&2, List<&2, U32>>, a: Array<U32>, +at: U32, +idx: List<&2, U
     case []:
       (a, idx)
 
-def total(+bss: List<&2, List<&2, U32>>) -> U32:
+def total.go(+bss: List<&2, List<&2, U32>>, +acc: U32) -> U32:
   match bss:
     case +bs <> t:
-      (samples(bs) + total(t) : U32)
+      total.go(t, (samples(bs) + acc : U32))
     case []:
-      0
+      acc
+
+def total(+bss: List<&2, List<&2, U32>>) -> U32:
+  total.go(bss, 0)
 
 def depth(+n: U32) -> Nat:
   Bool.pick(Nat, U32.is_le(n, 1), 0n, 1n+U32.log2((n - 1 : U32)))
@@ -216,41 +219,40 @@ def update(+cs: List<&2, Ch>, +g: S.Sim) -> List<&2, Ch>:
     case []:
       []
 
-def acc0(n: Nat) -> List<&2, U32>:
+def acc0.go(n: Nat, acc: List<&2, U32>) -> List<&2, U32>:
   match n:
     case 0n:
-      []
+      List.reverse(&2, U32, acc)
     case 1n+p:
-      1048576 <> 1048576 <> acc0(p)
+      acc0.go(p, 1048576 <> 1048576 <> acc)
 
-def add.out(+l: U32, +r: U32, +s: U32, +lv: U32, +rv: U32, p: List<&2, U32> & (Array<U32> & U32)) -> List<&2, U32> & (Array<U32> & U32):
-  (t, q) = p
-  ((l + (s - 128) * lv : U32) <> (r + (s - 128) * rv : U32) <> t, q)
+def acc0(n: Nat) -> List<&2, U32>:
+  acc0.go(n, [])
 
-def add.go?(acc: List<&2, U32>, a: Array<U32>, +base: U32, +len: U32, +pos: U32, +st: U32, +lv: U32, +rv: U32) -> List<&2, U32> & (Array<U32> & U32):
+def add.go?(acc: List<&2, U32>, out: List<&2, U32>, a: Array<U32>, +base: U32, +len: U32, +pos: U32, +st: U32, +lv: U32, +rv: U32) -> List<&2, U32> & (Array<U32> & U32):
   match acc:
     case +l <> t:
-      add.pair(l, t, a, base, len, pos, st, lv, rv)
+      add.pair(l, t, out, a, base, len, pos, st, lv, rv)
     case []:
-      ([], (a, pos))
+      (List.reverse(&2, U32, out), (a, pos))
 
-def add.pair?(+l: U32, acc: List<&2, U32>, a: Array<U32>, +base: U32, +len: U32, +pos: U32, +st: U32, +lv: U32, +rv: U32) -> List<&2, U32> & (Array<U32> & U32):
+def add.pair?(+l: U32, acc: List<&2, U32>, out: List<&2, U32>, a: Array<U32>, +base: U32, +len: U32, +pos: U32, +st: U32, +lv: U32, +rv: U32) -> List<&2, U32> & (Array<U32> & U32):
   match acc:
     case +r <> t:
-      add.at(U32.is_lt((pos >> 16n : U32), len), l, r, t, a, base, len, pos, st, lv, rv)
+      add.at(U32.is_lt((pos >> 16n : U32), len), l, r, t, out, a, base, len, pos, st, lv, rv)
     case []:
-      ([l], (a, pos))
+      (List.reverse(&2, U32, l <> out), (a, pos))
 
-def add.at?(more: Bool, +l: U32, +r: U32, t: List<&2, U32>, a: Array<U32>, +base: U32, +len: U32, +pos: U32, +st: U32, +lv: U32, +rv: U32) -> List<&2, U32> & (Array<U32> & U32):
+def add.at?(more: Bool, +l: U32, +r: U32, t: List<&2, U32>, out: List<&2, U32>, a: Array<U32>, +base: U32, +len: U32, +pos: U32, +st: U32, +lv: U32, +rv: U32) -> List<&2, U32> & (Array<U32> & U32):
   match more:
     case True{}:
-      add.sample(l, r, t, Array.get(U32, a, (base + (pos >> 16n) : U32)), base, len, pos, st, lv, rv)
+      add.sample(l, r, t, out, Array.get(U32, a, (base + (pos >> 16n) : U32)), base, len, pos, st, lv, rv)
     case False{}:
-      (l <> r <> t, (a, 4294967295))
+      (T.onto(U32, out, l <> r <> t), (a, 4294967295))
 
-def add.sample?(+l: U32, +r: U32, t: List<&2, U32>, q: Array<U32> & U32, +base: U32, +len: U32, +pos: U32, +st: U32, +lv: U32, +rv: U32) -> List<&2, U32> & (Array<U32> & U32):
+def add.sample?(+l: U32, +r: U32, t: List<&2, U32>, out: List<&2, U32>, q: Array<U32> & U32, +base: U32, +len: U32, +pos: U32, +st: U32, +lv: U32, +rv: U32) -> List<&2, U32> & (Array<U32> & U32):
   (a, +s) = q
-  add.out(l, r, s, lv, rv, add.go(t, a, base, len, (pos + st : U32), st, lv, rv))
+  add.go(t, (r + (s - 128) * rv : U32) <> (l + (s - 128) * lv : U32) <> out, a, base, len, (pos + st : U32), st, lv, rv)
 
 def chan.pack(+c: Ch, acc: List<&2, U32>, a: Array<U32>) -> (List<&2, U32> & Array<U32>) & Ch:
   ((acc, a), c)
@@ -276,7 +278,7 @@ def chan.pick(idle: Bool, +c: Ch, acc: List<&2, U32>, a: Array<U32>, +base: U32,
     case True{} _:
       ((acc, a), c)
     case False{} Ch{+sfx, +org, +pos, +lv, +rv}:
-      chan.after(Ch{sfx, org, pos, lv, rv}, add.go(acc, a, base, len, pos, st, lv, rv))
+      chan.after(Ch{sfx, org, pos, lv, rv}, add.go(acc, [], a, base, len, pos, st, lv, rv))
 
 def mix.next(+c: Ch, r: (List<&2, U32> & Array<U32>) & List<&2, Ch>) -> (List<&2, U32> & Array<U32>) & List<&2, Ch>:
   (p, cs) = r
@@ -297,19 +299,25 @@ def mix.step?(t: List<&2, Ch>, r: (List<&2, U32> & Array<U32>) & Ch, +idx: T.Vec
 def silence() -> List<&2, U32>:
   acc0(1260n)
 
-def pcm(xs: List<&2, U32>) -> List<&2, F32>:
+def pcm.go(xs: List<&2, U32>, acc: List<&2, F32>) -> List<&2, F32>:
   match xs:
     case +x <> t:
-      F32.clamp(((U32.to_f32(x) - 1048576.0) / 32640.0 : F32), (0.0 - 1.0 : F32), 1.0) <> pcm(t)
+      pcm.go(t, F32.clamp(((U32.to_f32(x) - 1048576.0) / 32640.0 : F32), (0.0 - 1.0 : F32), 1.0) <> acc)
     case []:
-      []
+      List.reverse(&2, F32, acc)
 
-def zipadd(xs: List<&2, U32>, ys: List<&2, U32>) -> List<&2, U32>:
+def pcm(xs: List<&2, U32>) -> List<&2, F32>:
+  pcm.go(xs, [])
+
+def zipadd.go(xs: List<&2, U32>, ys: List<&2, U32>, acc: List<&2, U32>) -> List<&2, U32>:
   match xs ys:
     case +x <> xt +y <> yt:
-      (x + y : U32) <> zipadd(xt, yt)
+      zipadd.go(xt, yt, (x + y : U32) <> acc)
     case a _:
-      a
+      T.onto(U32, acc, a)
+
+def zipadd(xs: List<&2, U32>, ys: List<&2, U32>) -> List<&2, U32>:
+  zipadd.go(xs, ys, [])
 
 def joined(a: Array<U32>, +idx: T.Vec<U32>, +pri: T.Vec<U32>, cs: List<&2, Ch>, acc: List<&2, U32>, r: Ms.Mu & List<&2, U32>) -> Mix & List<&2, U32>:
   (mus, ms) = r
