@@ -1,0 +1,10 @@
+{
+  "name": "bendoom",
+  "compatibility_date": "2026-10-01",
+  "routes": [{ "pattern": "kbrianps.com/bendoom*", "zone_name": "kbrianps.com" }],
+  "workers_dev": false,
+  "assets": {
+    "directory": "./site",
+    "html_handling": "auto-trailing-slash"
+  }
+}

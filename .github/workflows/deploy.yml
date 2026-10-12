@@ -1,0 +1,44 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+      - uses: oven-sh/setup-bun@v2
+        if: env.CLOUDFLARE_API_TOKEN != ''
+      - name: Bend 2.0.36
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          git clone -q --depth 1 --branch v2.0.36 https://github.com/bendlang/bend "$RUNNER_TEMP/bend"
+          (cd "$RUNNER_TEMP/bend/bend2/pack" && bun install --frozen-lockfile)
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/bin/sh\nexec bun %s/bend/bend2/main.ts "$@"\n' "$RUNNER_TEMP" > "$RUNNER_TEMP/bin/bend"
+          chmod +x "$RUNNER_TEMP/bin/bend"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - uses: actions/cache@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        with:
+          path: tests/.cache
+          key: freedoom-0.13.0
+      - run: web/site.sh
+        if: env.CLOUDFLARE_API_TOKEN != ''
+      - uses: cloudflare/wrangler-action@v3
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          wranglerVersion: 4.143.1
+          command: deploy

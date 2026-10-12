@@ -1,6 +1,6 @@
 # bendoom
 
-The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): every episode of Doom and Doom II, every monster and weapon, menus, saves, the automap and the original demos playing in sync. It is built in stages.
+The whole of Doom, rewritten in [Bend 2](https://github.com/bendlang/bend): every episode of Doom and Doom II, every monster and weapon, menus, saves, the automap and the original demos playing in sync. It is built in stages. [Play it in the browser](https://kbrianps.com/bendoom/), on Freedoom.
 
 <p align="center"><img src="docs/e1m1.png" width="640" alt="Freedoom's E1M1 from the player start, drawn by shot.bend"></p>
 
@@ -36,7 +36,12 @@ Sound effects are mixed in 8 channels at 22050 Hz with vanilla's channel stealin
     web/build.sh
     python3 -m http.server -d web
 
-`web/build.sh` compiles `doom.bend` through Bend's JS lane and appends `web/shell.js`, which gives it a canvas, the keyboard, Web Audio and a file system in memory, into `web/doom.js`. Serve the `web` directory and open `index.html`: pick an IWAD, and optionally PWADs, a SoundFont, a map, OPL3, comfort mode and General MIDI without reverb or chorus, and press Start. `?wad=URL` loads the IWAD from a URL instead, and `?map=`, `?opl3`, `?comfort` and `?noeffects` fill in the rest. Saves go to the browser's local storage. The shell replaces a handful of Bend's list functions and the innermost pixel loops with JavaScript of the same results, so frames are the native build's; it draws 20 to 30 frames a second in Chrome, against the 35 of the native build.
+`web/build.sh` compiles `doom.bend` through Bend's JS lane and appends `web/shell.js`, which gives it a canvas, the keyboard, Web Audio and a file system in memory, into `web/doom.js`. Serve the `web` directory and open `index.html`: pick an IWAD, and optionally PWADs, a SoundFont, a map, OPL3, comfort mode and General MIDI without reverb or chorus, and press Start. `?wad=URL` loads the IWAD from a URL instead, gunzipping it when the name ends in `.gz`, and with neither the page loads `freedoom1.wad.gz` from beside it if it is there; `?map=`, `?opl3`, `?comfort` and `?noeffects` fill in the rest. Saves go to the browser's local storage. The shell replaces a handful of Bend's list functions and the innermost pixel loops with JavaScript of the same results, so frames are the native build's; it draws 20 to 30 frames a second in Chrome, against the 35 of the native build.
+
+    web/site.sh
+    (cd web && wrangler deploy)
+
+`web/site.sh` builds the page that plays at [kbrianps.com/bendoom](https://kbrianps.com/bendoom/) into `web/site/bendoom`: the page, `doom.js` and Freedoom's `freedoom1.wad` gzipped, so it starts with nothing to pick. `web/wrangler.jsonc` serves that directory from Cloudflare under the `/bendoom` path, and `.github/workflows/deploy.yml` runs both on every push to `main` once the repository has the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets.
 
     bend shot.bend -o shot
     ./shot doom.wad E1M1 e1m1.bmp

@@ -40,12 +40,20 @@
     return [file.name, new Uint8Array(await file.arrayBuffer())];
   }
 
-  async function fetched(url) {
+  async function fetched(url, optional = false) {
     const res = await fetch(url);
     if (!res.ok) {
+      if (optional) {
+        return null;
+      }
       throw new Error("could not fetch " + url + ": " + res.status);
     }
-    return [new URL(url, location.href).pathname.replace(/^.*\//, ""), new Uint8Array(await res.arrayBuffer())];
+    const name = new URL(url, location.href).pathname.replace(/^.*\//, "");
+    if (name.endsWith(".gz")) {
+      const body = res.body.pipeThrough(new DecompressionStream("gzip"));
+      return [name.slice(0, -3), new Uint8Array(await new Response(body).arrayBuffer())];
+    }
+    return [name, new Uint8Array(await res.arrayBuffer())];
   }
 
   async function start(event) {
@@ -53,7 +61,7 @@
     $("log").textContent = "";
     try {
       const iwad = $("iwad").files[0] ? await read($("iwad").files[0])
-        : query.has("wad") ? await fetched(query.get("wad")) : null;
+        : query.has("wad") ? await fetched(query.get("wad")) : await fetched("freedoom1.wad.gz", true);
       if (iwad === null) {
         log("Pick an IWAD first.");
         return;
