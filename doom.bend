@@ -14,12 +14,23 @@ def look.out(r: P.Game & Array<U32>) -> P.Game & Image:
 def look(g: P.Game) -> P.Game & Image:
   look.out(P.frame(g))
 
+def loop?(fuel: Nat, win: Window, g: P.Game) -> IO(Unit):
+  match fuel:
+    case 0n:
+      Window.close(win)
+    case 1n+f:
+      App.step(P.Game, App{s => look(s), P.tick}, win, g, w => s => grabbed(f, w, P.wants(s)))
+
+def grabbed?(fuel: Nat, win: Window, r: P.Game & Bool) -> IO(Unit):
+  (g, on) = r
+  IO.bind(Window, Unit, Window.grab(win, on), w => loop(fuel, w, g))
+
 def opened(g: P.Game, r: Result<&1, &1, U32 & String, Window>) -> IO(Unit):
   match r:
     case Fail{(code, text)}:
       IO.die(Unit, 1, text)
     case Done{win}:
-      App.loop(~P.Game, ~App{s => look(s), P.tick}, U32.to_nat(4294967295), win, g)
+      loop(U32.to_nat(4294967295), win, g)
 
 def timed(+path: String, au: P.Au, p: M.Sim & Array<U32>, now: Nat) -> IO(Unit):
   (s, rom) = p

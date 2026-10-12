@@ -13,6 +13,13 @@
   form button { grid-column: 1 / 3; justify-self: start; padding: 6px 18px; }
   #log { white-space: pre-wrap; font-family: ui-monospace, monospace; color: #e88; min-height: 1.4em; }
   .hidden { display: none; }
+  #default { color: #999; }
+  #controls { margin-top: 24px; }
+  #controls h2 { font-size: 15px; margin: 0 0 8px; }
+  #controls table { border-collapse: collapse; }
+  #controls td { padding: 3px 16px 3px 0; vertical-align: top; }
+  #controls td:first-child { color: #fff; white-space: nowrap; }
+  kbd { font: 12px ui-monospace, monospace; border: 1px solid #555; border-radius: 3px; padding: 0 4px; background: #222; }
 </style>
 </head>
 <body>
@@ -21,6 +28,7 @@
   <div id="log"></div>
   <form id="setup">
     <label for="iwad">IWAD</label><input id="iwad" type="file" accept=".wad,.WAD">
+    <span></span><span id="default" class="hidden">Without one, Start plays Freedoom, a free Doom-compatible game. Pick doom.wad or doom2.wad to play the original.</span>
     <label for="pwads">PWADs</label><input id="pwads" type="file" accept=".wad,.WAD" multiple>
     <label for="font">SoundFont</label><input id="font" type="file" accept=".sf2,.SF2">
     <label for="map">Map</label><input id="map" type="text" placeholder="E1M1 or MAP01" size="8">
@@ -29,6 +37,27 @@
     <label for="noeffects">No reverb or chorus</label><input id="noeffects" type="checkbox">
     <button type="submit">Start</button>
   </form>
+  <section id="controls">
+    <h2>Controls</h2>
+    <table>
+      <tr><td>Click the game</td><td>Capture the mouse; <kbd>Esc</kbd> lets it go and opens the menu</td></tr>
+      <tr><td>Mouse</td><td>Turn left and right</td></tr>
+      <tr><td>Left button</td><td>Fire</td></tr>
+      <tr><td>Right button</td><td>Use: doors, switches, lifts</td></tr>
+      <tr><td>Middle button</td><td>Walk forward</td></tr>
+      <tr><td><kbd>↑</kbd> <kbd>↓</kbd> or <kbd>W</kbd> <kbd>S</kbd></td><td>Walk forward and back</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Turn</td></tr>
+      <tr><td><kbd>A</kbd> <kbd>D</kbd> or <kbd>,</kbd> <kbd>.</kbd></td><td>Strafe</td></tr>
+      <tr><td><kbd>Shift</kbd></td><td>Run</td></tr>
+      <tr><td><kbd>Ctrl</kbd> or <kbd>F</kbd></td><td>Fire</td></tr>
+      <tr><td><kbd>Space</kbd> or <kbd>E</kbd></td><td>Use</td></tr>
+      <tr><td><kbd>1</kbd> to <kbd>7</kbd></td><td>Pick a weapon</td></tr>
+      <tr><td><kbd>Tab</kbd></td><td>Automap</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Menu: new game, options, save, load, quit</td></tr>
+      <tr><td><kbd>F2</kbd> <kbd>F3</kbd></td><td>Save and load</td></tr>
+      <tr><td><kbd>-</kbd> <kbd>=</kbd></td><td>Shrink and grow the view</td></tr>
+    </table>
+  </section>
 </main>
 <script src="doom.js"></script>
 <script>
@@ -103,6 +132,13 @@
   }
 
   $("setup").addEventListener("submit", start);
+  if (!query.has("wad")) {
+    fetch("freedoom1.wad.gz", { method: "HEAD" }).then((res) => {
+      if (res.ok) {
+        $("default").classList.remove("hidden");
+      }
+    }, () => {});
+  }
   if (query.has("map")) {
     $("map").value = query.get("map");
   }

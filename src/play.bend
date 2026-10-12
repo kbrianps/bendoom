@@ -38,11 +38,31 @@ def press(+keys: U32, +c: U32, +down: Bool) -> U32:
 def held(+keys: U32, +b: U32) -> Bool:
   U32.is_ne((keys .&. b : U32), 0)
 
+def button.bit(+b: U32) -> U32:
+  Bool.pick(U32, U32.is_eq(b, 0), 131072, Bool.pick(U32, U32.is_eq(b, 1), 262144, Bool.pick(U32, U32.is_eq(b, 2), 524288, 0)))
+
+def click(+keys: U32, +b: U32, +down: Bool) -> U32:
+  Bool.pick(U32, down, (keys .|. button.bit(b) : U32), (keys .&. (4294967295 - button.bit(b)) : U32))
+
+def signed(+x: F32) -> U32:
+  Bool.pick(U32, F32.is_lt(x, 0.0), (0 - F32.to_u32(F32.round((0.0 - x : F32))) : U32), F32.to_u32(F32.round(x)))
+
+def turned(+g: S.Sim, +dx: F32) -> U32:
+  +sens = U32.to_f32((U.ui(g, 111) + 5 : U32))
+  signed((dx * sens * 0.8 : F32))
+
+def look(+g: S.Sim, +dx: F32) -> S.Sim:
+  U.ui.set(g, 250, (U.ui(g, 250) + turned(g, dx) : U32))
+
 def event(+e: Event, +r: Run) -> Run:
   match e r:
     case Key{+c, +d} Run{+g, +k}:
       +g1 = Q.respond(g, c, d)
       Run{g1, Bool.pick(U32, Q.eaten(g1), k, press(k, c, d))}
+    case Mouse{+x, +y, +b, +d} Run{+g, +k}:
+      Run{g, click(k, b, d)}
+    case Look{+dx, +dy} Run{+g, +k}:
+      Run{look(g, dx), k}
     case Close{} Run{+g, +k}:
       Run{Q.close(g), k}
     case _ q:
@@ -65,13 +85,13 @@ def weapon(n: Nat, +keys: U32, +i: U32) -> U32:
     case 1n+p:
       Bool.pick(U32, held(keys, (512 << U32.to_nat(i) : U32)), (4 .|. (i << 3n) : U32), weapon(p, keys, (i + 1 : U32)))
 
-def cmd(+g: S.Sim, +keys: U32, +turnheld: U32) -> S.Sim:
+def cmd(+g: S.Sim, +keys: U32, +turnheld: U32, +mouse: U32) -> S.Sim:
   +run = held(keys, 64)
   +tspeed = Bool.pick(U32, U32.is_lt(turnheld, 6), 320, Bool.pick(U32, run, 1280, 640))
-  +turn = amount(keys, 4, 8, tspeed)
-  +fwd = amount(keys, 1, 2, Bool.pick(U32, run, 50, 25))
+  +turn = (amount(keys, 4, 8, tspeed) - mouse : U32)
+  +fwd = amount(keys, 524289, 2, Bool.pick(U32, run, 50, 25))
   +side = amount(keys, 32, 16, Bool.pick(U32, run, 40, 24))
-  +bt = (Bool.pick(U32, held(keys, 65536), 1, 0) .|. Bool.pick(U32, held(keys, 128), 2, 0) .|. weapon(7n, keys, 0) : U32)
+  +bt = (Bool.pick(U32, held(keys, 196608), 1, 0) .|. Bool.pick(U32, held(keys, 262272), 2, 0) .|. weapon(7n, keys, 0) : U32)
   S.p.buttons.set(S.p.side.set(S.p.fwd.set(S.p.turn.set(g, turn), fwd), side), bt)
 
 def done(+g: S.Sim) -> Bool:
@@ -81,7 +101,7 @@ def steps(n: Nat, more: Bool, +g: S.Sim, +keys: U32, +h: U32) -> S.Sim:
   match n more:
     case 1n+p True{}:
       +h1 = Bool.pick(U32, held(keys, 12), (h + 1 : U32), 0)
-      +g1 = K.ticker(cmd(g, keys, h1))
+      +g1 = K.ticker(cmd(g, keys, h1, 0))
       steps(p, Bool.not(done(g1)), g1, keys, h1)
     case _ _:
       g
@@ -111,7 +131,7 @@ def runs?(n: Nat, more: Bool, +g: S.Sim, +keys: U32, +h: U32, +on: Bool, m: N.Mi
   match n more:
     case 1n+p True{}:
       +h1 = Bool.pick(U32, held(keys, 12), (h + 1 : U32), 0)
-      +g1 = Q.tick(cmd(g, keys, h1))
+      +g1 = Q.tick(cmd(U.ui.set(g, 250, 0), keys, h1, U.ui(g, 250)))
       runs.next(p, g1, keys, h1, on, heard(on, m, g1, out))
     case _ _:
       (Run{g, h}, (m, out))
@@ -243,3 +263,8 @@ def frame(g: Game) -> Game & Array<U32>:
 
 def start(+s: S.Sim, rom: Array<U32>, +path: String, +now: U32, au: Au) -> Game:
   Game{s, rom, path, 0, now, 0, 0, au}
+
+def wants(g: Game) -> Game & Bool:
+  match g:
+    case Game{+s, rom, +path, +k, +t0, +tics, +h, au}:
+      (Game{s, rom, path, k, t0, tics, h, au}, Bool.and(U32.is_eq(S.sim.gs(s), 0), U32.is_eq(U.ui(s, 100), 0)))

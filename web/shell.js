@@ -4,6 +4,10 @@ const WEB = {
   args: [],
   env: {},
   keys: [],
+  events: [],
+  look: 0,
+  grab: false,
+  escaped: 0,
   canvas: null,
   ctx: null,
   pix: null,
@@ -312,13 +316,25 @@ $0eff["Window.frame"] = (win, img, k) => {
   requestAnimationFrame(() => {
     const evs = WEB.keys.map(([code, down]) => ({ $: "Key", code, down }));
     WEB.keys = [];
+    evs.push(...WEB.events);
+    WEB.events = [];
+    if (WEB.look !== 0) {
+      evs.push({ $: "Look", dx: Math.fround(WEB.look), dy: 0 });
+      WEB.look = 0;
+    }
     io_push(k, io_tup(win, img, web_list(evs)), false);
     web_pump();
   });
   return undefined;
 };
 
-$0eff["Window.grab"] = (win, on) => win;
+$0eff["Window.grab"] = (win, on) => {
+  WEB.grab = on;
+  if (!on && document.pointerLockElement === WEB.canvas) {
+    document.exitPointerLock();
+  }
+  return win;
+};
 $0eff["Window.set_title"] = (win, title) => {
   document.title = title;
   return win;
@@ -438,10 +454,45 @@ function web_listen(target) {
     if (down && e.repeat) {
       return;
     }
+    if (code === 27) {
+      WEB.escaped = performance.now();
+    }
     WEB.keys.push([code, down]);
   };
   target.addEventListener("keydown", on(true));
   target.addEventListener("keyup", on(false));
+}
+
+function web_mouse(canvas) {
+  const locked = () => document.pointerLockElement === canvas;
+  const button = (b) => (b === 0 ? 0 : b === 2 ? 1 : b === 1 ? 2 : null);
+  const click = (down) => (e) => {
+    const b = button(e.button);
+    if (b === null) {
+      return;
+    }
+    e.preventDefault();
+    if (down && WEB.grab && !locked()) {
+      canvas.requestPointerLock();
+      return;
+    }
+    if (locked() || !down) {
+      WEB.events.push({ $: "Mouse", x: 0, y: 0, button: b, down });
+    }
+  };
+  canvas.addEventListener("mousedown", click(true));
+  window.addEventListener("mouseup", click(false));
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  document.addEventListener("mousemove", (e) => {
+    if (locked()) {
+      WEB.look += e.movementX;
+    }
+  });
+  document.addEventListener("pointerlockchange", () => {
+    if (!locked() && WEB.grab && performance.now() - WEB.escaped > 250) {
+      WEB.keys.push([27, true], [27, false]);
+    }
+  });
 }
 
 function web_start(opts) {
@@ -453,6 +504,9 @@ function web_start(opts) {
     WEB.files.set(name, data);
   }
   web_listen(opts.keys ?? window);
+  if (typeof document.addEventListener === "function") {
+    web_mouse(opts.canvas);
+  }
   const io = { runs: [], live: 0, waits: [] };
   globalThis.BEND_IO = io;
   io_push(run_loop($main$()), (x) => ({ $: "Emit", value: x }), true);
