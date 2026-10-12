@@ -16,6 +16,8 @@ rm -rf web/site
 mkdir -p "$OUT"
 web/build.sh "$OUT/doom.js"
 cp web/index.html "$OUT/index.html"
+cp web/favicon.png web/apple-touch-icon.png "$OUT/"
+cp docs/e1m1.png "$OUT/preview.png"
 gzip -9 -n -c "$CACHE/$FREEDOOM/freedoom1.wad" > "$OUT/freedoom1.wad.gz"
 cp "$CACHE/$FREEDOOM/COPYING.txt" "$OUT/FREEDOOM-COPYING.txt"
 echo "wrote $OUT"
